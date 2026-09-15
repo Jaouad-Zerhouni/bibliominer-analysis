@@ -127,3 +127,26 @@ def test_corpus_sans_ville_ne_casse_pas():
     assert c.cities_impact().empty
     assert c.co_city()["n_nodes"] == 0
     assert len(c.collaboration_scale()) == 4
+
+
+def test_hierarchie_liste_toutes_les_institutions_de_la_ville():
+    """Le seul leader cachait les autres institutions de la ville.
+
+    Compté en AFFILIATIONS : un document co-signé par deux laboratoires de
+    l'université A lui en donne deux.
+    """
+    c = Corpus.from_dataframe(pd.DataFrame([
+        _doc(1, RABAT + ";" + RABAT.replace("Univ A", "Univ A, subparent: Lab 2")),
+        _doc(2, RABAT), _doc(3, RABAT2),
+    ]))
+    h = c.city_hierarchy().set_index("city")
+    assert h.loc["Rabat", "institution_affiliations"] == "Univ A (3); Univ C (1)"
+    assert h.loc["Rabat", "top_institution"] == "Univ A"
+    assert h.loc["Rabat", "institutions"] == 2
+
+
+def test_hierarchie_egalite_departagee_par_le_nom():
+    c = Corpus.from_dataframe(pd.DataFrame([_doc(1, RABAT2), _doc(2, RABAT)]))
+    h = c.city_hierarchy().set_index("city")
+    assert h.loc["Rabat", "institution_affiliations"] == "Univ A (1); Univ C (1)"
+    assert h.loc["Rabat", "top_institution"] == "Univ A"

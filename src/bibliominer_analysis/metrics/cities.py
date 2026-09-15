@@ -225,18 +225,36 @@ def cities_over_time(corpus, n: int = 8) -> pd.DataFrame:
     return counts[cols].reset_index(drop=True)
 
 
+def _institutions_by_affiliations(parents: pd.Series) -> list:
+    """[(institution, affiliations)], la plus fréquente d'abord ; à égalité,
+    par ordre alphabétique, pour qu'un même corpus donne toujours le même
+    ordre (et le même leader)."""
+    names = parents.dropna().astype(str).str.strip()
+    names = names[names != ""]
+    counts = names.value_counts()
+    return sorted(((name, int(c)) for name, c in counts.items()),
+                  key=lambda item: (-item[1], item[0]))
+
+
 def city_hierarchy(corpus, n: Optional[int] = 40) -> pd.DataFrame:
     """Pays → ville → institutions.
 
     Colonnes : ``country``, ``city``, ``institutions``, ``documents``,
-    ``top_institution``, ``share_of_country``.
+    ``top_institution``, ``share_of_country``, ``institution_affiliations``.
 
     ``share_of_country`` dit si une ville porte l'essentiel de la production de
     son pays ou n'en est qu'une composante — la même lecture que la hiérarchie
     établissement → unités, transposée à la géographie.
+
+    ``institution_affiliations`` liste TOUTES les institutions de la ville avec
+    leur nombre d'affiliations, de la plus fréquente à la moins fréquente :
+    « Mohammed V University (26); National School of Mineral Industry (12) ».
+    Le seul leader cachait les autres — une école de 12 documents disparaissait
+    derrière l'université de sa ville. ``top_institution`` en est le premier
+    élément.
     """
     cols = ["country", "city", "institutions", "documents", "top_institution",
-            "share_of_country"]
+            "share_of_country", "institution_affiliations"]
     aff = corpus.affiliations
     if aff.empty or "city" not in aff.columns:
         return pd.DataFrame(columns=cols)
@@ -254,14 +272,16 @@ def city_hierarchy(corpus, n: Optional[int] = 40) -> pd.DataFrame:
     rows = []
     for (country, city), g in a.groupby(["country", "city"], sort=False):
         docs = int(g["eid"].nunique())
-        insts = g["parent1"].dropna()
+        ranked = _institutions_by_affiliations(g["parent1"])
         rows.append({
             "country": country,
             "city": city,
-            "institutions": int(insts.nunique()),
+            "institutions": len(ranked),
             "documents": docs,
-            "top_institution": insts.mode().iat[0] if not insts.empty else None,
+            "top_institution": ranked[0][0] if ranked else None,
             "share_of_country": round(100.0 * docs / by_country.get(country, docs), 1),
+            "institution_affiliations": "; ".join(
+                f"{name} ({count})" for name, count in ranked),
         })
 
     out = pd.DataFrame(rows).sort_values(
