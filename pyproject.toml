@@ -1,0 +1,88 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bibliominer-analysis"
+# La version vit dans `__init__.py` et NULLE PART ailleurs : deux copies
+# finissent toujours par diverger, et c'est celle du module que lisent les
+# utilisateurs (`bibliominer_analysis.__version__`).
+dynamic = ["version"]
+description = "Bibliometric analysis of a Scopus corpus cleaned with Bibliominer."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+# Les auteurs viennent de `site/src/site.config.ts`, la source de vérité du
+# projet — même ordre, mêmes rattachements. Deux listes d'auteurs finissent
+# par diverger, et c'est celle du site que lisent Google Scholar et les
+# lecteurs.
+authors = [
+    { name = "Jaouad Zerhouni", email = "j.zerhouni@edu.umi.ac.ma" },
+    { name = "Mohamed Hosni", email = "m.hosni@umi.ac.ma" },
+    { name = "Ibtissam Medarhri" },
+    { name = "Rachid Menaoui" },
+    { name = "Juan Manuel Carrillo de Gea" },
+]
+keywords = [
+    "bibliometrics", "scientometrics", "scopus", "co-citation",
+    "co-word", "bibliographic-coupling", "science-mapping",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+
+dependencies = [
+    # < 3 : pandas 3 change la façon dont une valeur manquante devient du texte
+    # (`astype(str)` la laisse manquante au lieu d'écrire « nan ») et confie
+    # les chaînes à PyArrow. Constaté sur une installation neuve (Python 3.14,
+    # pandas 3.0) : des valeurs manquantes comptées comme remplies, et des
+    # tests en échec. Le support de pandas 3 se fera avec la matrice
+    # d'intégration continue, pas à l'aveugle.
+    "pandas>=1.5,<3",
+    "numpy>=1.21",
+    # Les réseaux (co-citation, co-mots, couplage) et le regroupement en
+    # communautés pour la carte thématique sont au cœur de la bibliométrie :
+    # networkx est une dépendance, pas une option. Python pur, sans compilation.
+    "networkx>=3.0",
+    # Les figures EXPORTÉES (`figures/render.py`) sont générées par
+    # matplotlib, jamais capturées depuis le rendu du navigateur — c'est ce
+    # qui rend une figure publiée reproductible depuis les mêmes données.
+    # Passée de dépendance OPTIONNELLE à requise : ce n'est plus un à-côté.
+    "matplotlib>=3.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pyarrow>=12.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/jaouad/bibliominer"
+Source = "https://github.com/jaouad/bibliominer"
+Issues = "https://github.com/jaouad/bibliominer/issues"
+
+[tool.hatch.version]
+path = "src/bibliominer_analysis/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bibliominer_analysis"]
+# `py.typed` dit aux vérificateurs de types des utilisateurs que les
+# annotations de ce paquet sont fiables (PEP 561). Sans ce marqueur, mypy et
+# consorts les IGNORENT : le paquet est entièrement annoté, et personne n'en
+# profiterait.
+artifacts = ["src/bibliominer_analysis/py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
