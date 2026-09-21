@@ -34,7 +34,7 @@ def corresponding_author_countries(corpus, n: Optional[int] = 20) -> pd.DataFram
     cols = ["country", "documents", "scp", "mcp", "mcp_ratio", "citations",
             "citations_per_document"]
     aff = corpus.affiliations
-    aff = aff[aff["country"].notna() & (aff["country"].astype(str).str.strip() != "")]
+    aff = aff[aff["country"].notna() & (aff["country"].map(str).str.strip() != "")]
     if aff.empty:
         return pd.DataFrame(columns=cols)
 
@@ -57,7 +57,7 @@ def corresponding_author_countries(corpus, n: Optional[int] = 20) -> pd.DataFram
     missing = set(aff["eid"]) - set(lead["eid"])
     if missing:
         fallback = (aff[aff["eid"].isin(missing)]
-                    .sort_values("aff_pos")
+                    .sort_values("aff_pos", kind="stable")
                     .drop_duplicates("eid")[["eid", "country"]])
         lead = pd.concat([lead, fallback], ignore_index=True)
 
@@ -83,7 +83,7 @@ def corresponding_author_countries(corpus, n: Optional[int] = 20) -> pd.DataFram
     out["citations_per_document"] = (out["citations"] / out["documents"]).round(2)
 
     out = out.sort_values(["documents", "citations"],
-                          ascending=False).reset_index(drop=True)
+                          ascending=False, kind="stable").reset_index(drop=True)
     return (out[cols].head(n) if n else out[cols])
 
 
@@ -100,7 +100,7 @@ def countries_impact(corpus, n=20, min_documents=1):
     cols = ["country", "documents", "citations", "h_index", "g_index",
             "m_index", "first_year", "last_year"]
     aff = corpus.affiliations
-    aff = aff[aff["country"].notna() & (aff["country"].astype(str).str.strip() != "")]
+    aff = aff[aff["country"].notna() & (aff["country"].map(str).str.strip() != "")]
     if aff.empty:
         return pd.DataFrame(columns=cols)
 
@@ -133,5 +133,5 @@ def countries_impact(corpus, n=20, min_documents=1):
     out = pd.DataFrame(rows)
     out = out[out["documents"] >= min_documents]
     out = out.sort_values(["h_index", "citations", "documents"],
-                          ascending=False).reset_index(drop=True)
+                          ascending=False, kind="stable").reset_index(drop=True)
     return out.head(n) if n else out

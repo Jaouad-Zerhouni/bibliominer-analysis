@@ -17,8 +17,8 @@ license = { file = "LICENSE" }
 # par diverger, et c'est celle du site que lisent Google Scholar et les
 # lecteurs.
 authors = [
-    { name = "Jaouad Zerhouni", email = "j.zerhouni@edu.umi.ac.ma" },
     { name = "Mohamed Hosni", email = "m.hosni@umi.ac.ma" },
+    { name = "Jaouad Zerhouni", email = "j.zerhouni@edu.umi.ac.ma" },
     { name = "Ibtissam Medarhri" },
     { name = "Rachid Menaoui" },
     { name = "Juan Manuel Carrillo de Gea" },
@@ -38,18 +38,18 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Information Analysis",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 
 dependencies = [
-    # < 3 : pandas 3 change la façon dont une valeur manquante devient du texte
-    # (`astype(str)` la laisse manquante au lieu d'écrire « nan ») et confie
-    # les chaînes à PyArrow. Constaté sur une installation neuve (Python 3.14,
-    # pandas 3.0) : des valeurs manquantes comptées comme remplies, et des
-    # tests en échec. Le support de pandas 3 se fera avec la matrice
-    # d'intégration continue, pas à l'aveugle.
-    "pandas>=1.5,<3",
+    # pandas 2 ET 3. Le passage à pandas 3 a été vérifié en comparant les
+    # résultats sur de vrais corpus, pas seulement les tests : `astype(str)`
+    # y laisse une valeur manquante manquante (d'où `map(str)` partout) et
+    # ordonne autrement les ex æquo (d'où des tris stables et départagés).
+    # < 4 : une version majeure future sera vérifiée de la même façon.
+    "pandas>=1.5,<4",
     "numpy>=1.21",
     # Les réseaux (co-citation, co-mots, couplage) et le regroupement en
     # communautés pour la carte thématique sont au cœur de la bibliométrie :
@@ -69,9 +69,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jaouad/bibliominer"
-Source = "https://github.com/jaouad/bibliominer"
-Issues = "https://github.com/jaouad/bibliominer/issues"
+Homepage = "https://github.com/Jaouad-Zerhouni/bibliominer"
+Source = "https://github.com/Jaouad-Zerhouni/bibliominer"
+Issues = "https://github.com/Jaouad-Zerhouni/bibliominer/issues"
 
 [tool.hatch.version]
 path = "src/bibliominer_analysis/__init__.py"

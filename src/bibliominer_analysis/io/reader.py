@@ -114,21 +114,22 @@ def build_tables(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
             affs.append(dict(a, eid=eid, aff_pos=j))
 
         # --- auteur x affiliation ------------------------------------------
-        # « Authors with affiliations » aligne auteur et affiliation dans le
-        # MÊME ordre que les autres colonnes. On apparie par rang, sans
-        # re-parser l'affiliation : on pointe celle déjà extraite.
+        # « Authors with affiliations » a UN bloc par auteur, dans l'ordre des
+        # auteurs. Un bloc peut porter PLUSIEURS affiliations : une ligne par
+        # (auteur, affiliation), chacune pointant l'affiliation identique du
+        # document — jamais « la n-ième », qui n'a aucun rapport avec l'auteur.
         awa = P.split_list(row.get(S.COL_AUTHORS_AFF))
         if awa and parsed_authors:
             for rank, item in enumerate(awa, start=1):
                 if rank > len(parsed_authors):
                     break
-                _, text = P.strip_index(item)
-                auth_affs.append({
-                    "eid": eid,
-                    "position": parsed_authors[rank - 1]["position"],
-                    "aff_pos": rank if rank <= len(parsed_affs) else None,
-                    "raw": text or None,
-                })
+                for aff_pos, text in P.author_affiliation_positions(item, parsed_affs):
+                    auth_affs.append({
+                        "eid": eid,
+                        "position": parsed_authors[rank - 1]["position"],
+                        "aff_pos": aff_pos,
+                        "raw": text or None,
+                    })
 
         # --- mots-clés ------------------------------------------------------
         for kw in P.parse_keywords(row.get(S.COL_AUTHOR_KW)):

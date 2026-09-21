@@ -19,6 +19,8 @@ le monde par simple effet de taille, et formerait un groupe artificiel.
 
 from __future__ import annotations
 
+from .._stable import ordered_communities, ordered_graph, top_by_count
+
 from collections import Counter
 from typing import Any, Dict
 
@@ -52,11 +54,7 @@ def clustering_by_coupling(corpus, top_n: int = 100, min_weight: int = 3,
 
     import networkx as nx
 
-    G = nx.Graph()
-    for node in graph["nodes"]:
-        G.add_node(node["id"])
-    for e in graph["edges"]:
-        G.add_edge(e["source"], e["target"], weight=float(e["weight"]))
+    G = ordered_graph(graph["nodes"], graph["edges"], node_attrs=False)
 
     try:
         groups = nx.community.louvain_communities(G, weight="weight", seed=20240101)
@@ -74,11 +72,10 @@ def clustering_by_coupling(corpus, top_n: int = 100, min_weight: int = 3,
 
     kw = corpus.keywords.copy()
     kw = kw[kw["keyword"].notna()]
-    kw["norm"] = kw["keyword"].astype(str).str.strip().str.lower()
+    kw["norm"] = kw["keyword"].map(str).str.strip().str.lower()
 
     rows = []
-    for i, members in enumerate(sorted(groups, key=len, reverse=True), start=1):
-        members = set(members)
+    for i, members in enumerate(ordered_communities(groups), start=1):
         if len(members) < min_cluster_size:
             continue
 
@@ -88,13 +85,18 @@ def clustering_by_coupling(corpus, top_n: int = 100, min_weight: int = 3,
             if u_in != v_in:
                 external += float(data.get("weight", 0.0))
 
-        present = [m for m in members if m in docs.index]
+        present = sorted(m for m in members if m in docs.index)
         sub = docs.loc[present] if present else docs.iloc[0:0]
         measure = sub[impact] if impact in ("local", "global") else sub["local"]
 
         terms = Counter(kw[kw["eid"].isin(members)]["norm"])
-        top_terms = [t for t, _ in terms.most_common(8)]
-        best = sub[impact].idxmax() if not sub.empty and sub[impact].max() > 0 else None
+        top_terms = [t for t, _ in top_by_count(terms, 8)]
+        # Le document le plus cité du groupe ; à égalité, le plus petit
+        # identifiant — `idxmax` prenait le premier rencontré, dont l'ordre
+        # venait d'un ensemble (hachage aléatoire).
+        best = (sub[impact].sort_index(kind="stable")
+                .sort_values(ascending=False, kind="stable").index[0]
+                if not sub.empty and sub[impact].max() > 0 else None)
 
         rows.append({
             "cluster": i,
@@ -126,7 +128,7 @@ def clustering_by_coupling(corpus, top_n: int = 100, min_weight: int = 3,
         return "emerging_declining"
 
     df["quadrant"] = df.apply(quadrant, axis=1)
-    df = df.sort_values("documents", ascending=False).reset_index(drop=True)
+    df = df.sort_values("documents", ascending=False, kind="stable").reset_index(drop=True)
     return {
         "clusters": df[cols],
         "medians": {"centrality": round(med_c, 3), "impact": round(med_i, 2)},

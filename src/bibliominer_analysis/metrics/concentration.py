@@ -78,15 +78,15 @@ def _series(corpus, unit: str) -> pd.Series:
     """Documents par entité, pour l'unité demandée."""
     if unit == "authors":
         a = corpus.authors
-        a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+        a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
         if a.empty:
             return pd.Series(dtype=float)
-        key = a["scopus_id"].fillna("name:" + a["name"].astype(str))
+        key = a["scopus_id"].fillna("name:" + a["name"].map(str))
         return a.assign(key=key).drop_duplicates(["key", "eid"]).groupby("key").size()
 
     if unit == "sources":
         d = corpus.documents[["eid", "source"]].dropna()
-        d = d[d["source"].astype(str).str.strip() != ""]
+        d = d[d["source"].map(str).str.strip() != ""]
         return d.groupby("source")["eid"].nunique()
 
     frame, column = None, None
@@ -101,7 +101,7 @@ def _series(corpus, unit: str) -> pd.Series:
         return pd.Series(dtype=float)
 
     f = frame[["eid", column]].dropna()
-    f = f[f[column].astype(str).str.strip() != ""]
+    f = f[f[column].map(str).str.strip() != ""]
     if f.empty:
         return pd.Series(dtype=float)
     return f.drop_duplicates().groupby(column)["eid"].nunique()

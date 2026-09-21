@@ -3,7 +3,7 @@
 Bibliometric analysis of a Scopus corpus, as a **library**: notebook, script,
 CI pipeline — no interface required.
 
-It is the computation layer behind [Bibliominer](https://github.com/jaouad/bibliominer).
+It is the computation layer behind [Bibliominer](https://github.com/Jaouad-Zerhouni/bibliominer).
 The web application consumes it rather than reimplementing it: one source of
 truth, one place to test.
 

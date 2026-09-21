@@ -147,13 +147,13 @@ def lotka(corpus) -> Dict[str, object]:
     conclure à un écart là où il n'y en a pas.
     """
     a = corpus.authors
-    a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+    a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     empty = pd.DataFrame(columns=["documents_written", "n_authors",
                                   "share_observed", "share_lotka"])
     if a.empty:
         return {"table": empty, "fit": _fit_power_law(np.array([]), np.array([]))}
 
-    key = a["scopus_id"].fillna("name:" + a["name"].astype(str))
+    key = a["scopus_id"].fillna("name:" + a["name"].map(str))
     per_author = a.assign(key=key).drop_duplicates(
         subset=["key", "eid"]).groupby("key").size()
 
@@ -301,7 +301,7 @@ def bradford(corpus, zones: int = 3) -> Dict[str, object]:
     zones successives : c'est lui qui dit si la loi tient.
     """
     d = corpus.documents
-    d = d[d["source"].notna() & (d["source"].astype(str).str.strip() != "")]
+    d = d[d["source"].notna() & (d["source"].map(str).str.strip() != "")]
     empty = pd.DataFrame(columns=["rank", "source", "documents",
                                   "cumulative", "zone"])
     if d.empty:
@@ -310,7 +310,7 @@ def bradford(corpus, zones: int = 3) -> Dict[str, object]:
                 "multiplier": float("nan")}
 
     counts = (d.groupby("source")["eid"].nunique()
-                .sort_values(ascending=False).reset_index(name="documents"))
+                .sort_values(ascending=False, kind="stable").reset_index(name="documents"))
     counts["rank"] = np.arange(1, len(counts) + 1)
     counts["cumulative"] = counts["documents"].cumsum()
 
@@ -371,12 +371,12 @@ def zipf(corpus, n: Optional[int] = 100, kind: str = "author") -> Dict[str, obje
         return {"table": empty, "fit": _fit_power_law(np.array([]), np.array([]))}
 
     k = k.copy()
-    k["norm"] = k["keyword"].astype(str).str.strip().str.lower()
+    k["norm"] = k["keyword"].map(str).str.strip().str.lower()
     counts = (k.groupby("norm")
                 .agg(keyword=("keyword", lambda s: s.mode().iat[0]),
                      frequency=("eid", "nunique"))
                 .reset_index(drop=True)
-                .sort_values("frequency", ascending=False)
+                .sort_values("frequency", ascending=False, kind="stable")
                 .reset_index(drop=True))
     counts["rank"] = np.arange(1, len(counts) + 1)
 

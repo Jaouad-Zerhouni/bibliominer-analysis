@@ -115,7 +115,7 @@ def normalize_title(value: Any) -> str:
 def _to_number(series: pd.Series) -> pd.Series:
     """Décimales à la virgule, séparateur de milliers absent."""
     return pd.to_numeric(
-        series.astype(str).str.replace(".", "", regex=False)
+        series.map(str).str.replace(".", "", regex=False)
                           .str.replace(",", ".", regex=False)
                           .str.strip(),
         errors="coerce")
@@ -147,20 +147,20 @@ def load_scimago(path: Optional[Any] = None, force: bool = False) -> pd.DataFram
 
     out = pd.DataFrame(index=df.index)
     for src, dst in _COLUMNS.items():
-        out[dst] = df[src].astype(str).str.strip().str.strip('"') if src in df.columns else None
+        out[dst] = df[src].map(str).str.strip().str.strip('"') if src in df.columns else None
     for src, dst in _NUMERIC.items():
         out[dst] = _to_number(df[src]) if src in df.columns else np.nan
 
-    quartile = (df["SJR Best Quartile"].astype(str).str.strip().str.upper()
+    quartile = (df["SJR Best Quartile"].map(str).str.strip().str.upper()
                 if "SJR Best Quartile" in df.columns else pd.Series("", index=df.index))
     out["quartile"] = quartile.where(quartile.isin(QUARTILES), None)
     out["issns"] = df["Issn"].map(_split_issn_field) if "Issn" in df.columns else [[]] * len(df)
     out["scimago_rank"] = _to_number(df["Rank"]) if "Rank" in df.columns else np.nan
 
     if "Open Access" in df.columns:
-        out["open_access"] = df["Open Access"].astype(str).str.strip().str.lower().eq("yes")
+        out["open_access"] = df["Open Access"].map(str).str.strip().str.lower().eq("yes")
     if "Open Access Diamond" in df.columns:
-        out["open_access_diamond"] = (df["Open Access Diamond"].astype(str)
+        out["open_access_diamond"] = (df["Open Access Diamond"].map(str)
                                       .str.strip().str.lower().eq("yes"))
 
     if path is None:
@@ -218,7 +218,7 @@ def enrich_sources(corpus, path: Optional[Any] = None) -> pd.DataFrame:
         return pd.DataFrame(columns=_OUT_COLS)
 
     d = docs[["eid", "source"]].copy()
-    d["source"] = d["source"].astype(str).str.strip()
+    d["source"] = d["source"].map(str).str.strip()
     d = d[(d["source"] != "") & (d["source"].str.lower() != "nan")]
     if d.empty:
         return pd.DataFrame(columns=_OUT_COLS)
@@ -259,7 +259,7 @@ def enrich_sources(corpus, path: Optional[Any] = None) -> pd.DataFrame:
             grouped[col] = None
 
     grouped = grouped.sort_values(["documents", "citations"],
-                                  ascending=False).reset_index(drop=True)
+                                  ascending=False, kind="stable").reset_index(drop=True)
     return grouped[_OUT_COLS]
 
 
@@ -330,7 +330,7 @@ def quartile_over_time(corpus, path: Optional[Any] = None) -> pd.DataFrame:
     d = corpus.documents[["eid", "source"]].copy()
     d["year"] = pd.to_numeric(corpus.documents["year"], errors="coerce")
     d = d.dropna(subset=["year"])
-    d["quartile"] = d["source"].astype(str).str.strip().map(bucket).fillna("Not indexed")
+    d["quartile"] = d["source"].map(str).str.strip().map(bucket).fillna("Not indexed")
     if d.empty:
         return pd.DataFrame(columns=cols)
 
@@ -428,7 +428,7 @@ def subject_areas(corpus, path: Optional[Any] = None) -> pd.DataFrame:
              .reset_index())
     out["share"] = (100.0 * out["documents"] / total).round(1) if total else 0.0
     return out.sort_values(["documents", "citations"],
-                           ascending=False).reset_index(drop=True)[cols]
+                           ascending=False, kind="stable").reset_index(drop=True)[cols]
 
 
 def subject_categories(corpus, n: Optional[int] = 25,
@@ -462,7 +462,7 @@ def subject_categories(corpus, n: Optional[int] = 25,
                                  lambda x: x.dropna().min() if x.notna().any() else None))
              .reset_index())
     out = out.sort_values(["documents", "sources"],
-                          ascending=False).reset_index(drop=True)
+                          ascending=False, kind="stable").reset_index(drop=True)
     return (out[cols].head(n) if n else out[cols])
 
 

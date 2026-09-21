@@ -127,7 +127,8 @@ def _place_labels(fig, ax, nodes, areas, positions, colour, limit: int) -> None:
     la largeur d'un texte dépend de la police, de la taille, du DPI — une
     estimation se trompe précisément là où les mots sont longs.
     """
-    ranked = sorted(zip(nodes, areas), key=lambda pair: -pair[1])[:limit]
+    ranked = sorted(zip(nodes, areas),
+                    key=lambda pair: (-pair[1], str(pair[0].get("id"))))[:limit]
     fig.canvas.draw()                       # il faut un rendu pour mesurer
     renderer = fig.canvas.get_renderer()
 

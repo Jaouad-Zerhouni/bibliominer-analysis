@@ -30,7 +30,7 @@ def authors_over_time(corpus, n: int = 12) -> pd.DataFrame:
     cols = ["author", "year", "documents", "citations", "citations_per_year",
             "cumulative"]
     a = corpus.authors[["eid", "name"]].dropna(subset=["name"])
-    a = a[a["name"].astype(str).str.strip() != ""].drop_duplicates(["eid", "name"])
+    a = a[a["name"].map(str).str.strip() != ""].drop_duplicates(["eid", "name"])
     if a.empty:
         return pd.DataFrame(columns=cols)
 
@@ -43,7 +43,7 @@ def authors_over_time(corpus, n: int = 12) -> pd.DataFrame:
         return pd.DataFrame(columns=cols)
 
     top = (a.groupby("name")["eid"].nunique()
-             .sort_values(ascending=False).head(n).index)
+             .sort_values(ascending=False, kind="stable").head(n).index)
     a = a[a["name"].isin(top)]
 
     last_year = d["year"].max()
@@ -52,13 +52,13 @@ def authors_over_time(corpus, n: int = 12) -> pd.DataFrame:
              .reset_index().rename(columns={"name": "author"}))
     age = (last_year - out["year"] + 1).clip(lower=1)
     out["citations_per_year"] = (out["citations"] / age).round(2)
-    out = out.sort_values(["author", "year"])
+    out = out.sort_values(["author", "year"], kind="stable")
     out["cumulative"] = out.groupby("author")["documents"].cumsum()
     out["year"] = out["year"].astype(int)
 
     order = {name: i for i, name in enumerate(top)}
     out = out.sort_values(["author", "year"],
-                          key=lambda s: s.map(order) if s.name == "author" else s)
+                          key=lambda s: s.map(order) if s.name == "author" else s, kind="stable")
     return out[cols].reset_index(drop=True)
 
 
@@ -77,7 +77,7 @@ def word_dynamics(corpus, n: int = 10, kind: str = "author",
     k = corpus.keywords
     if kind in ("author", "index"):
         k = k[k["kind"] == kind]
-    k = k[k["keyword"].notna() & (k["keyword"].astype(str).str.strip() != "")]
+    k = k[k["keyword"].notna() & (k["keyword"].map(str).str.strip() != "")]
     if k.empty:
         return pd.DataFrame(columns=cols)
 
@@ -89,7 +89,7 @@ def word_dynamics(corpus, n: int = 10, kind: str = "author",
         return pd.DataFrame(columns=cols)
 
     top = (k.groupby("keyword")["eid"].nunique()
-             .sort_values(ascending=False).head(n).index)
+             .sort_values(ascending=False, kind="stable").head(n).index)
     k = k[k["keyword"].isin(top)]
 
     counts = (k.groupby(["keyword", "year"])["eid"].nunique()
@@ -104,7 +104,7 @@ def word_dynamics(corpus, n: int = 10, kind: str = "author",
     order = {w: i for i, w in enumerate(top)}
     counts = counts.sort_values(
         ["keyword", "year"],
-        key=lambda s: s.map(order) if s.name == "keyword" else s)
+        key=lambda s: s.map(order) if s.name == "keyword" else s, kind="stable")
     return counts[cols].reset_index(drop=True)
 
 
@@ -136,4 +136,4 @@ def average_citations_per_year(corpus) -> pd.DataFrame:
     out["mean_citations_per_year"] = (out["mean_citations"]
                                       / out["citable_years"]).round(2)
     out["mean_citations"] = out["mean_citations"].round(2)
-    return out.sort_values("year").reset_index(drop=True)
+    return out.sort_values("year", kind="stable").reset_index(drop=True)

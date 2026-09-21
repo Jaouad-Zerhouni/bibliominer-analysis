@@ -58,7 +58,7 @@ def by_country(corpus, n: Optional[int] = None) -> pd.DataFrame:
     somme dépasse donc volontairement le nombre de documents.
     """
     a = corpus.affiliations
-    a = a[a["country"].notna() & (a["country"].astype(str).str.strip() != "")]
+    a = a[a["country"].notna() & (a["country"].map(str).str.strip() != "")]
     if a.empty:
         return pd.DataFrame(columns=["country", "documents", "citations"])
 
@@ -70,7 +70,7 @@ def by_country(corpus, n: Optional[int] = None) -> pd.DataFrame:
     g = (pairs.groupby("country")
               .agg(documents=("eid", "nunique"), citations=("citations", "sum"))
               .reset_index()
-              .sort_values(["documents", "citations"], ascending=False)
+              .sort_values(["documents", "citations"], ascending=False, kind="stable")
               .reset_index(drop=True))
     return g.head(n) if n else g
 
@@ -92,8 +92,40 @@ def org_column(level: str = "parent") -> str:
                          % level) from None
 
 
+#: Les deux organismes mères qu'une affiliation peut citer.
+PARENT_COLUMNS = ("parent1", "parent2")
+
+
+def institution_rows(affiliations: pd.DataFrame) -> pd.DataFrame:
+    """Une ligne par (affiliation, organisme mère), colonne ``institution``.
+
+    Une affiliation à DOUBLE rattachement (« parent 1: Université A, parent 2:
+    CNRS ») appartient aux deux organismes : elle compte pour chacun, en
+    compte entier, comme un document co-signé compte pour chaque pays. Lire
+    ``parent1`` seul faisait disparaître le second organisme de tous les
+    classements. Un ``parent 2`` identique au ``parent 1`` ne compte qu'une
+    fois.
+    """
+    frames = []
+    for col in PARENT_COLUMNS:
+        if col not in affiliations.columns:
+            continue
+        names = affiliations[col].astype("string").str.strip()
+        kept = affiliations[names.notna() & (names != "")].copy()
+        kept["institution"] = names[kept.index].map(str)
+        frames.append(kept)
+    if not frames:
+        return affiliations.iloc[0:0].assign(institution=pd.Series(dtype=object))
+    out = pd.concat(frames, ignore_index=True)
+    key = [c for c in ("eid", "aff_pos") if c in out.columns] + ["institution"]
+    return out.drop_duplicates(subset=key).reset_index(drop=True)
+
+
 def _org_frame(corpus, level: str = "parent") -> pd.DataFrame:
     """Affiliations exploitables pour ce niveau, colonne renommée `org`.
+
+    Au niveau « parent », une affiliation à double rattachement donne une
+    ligne par organisme (voir `institution_rows`).
 
     Les chercheurs sans rattachement sont EXCLUS : le cleaning les marque
     « Independent researcher », ce n'est pas une organisation et sa présence
@@ -102,8 +134,20 @@ def _org_frame(corpus, level: str = "parent") -> pd.DataFrame:
     from ..io.schema import INDEPENDENT_LABEL
 
     col = org_column(level)
+    if level == "parent":
+        a = institution_rows(corpus.affiliations)
+        a = a[a["institution"] != INDEPENDENT_LABEL]
+        if a.empty:
+            return pd.DataFrame(columns=["eid", "org", "country", "parent1"])
+        return pd.DataFrame({
+            "eid": a["eid"].to_numpy(),
+            "org": a["institution"].to_numpy(),
+            "country": a["country"].to_numpy(),
+            "parent1": a["institution"].to_numpy(),
+        })
+
     a = corpus.affiliations
-    a = a[a[col].notna() & (a[col].astype(str).str.strip() != "")]
+    a = a[a[col].notna() & (a[col].map(str).str.strip() != "")]
     a = a[a[col] != INDEPENDENT_LABEL]
     if a.empty:
         return pd.DataFrame(columns=["eid", "org", "country", "parent1"])
@@ -141,7 +185,7 @@ def top_institutions(corpus, n: int = 20, level: str = "parent") -> pd.DataFrame
                             if not s.dropna().empty else None))
               .reset_index()
               .rename(columns={"org": "institution"})
-              .sort_values(["documents", "citations"], ascending=False)
+              .sort_values(["documents", "citations"], ascending=False, kind="stable")
               .reset_index(drop=True))
     return g.head(n)
 
@@ -171,7 +215,7 @@ def institutions_over_time(corpus, n: int = 10, cumulative: bool = True,
     pairs["year"] = pairs["year"].astype(int)
 
     top = (pairs.groupby("org")["eid"].nunique()
-                .sort_values(ascending=False).head(n).index)
+                .sort_values(ascending=False, kind="stable").head(n).index)
     pairs = pairs[pairs["org"].isin(top)]
 
     counts = (pairs.groupby(["org", "year"])["eid"].nunique()
@@ -203,7 +247,7 @@ def institutions_by_country(corpus, n: int = 20,
 
     rows = []
     for country, g in per_inst.groupby(level=0):
-        g = g.droplevel(0).sort_values(ascending=False)
+        g = g.droplevel(0).sort_values(ascending=False, kind="stable")
         rows.append({
             "country": country,
             "institutions": int(len(g)),
@@ -211,7 +255,7 @@ def institutions_by_country(corpus, n: int = 20,
             "top_institution": g.index[0],
         })
     return (pd.DataFrame(rows)
-              .sort_values(["documents", "institutions"], ascending=False)
+              .sort_values(["documents", "institutions"], ascending=False, kind="stable")
               .reset_index(drop=True).head(n))
 
 
@@ -228,20 +272,23 @@ def org_hierarchy(corpus, n: int = 20, min_documents: int = 1) -> pd.DataFrame:
     ``share`` est la part de l'unité DANS son organisme : elle dit si un
     laboratoire porte l'essentiel de la production de son université ou s'il
     n'en est qu'une composante parmi d'autres.
+
+    Une unité à double rattachement figure sous SES DEUX organismes.
     """
     from ..io.schema import INDEPENDENT_LABEL
 
-    base = corpus.affiliations
-    base = base[base["parent1"].notna()
-                & (base["parent1"].astype(str).str.strip() != "")]
-    base = base[base["parent1"] != INDEPENDENT_LABEL]
+    base = institution_rows(corpus.affiliations)
+    base = base[base["institution"] != INDEPENDENT_LABEL]
+    # La suite lit « parent1 » : c'est ici l'organisme de CETTE ligne,
+    # premier ou second rattachement.
+    base = base.assign(parent1=base["institution"])
 
     # `a` ne garde que les lignes PORTANT une unité, mais le total de
     # l'organisme se calcule sur `base` : une université dont un document ne
     # mentionne aucune unité en a quand même un de plus, et l'ignorer
     # gonflerait artificiellement la part des unités.
     a = base[base["subparent"].notna()
-             & (base["subparent"].astype(str).str.strip() != "")]
+             & (base["subparent"].map(str).str.strip() != "")]
     empty = pd.DataFrame(columns=["parent", "subparent", "documents",
                                   "citations", "parent_documents", "share"])
     if a.empty:
@@ -268,7 +315,7 @@ def org_hierarchy(corpus, n: int = 20, min_documents: int = 1) -> pd.DataFrame:
 
     g = g[g["documents"] >= min_documents]
     return (g.sort_values(["parent_documents", "parent", "documents"],
-                          ascending=[False, True, False])
+                          ascending=[False, True, False], kind="stable")
              .reset_index(drop=True).head(n))
 
 
@@ -280,7 +327,7 @@ def top_authors(corpus, n: int = 20) -> pd.DataFrame:
     d'un co-signataire.
     """
     a = corpus.authors
-    a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+    a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     if a.empty:
         return pd.DataFrame(columns=["author", "scopus_id", "documents",
                                      "citations", "first_author"])
@@ -292,7 +339,7 @@ def top_authors(corpus, n: int = 20) -> pd.DataFrame:
 
     # Clé de regroupement : l'identifiant Scopus s'il existe (fiable), sinon
     # le nom — deux homonymes sans identifiant restent indiscernables.
-    a["key"] = a["scopus_id"].fillna("name:" + a["name"].astype(str))
+    a["key"] = a["scopus_id"].fillna("name:" + a["name"].map(str))
 
     g = (a.groupby("key")
            .agg(author=("name", lambda s: s.mode().iat[0] if not s.empty else None),
@@ -301,7 +348,7 @@ def top_authors(corpus, n: int = 20) -> pd.DataFrame:
                 citations=("citations", "sum"),
                 first_author=("is_first", "sum"))
            .reset_index(drop=True)
-           .sort_values(["documents", "citations"], ascending=False)
+           .sort_values(["documents", "citations"], ascending=False, kind="stable")
            .reset_index(drop=True))
     g["first_author"] = g["first_author"].astype(int)
     return g.head(n)
@@ -310,13 +357,13 @@ def top_authors(corpus, n: int = 20) -> pd.DataFrame:
 def top_sources(corpus, n: int = 20) -> pd.DataFrame:
     d = corpus.documents.copy()
     d["citations"] = _citations(corpus)
-    d = d[d["source"].notna() & (d["source"].astype(str).str.strip() != "")]
+    d = d[d["source"].notna() & (d["source"].map(str).str.strip() != "")]
     if d.empty:
         return pd.DataFrame(columns=["source", "documents", "citations"])
     return (d.groupby("source")
              .agg(documents=("eid", "nunique"), citations=("citations", "sum"))
              .reset_index()
-             .sort_values(["documents", "citations"], ascending=False)
+             .sort_values(["documents", "citations"], ascending=False, kind="stable")
              .reset_index(drop=True)
              .head(n))
 
@@ -335,25 +382,25 @@ def top_keywords(corpus, n: int = 30, kind: str = "author") -> pd.DataFrame:
         return pd.DataFrame(columns=["keyword", "documents"])
 
     k = k.copy()
-    k["norm"] = k["keyword"].astype(str).str.strip().str.lower()
+    k["norm"] = k["keyword"].map(str).str.strip().str.lower()
     g = (k.groupby("norm")
            .agg(keyword=("keyword", lambda s: s.mode().iat[0]),
                 documents=("eid", "nunique"))
            .reset_index(drop=True)
-           .sort_values("documents", ascending=False)
+           .sort_values("documents", ascending=False, kind="stable")
            .reset_index(drop=True))
     return g.head(n)
 
 
 def document_types(corpus) -> pd.DataFrame:
     d = corpus.documents
-    d = d[d["doc_type"].notna() & (d["doc_type"].astype(str).str.strip() != "")]
+    d = d[d["doc_type"].notna() & (d["doc_type"].map(str).str.strip() != "")]
     if d.empty:
         return pd.DataFrame(columns=["doc_type", "documents", "share"])
     g = (d.groupby("doc_type")
            .agg(documents=("eid", "nunique"))
            .reset_index()
-           .sort_values("documents", ascending=False)
+           .sort_values("documents", ascending=False, kind="stable")
            .reset_index(drop=True))
     total = g["documents"].sum()
     g["share"] = (100 * g["documents"] / total).round(1) if total else 0.0

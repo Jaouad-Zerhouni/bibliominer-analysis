@@ -20,7 +20,7 @@ def _docs_with_citations(corpus) -> pd.DataFrame:
     d["citations"] = pd.to_numeric(corpus.documents["cited_by"],
                                    errors="coerce").fillna(0).astype(int)
     d["year"] = pd.to_numeric(d["year"], errors="coerce")
-    d = d[d["source"].notna() & (d["source"].astype(str).str.strip() != "")]
+    d = d[d["source"].notna() & (d["source"].map(str).str.strip() != "")]
     return d
 
 
@@ -58,7 +58,7 @@ def sources_impact(corpus, n: Optional[int] = 20,
     out = pd.DataFrame(rows)
     out = out[out["documents"] >= min_documents]
     out = out.sort_values(["h_index", "citations", "documents"],
-                          ascending=False).reset_index(drop=True)
+                          ascending=False, kind="stable").reset_index(drop=True)
     return out.head(n) if n else out
 
 
@@ -70,7 +70,7 @@ def top_sources_ranked(corpus, n: Optional[int] = 20) -> pd.DataFrame:
     out = (d.groupby("source")
              .agg(documents=("eid", "nunique"), citations=("citations", "sum"))
              .reset_index()
-             .sort_values(["documents", "citations"], ascending=False)
+             .sort_values(["documents", "citations"], ascending=False, kind="stable")
              .reset_index(drop=True))
     return out.head(n) if n else out
 
@@ -89,7 +89,7 @@ def sources_over_time(corpus, n: int = 8, cumulative: bool = True) -> pd.DataFra
         return pd.DataFrame(columns=["year", "source", "documents", "cumulative"])
 
     top = (d.groupby("source")["eid"].nunique()
-             .sort_values(ascending=False).head(n).index)
+             .sort_values(ascending=False, kind="stable").head(n).index)
     d = d[d["source"].isin(top)]
     counts = (d.groupby(["source", "year"])["eid"].nunique()
                 .rename("documents").reset_index())
@@ -102,5 +102,5 @@ def sources_over_time(corpus, n: int = 8, cumulative: bool = True) -> pd.DataFra
     counts["year"] = counts["year"].astype(int)
     order = {s: i for i, s in enumerate(top)}
     counts = counts.sort_values(
-        ["source", "year"], key=lambda s: s.map(order) if s.name == "source" else s)
+        ["source", "year"], key=lambda s: s.map(order) if s.name == "source" else s, kind="stable")
     return counts.reset_index(drop=True)

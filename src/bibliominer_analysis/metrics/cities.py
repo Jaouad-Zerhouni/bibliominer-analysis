@@ -26,6 +26,7 @@ from typing import Optional
 import pandas as pd
 
 from .impact import g_index, h_index, m_index
+from .production import institution_rows
 
 
 def _city_frame(corpus) -> pd.DataFrame:
@@ -36,7 +37,7 @@ def _city_frame(corpus) -> pd.DataFrame:
         return pd.DataFrame(columns=cols + ["citations", "year"])
 
     a = aff[cols].copy()
-    a["city"] = a["city"].astype(str).str.strip()
+    a["city"] = a["city"].map(str).str.strip()
     # « None » vient d'une colonne absente convertie en chaîne : sans ce filtre,
     # un corpus sans ville produirait une ville nommée « None ».
     a = a[(a["city"] != "") & (~a["city"].str.lower().isin({"nan", "none"}))]
@@ -71,13 +72,14 @@ def top_cities(corpus, n: Optional[int] = 20) -> pd.DataFrame:
 
     # Institutions distinctes par ville : c'est ce qui distingue un pôle
     # universitaire d'un laboratoire isolé à production égale.
-    aff = corpus.affiliations
+    # Parent 1 ET parent 2 : un double rattachement nomme deux institutions.
     inst = pd.DataFrame(columns=["city", "institutions"])
-    if "parent1" in aff.columns:
-        i = aff[["city", "parent1"]].dropna()
-        i["city"] = i["city"].astype(str).str.strip()
+    rows = institution_rows(corpus.affiliations)
+    if not rows.empty and "city" in rows.columns:
+        i = rows[["city", "institution"]].dropna()
+        i["city"] = i["city"].map(str).str.strip()
         i = i[i["city"] != ""]
-        inst = (i.drop_duplicates().groupby("city")["parent1"].nunique()
+        inst = (i.drop_duplicates().groupby("city")["institution"].nunique()
                  .rename("institutions").reset_index())
 
     out = (a.groupby("city")
@@ -90,7 +92,7 @@ def top_cities(corpus, n: Optional[int] = 20) -> pd.DataFrame:
     out["institutions"] = out["institutions"].fillna(0).astype(int)
     out["citations_per_document"] = (out["citations"] / out["documents"]).round(2)
     out = out.sort_values(["documents", "citations"],
-                          ascending=False).reset_index(drop=True)
+                          ascending=False, kind="stable").reset_index(drop=True)
     return (out[cols].head(n) if n else out[cols])
 
 
@@ -126,7 +128,7 @@ def cities_impact(corpus, n: Optional[int] = 20,
     out = pd.DataFrame(rows)
     out = out[out["documents"] >= min_documents]
     out = out.sort_values(["h_index", "citations", "documents"],
-                          ascending=False).reset_index(drop=True)
+                          ascending=False, kind="stable").reset_index(drop=True)
     return (out[cols].head(n) if n else out[cols])
 
 
@@ -207,7 +209,7 @@ def cities_over_time(corpus, n: int = 8) -> pd.DataFrame:
         return pd.DataFrame(columns=cols)
 
     top = (a.groupby("city")["eid"].nunique()
-             .sort_values(ascending=False).head(n).index)
+             .sort_values(ascending=False, kind="stable").head(n).index)
     a = a[a["city"].isin(top)]
 
     counts = (a.groupby(["city", "year"])["eid"].nunique()
@@ -221,7 +223,7 @@ def cities_over_time(corpus, n: int = 8) -> pd.DataFrame:
 
     rank = {c: i for i, c in enumerate(top)}
     counts = counts.sort_values(
-        ["city", "year"], key=lambda s: s.map(rank) if s.name == "city" else s)
+        ["city", "year"], key=lambda s: s.map(rank) if s.name == "city" else s, kind="stable")
     return counts[cols].reset_index(drop=True)
 
 
@@ -229,7 +231,7 @@ def _institutions_by_affiliations(parents: pd.Series) -> list:
     """[(institution, affiliations)], la plus fréquente d'abord ; à égalité,
     par ordre alphabétique, pour qu'un même corpus donne toujours le même
     ordre (et le même leader)."""
-    names = parents.dropna().astype(str).str.strip()
+    names = parents.dropna().map(str).str.strip()
     names = names[names != ""]
     counts = names.value_counts()
     return sorted(((name, int(c)) for name, c in counts.items()),
@@ -259,8 +261,8 @@ def city_hierarchy(corpus, n: Optional[int] = 40) -> pd.DataFrame:
     if aff.empty or "city" not in aff.columns:
         return pd.DataFrame(columns=cols)
 
-    a = aff[["eid", "city", "country", "parent1"]].copy()
-    a["city"] = a["city"].astype(str).str.strip()
+    a = aff.copy()
+    a["city"] = a["city"].map(str).str.strip()
     a = a[(a["city"] != "") & (~a["city"].str.lower().isin({"nan", "none"}))]
     if a.empty:
         return pd.DataFrame(columns=cols)
@@ -269,10 +271,16 @@ def city_hierarchy(corpus, n: Optional[int] = 40) -> pd.DataFrame:
     # sinon la part serait rapportée à un dénominateur incomplet.
     by_country = a.drop_duplicates(["eid", "country"]).groupby("country")["eid"].nunique()
 
+    # Les institutions d'une ville : parent 1 ET parent 2 de ses affiliations.
+    institutions = {key: g["institution"] for key, g in
+                    institution_rows(a).groupby(["country", "city"], sort=False)}
+    empty = pd.Series(dtype=object)
+
     rows = []
     for (country, city), g in a.groupby(["country", "city"], sort=False):
         docs = int(g["eid"].nunique())
-        ranked = _institutions_by_affiliations(g["parent1"])
+        ranked = _institutions_by_affiliations(
+            institutions.get((country, city), empty))
         rows.append({
             "country": country,
             "city": city,
@@ -284,6 +292,9 @@ def city_hierarchy(corpus, n: Optional[int] = 40) -> pd.DataFrame:
                 f"{name} ({count})" for name, count in ranked),
         })
 
+    # La ville départage les ex æquo : sans elle, les villes gardées sous la
+    # troncature `n` dépendaient de l'ordre des lignes du fichier.
     out = pd.DataFrame(rows).sort_values(
-        ["country", "documents"], ascending=[True, False]).reset_index(drop=True)
+        ["country", "documents", "city"],
+        ascending=[True, False, True], kind="stable").reset_index(drop=True)
     return (out[cols].head(n) if n else out[cols])

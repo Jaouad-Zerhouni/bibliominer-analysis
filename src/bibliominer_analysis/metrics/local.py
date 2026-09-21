@@ -25,6 +25,8 @@ Le rapprochement référence → document se fait en deux temps :
 
 from __future__ import annotations
 
+from .._stable import top_by_count
+
 import re
 import unicodedata
 from typing import Optional
@@ -106,7 +108,7 @@ def citation_pairs(corpus) -> pd.DataFrame:
     out = pd.DataFrame(rows, columns=["citing", "cited", "via"])
     # Le DOI prime sur le titre quand les deux existent pour la même paire.
     out["_rank"] = (out["via"] == "title").astype(int)
-    out = (out.sort_values("_rank")
+    out = (out.sort_values("_rank", kind="stable")
               .drop_duplicates(subset=["citing", "cited"])
               .drop(columns="_rank")
               .reset_index(drop=True))
@@ -167,7 +169,8 @@ def most_local_cited_documents(corpus, n: Optional[int] = 20) -> pd.DataFrame:
         (100 * d["local_citations"] / d["global_citations"]).round(1), 0.0)
     d["label"] = _labels(d)
 
-    out = d.sort_values(["local_citations", "global_citations"], ascending=False)
+    out = d.sort_values(["local_citations", "global_citations", "title", "eid"],
+                        ascending=[False, False, True, True], kind="stable")
     out = out[["label", "title", "first_author", "year", "source",
                "local_citations", "global_citations", "lc_gc_ratio",
                "local_citations_per_year"]].reset_index(drop=True)
@@ -177,13 +180,19 @@ def most_local_cited_documents(corpus, n: Optional[int] = 20) -> pd.DataFrame:
 
 def _labels(d: pd.DataFrame) -> pd.Series:
     """« HOSNI M., 2019 » — l'étiquette courte usuelle en bibliométrie."""
-    author = d["first_author"].fillna("ANONYMOUS").astype(str).str.upper()
-    year = d["year"].astype("Int64").astype(str).replace("<NA>", "n.d.")
+    author = d["first_author"].fillna("ANONYMOUS").map(str).str.upper()
+    year = d["year"].astype("Int64").map(str).replace("<NA>", "n.d.")
     base = author + ", " + year
     # Deux documents du même auteur la même année : on suffixe a, b, c…
+    # dans l'ordre des TITRES, pas des lignes : sinon « 2018-b » changeait
+    # de document quand l'export Scopus était trié autrement.
     dup = base.duplicated(keep=False)
     if dup.any():
-        suffix = base.groupby(base).cumcount()
+        order = pd.DataFrame({"base": base,
+                              "title": d.get("title", pd.Series("", index=d.index)).fillna("").map(str),
+                              "eid": d.get("eid", pd.Series("", index=d.index)).map(str)})
+        order = order.sort_values(["base", "title", "eid"], kind="stable")
+        suffix = order.groupby("base").cumcount().reindex(base.index)
         letters = suffix.map(lambda i: "" if i == 0 else "-" + chr(97 + min(i, 25)))
         base = base + letters.where(dup, "")
     return base
@@ -197,7 +206,7 @@ def most_local_cited_authors(corpus, n: Optional[int] = 20) -> pd.DataFrame:
     """
     lc = local_citations(corpus)
     a = corpus.authors[["eid", "name"]].dropna(subset=["name"])
-    a = a[a["name"].astype(str).str.strip() != ""].drop_duplicates(["eid", "name"])
+    a = a[a["name"].map(str).str.strip() != ""].drop_duplicates(["eid", "name"])
     if a.empty:
         return pd.DataFrame(columns=["author", "local_citations", "documents"])
     a = a.merge(lc, on="eid", how="left")
@@ -208,7 +217,7 @@ def most_local_cited_authors(corpus, n: Optional[int] = 20) -> pd.DataFrame:
              .reset_index().rename(columns={"name": "author"}))
     out = out[out["local_citations"] > 0]
     out = out.sort_values(["local_citations", "documents"],
-                          ascending=False).reset_index(drop=True)
+                          ascending=False, kind="stable").reset_index(drop=True)
     return out.head(n) if n else out
 
 
@@ -216,7 +225,7 @@ def most_local_cited_sources(corpus, n: Optional[int] = 20) -> pd.DataFrame:
     """Revues classées par citations locales cumulées de leurs articles."""
     lc = local_citations(corpus)
     d = corpus.documents[["eid", "source"]].copy()
-    d = d[d["source"].notna() & (d["source"].astype(str).str.strip() != "")]
+    d = d[d["source"].notna() & (d["source"].map(str).str.strip() != "")]
     if d.empty:
         return pd.DataFrame(columns=["source", "local_citations", "documents"])
     d = d.merge(lc, on="eid", how="left")
@@ -227,7 +236,7 @@ def most_local_cited_sources(corpus, n: Optional[int] = 20) -> pd.DataFrame:
              .reset_index())
     out = out[out["local_citations"] > 0]
     out = out.sort_values(["local_citations", "documents"],
-                          ascending=False).reset_index(drop=True)
+                          ascending=False, kind="stable").reset_index(drop=True)
     return out.head(n) if n else out
 
 
@@ -249,7 +258,8 @@ def historiograph(corpus, n: int = 25) -> dict:
     d["local_citations"] = d["local_citations"].fillna(0).astype(int)
 
     keep = d[d["local_citations"] > 0].sort_values(
-        ["local_citations", "global_citations"], ascending=False).head(n)
+        ["local_citations", "global_citations", "eid"],
+        ascending=[False, False, True], kind="stable").head(n)
     if keep.empty:
         return {"nodes": [], "edges": [], "n_nodes": 0, "n_edges": 0}
 
@@ -321,7 +331,7 @@ def citation_network(corpus, unit: str = "sources", top_n: int = 40,
     for (a, b), w in flows.items():
         weight_of[a] += w
         weight_of[b] += w
-    keep = {k for k, _ in weight_of.most_common(top_n)}
+    keep = {k for k, _ in top_by_count(weight_of, top_n)}
 
     edges = [{"source": a, "target": b, "weight": int(w)}
              for (a, b), w in flows.items()
@@ -334,9 +344,11 @@ def citation_network(corpus, unit: str = "sources", top_n: int = 40,
     nodes = [{"id": k, "label": k, "occurrences": int(weight_of[k]),
               "degree": int(sum(e["weight"] for e in edges
                                 if e["source"] == k or e["target"] == k))}
-             for k in sorted(linked, key=lambda x: -weight_of[x])]
+             for k in sorted(linked, key=lambda x: (-weight_of[x], str(x)))]
 
-    return {"nodes": nodes, "edges": sorted(edges, key=lambda e: -e["weight"]),
+    return {"nodes": nodes,
+            "edges": sorted(edges, key=lambda e: (-e["weight"], str(e["source"]),
+                                                  str(e["target"]))),
             "n_nodes": len(nodes), "n_edges": len(edges)}
 
 
@@ -350,15 +362,15 @@ def _unit_members(corpus, unit: str, level: str = "parent") -> dict:
 
     if unit == "authors":
         frame = corpus.authors[["eid", "name"]].dropna()
-        frame = frame[frame["name"].astype(str).str.strip() != ""]
+        frame = frame[frame["name"].map(str).str.strip() != ""]
         column = "name"
     elif unit == "sources":
         frame = corpus.documents[["eid", "source"]].dropna()
-        frame = frame[frame["source"].astype(str).str.strip() != ""]
+        frame = frame[frame["source"].map(str).str.strip() != ""]
         column = "source"
     elif unit == "countries":
         frame = corpus.affiliations[["eid", "country"]].dropna()
-        frame = frame[frame["country"].astype(str).str.strip() != ""]
+        frame = frame[frame["country"].map(str).str.strip() != ""]
         column = "country"
     elif unit == "institutions":
         from .production import _org_frame

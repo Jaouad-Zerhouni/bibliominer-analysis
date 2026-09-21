@@ -93,9 +93,15 @@ class Corpus:
         y = self.year_range()
         span = "%s-%s" % y if y else "?"
         return "<Corpus %d documents, %s, %d auteurs, %d institutions>" % (
-            len(self.documents), span, self.n_authors(),
-            self.affiliations["parent1"].nunique(dropna=True),
+            len(self.documents), span, self.n_authors(), self.n_institutions(),
         )
+
+    def n_institutions(self) -> int:
+        """Organismes mères distincts — parent 1 ET parent 2 : un double
+        rattachement nomme deux institutions."""
+        from ..metrics.production import institution_rows
+        rows = institution_rows(self.affiliations)
+        return int(rows["institution"].nunique()) if not rows.empty else 0
 
     def n_authors(self) -> int:
         """Auteurs distincts — MÊME clé que `top_authors` : l'identifiant
@@ -105,7 +111,7 @@ class Corpus:
         a = self.authors
         if a.empty:
             return 0
-        key = a["scopus_id"].fillna("name:" + a["name"].astype(str))
+        key = a["scopus_id"].fillna("name:" + a["name"].map(str))
         return int(key.nunique())
 
     def year_range(self):
@@ -126,7 +132,7 @@ class Corpus:
             # travail qu'a représenté la standardisation, à distinguer du
             # nombre d'institutions une fois celles-ci regroupées.
             "affiliations": int(self.affiliations["raw"].nunique(dropna=True)),
-            "institutions": int(self.affiliations["parent1"].nunique(dropna=True)),
+            "institutions": self.n_institutions(),
             "countries": int(self.affiliations["country"].nunique(dropna=True)),
             "sources": int(self.documents["source"].nunique(dropna=True)),
             "keywords": int(self.keywords.loc[

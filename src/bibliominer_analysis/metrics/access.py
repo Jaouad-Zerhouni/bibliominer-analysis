@@ -185,7 +185,7 @@ def access_over_time(corpus) -> pd.DataFrame:
     out["open_access"] = out["open_access"].astype(int)
     out["share"] = (100.0 * out["open_access"] / out["documents"]).round(1)
     out["year"] = out["year"].astype(int)
-    return out.sort_values("year").reset_index(drop=True)[cols]
+    return out.sort_values("year", kind="stable").reset_index(drop=True)[cols]
 
 
 def access_summary(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
@@ -221,11 +221,11 @@ def access_summary(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
     flag = enriched["open_access"].map(lambda v: bool(v) if v == v and v is not None else False)
     journal_open = set(enriched.loc[flag, "source"])
     src = corpus.documents[["eid", "source"]].copy()
-    src["source"] = src["source"].astype(str).str.strip()
-    in_open_journal = set(src.loc[src["source"].isin(journal_open), "eid"].astype(str))
+    src["source"] = src["source"].map(str).str.strip()
+    in_open_journal = set(src.loc[src["source"].isin(journal_open), "eid"].map(str))
 
     base["journal_open_documents"] = len(in_open_journal)
     base["disagreement"] = int(sum(
-        1 for eid, is_open in zip(d["eid"].astype(str), d["is_open"])
+        1 for eid, is_open in zip(d["eid"].map(str), d["is_open"])
         if bool(is_open) and eid not in in_open_journal))
     return base

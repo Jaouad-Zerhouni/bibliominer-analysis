@@ -210,6 +210,91 @@ def parse_affiliations(cell: Any) -> List[Dict[str, Optional[str]]]:
     return [parse_affiliation(s) for s in split_list(cell)]
 
 
+#: Ordre d'écriture des libellés dans une affiliation Bibliominer. Un libellé
+#: qui revient, ou qui remonte dans cet ordre, ouvre l'affiliation suivante.
+_AFF_ORDER = {key: rank for rank, key in enumerate(S.AFF_COLUMNS)}
+
+
+def _aff_key(rec: Dict[str, Optional[str]]) -> tuple:
+    return tuple((rec.get(c) or "").strip().lower() for c in S.AFF_COLUMNS)
+
+
+def _labelled_blocks(parts: List[str]) -> "tuple[str, List[str]]":
+    """Segments d'un bloc AWA étiqueté -> (nom, [texte de chaque affiliation])."""
+    name_parts: List[str] = []
+    affs: List[List[str]] = []
+    seen: Dict[str, int] = {}
+    last_rank = -1
+    for part in parts:
+        label = part.partition(":")[0].strip().lower() if ":" in part else ""
+        key = S.AFF_LABELS.get(label)
+        if key is None:
+            if affs:
+                affs[-1].append(part)      # une valeur contenant une virgule
+            else:
+                name_parts.append(part)
+            continue
+        rank = _AFF_ORDER[key]
+        if not affs or key in seen or rank <= last_rank:
+            affs.append([])
+            seen = {}
+        affs[-1].append(part)
+        seen[key] = rank
+        last_rank = rank
+    return ", ".join(name_parts), [", ".join(a) for a in affs]
+
+
+def author_affiliation_positions(block: str,
+                                 doc_affs: List[Dict[str, Optional[str]]]
+                                 ) -> List["tuple[Optional[int], str]"]:
+    """Les affiliations d'UN auteur, lues dans son bloc « Authors with
+    affiliations » : [(position dans la colonne Affiliations, texte)].
+
+    Un auteur peut en avoir plusieurs, écrites à la suite dans le même bloc :
+        ``Hosni M., subparent: ENSIAS, …, country: Morocco, subparent: ENSAM, …``
+    Chacune est rapprochée de l'affiliation IDENTIQUE du document. Apparier
+    au rang (auteur 3 -> affiliation 3) donnait à un auteur l'affiliation de
+    son voisin dès qu'un auteur précédent en avait deux, ou que deux auteurs
+    partageaient la même.
+
+    Export Scopus brut (non étiqueté) : on retient les affiliations du
+    document dont le texte figure dans le bloc. Rien de reconnu : une seule
+    entrée, sans position, qui garde le texte.
+    """
+    _, text = strip_index(block)
+    parts = [p.strip() for p in text.split(",") if p.strip()]
+    if not parts:
+        return []
+
+    labelled = any(S.AFF_LABELS.get(p.partition(":")[0].strip().lower())
+                   for p in parts if ":" in p)
+    found = (_labelled_positions(parts, doc_affs) if labelled
+             else _raw_positions(parts, doc_affs))
+    return found or [(None, ", ".join(parts[1:]) or text)]
+
+
+def _labelled_positions(parts: List[str], doc_affs) -> list:
+    _, aff_texts = _labelled_blocks(parts)
+    keys = [_aff_key(a) for a in doc_affs]
+    out = []
+    for aff_text in aff_texts:
+        key = _aff_key(parse_affiliation(aff_text))
+        out.append((keys.index(key) + 1 if key in keys else None, aff_text))
+    return out
+
+
+def _raw_positions(parts: List[str], doc_affs) -> list:
+    tail = ", ".join(parts[1:]).lower()
+    found = []
+    for pos, aff in enumerate(doc_affs, start=1):
+        raw = (aff.get("raw") or "").strip().lower()
+        at = tail.find(raw) if raw else -1
+        if at >= 0:
+            found.append((at, pos, aff.get("raw")))
+    found.sort()
+    return [(pos, raw) for _, pos, raw in found]
+
+
 # ---------------------------------------------------------------------------
 # Références réconciliées
 # ---------------------------------------------------------------------------

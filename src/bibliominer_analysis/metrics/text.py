@@ -21,6 +21,8 @@ Deux précautions qui décident de la qualité du résultat :
 
 from __future__ import annotations
 
+from .._stable import top_by_count
+
 import re
 import unicodedata
 from collections import Counter
@@ -178,7 +180,7 @@ def top_terms(corpus, field: str = "abstract", ngram: int = 1,
         return empty
 
     out = pd.DataFrame(rows).sort_values(
-        ["documents", "term"], ascending=[False, True]).reset_index(drop=True)
+        ["documents", "term"], ascending=[False, True], kind="stable").reset_index(drop=True)
     return out.head(n) if n else out
 
 
@@ -203,7 +205,7 @@ def text_co_occurrence(corpus, field: str = "abstract", ngram: int = 2,
     if not counts:
         return {"nodes": [], "edges": [], "n_nodes": 0, "n_edges": 0}
 
-    keep = {t for t, _ in counts.most_common(top_n)}
+    keep = {t for t, _ in top_by_count(counts, top_n)}
     pairs: Counter = Counter()
     for terms in per_doc.values():
         present = sorted(terms & keep)
@@ -237,7 +239,7 @@ def text_trend(corpus, field: str = "abstract", ngram: int = 2,
 
     years = corpus.documents[["eid", "year"]].copy()
     years["year"] = pd.to_numeric(years["year"], errors="coerce")
-    year_of = dict(zip(years["eid"].astype(str), years["year"]))
+    year_of = dict(zip(years["eid"].map(str), years["year"]))
 
     rows = []
     for eid, terms in per_doc.items():
@@ -262,5 +264,5 @@ def text_trend(corpus, field: str = "abstract", ngram: int = 2,
 
     for c in ("year_q1", "year_median", "year_q3"):
         g[c] = g[c].round().astype("Int64")
-    return (g.sort_values(["year_median", "documents"], ascending=[True, False])
+    return (g.sort_values(["year_median", "documents"], ascending=[True, False], kind="stable")
              .reset_index(drop=True).head(n))

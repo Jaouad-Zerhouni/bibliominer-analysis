@@ -110,14 +110,10 @@ def _eigenvector(A, iters: int = 2000, tol: float = 1e-12):
 
 
 def _to_networkx(graph: Dict[str, Any]):
-    import networkx as nx
+    from .._stable import ordered_graph
 
-    G = nx.Graph()
-    for n in graph.get("nodes", []):
-        G.add_node(n["id"], **{k: v for k, v in n.items() if k != "id"})
-    for e in graph.get("edges", []):
-        G.add_edge(e["source"], e["target"], weight=float(e.get("weight", 1)))
-    return G
+    # Ordre d'insertion fixe : Louvain, même avec sa graine, en dépend.
+    return ordered_graph(graph.get("nodes", []), graph.get("edges", []))
 
 
 def normalize(graph: Dict[str, Any], method: str = "association") -> Dict[str, Any]:
@@ -218,7 +214,8 @@ def annotate(graph: Dict[str, Any], communities: bool = True,
             groups = nx.community.greedy_modularity_communities(G, weight="weight")
         # Les groupes sont numérotés du plus grand au plus petit : le numéro
         # devient lisible au lieu d'être arbitraire.
-        for i, members in enumerate(sorted(groups, key=len, reverse=True), start=1):
+        from .._stable import ordered_communities
+        for i, members in enumerate(ordered_communities(groups), start=1):
             for m in members:
                 membership[m] = i
 
@@ -330,14 +327,14 @@ def overlay_years(corpus, unit: str, level: str = "parent") -> Dict[str, float]:
 
     if unit == "keywords":
         t = corpus.keywords[corpus.keywords["keyword"].notna()].copy()
-        t["id"] = t["keyword"].astype(str).str.strip().str.lower()
+        t["id"] = t["keyword"].map(str).str.strip().str.lower()
     elif unit == "authors":
         t = corpus.authors
-        t = t[t["name"].notna() & (t["name"].astype(str).str.strip() != "")].copy()
-        t["id"] = t["scopus_id"].fillna("name:" + t["name"].astype(str))
+        t = t[t["name"].notna() & (t["name"].map(str).str.strip() != "")].copy()
+        t["id"] = t["scopus_id"].fillna("name:" + t["name"].map(str))
     elif unit == "countries":
         t = corpus.affiliations
-        t = t[t["country"].notna() & (t["country"].astype(str).str.strip() != "")].copy()
+        t = t[t["country"].notna() & (t["country"].map(str).str.strip() != "")].copy()
         t["id"] = t["country"]
     elif unit == "institutions":
         from ..metrics.production import _org_frame

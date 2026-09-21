@@ -15,6 +15,8 @@ calculer.
 
 from __future__ import annotations
 
+from .._stable import top_by_count
+
 from collections import Counter
 from typing import Dict, List, Optional, Set
 
@@ -28,7 +30,7 @@ def _values_by_doc(corpus, field: str) -> Dict[str, Set[str]]:
     """{eid -> valeurs} pour la dimension demandée."""
     if field == "authors":
         a = corpus.authors
-        a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+        a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
         src = a[["eid", "name"]].rename(columns={"name": "v"})
     elif field == "keywords":
         k = corpus.keywords
@@ -36,11 +38,11 @@ def _values_by_doc(corpus, field: str) -> Dict[str, Set[str]]:
         src = k[["eid", "keyword"]].rename(columns={"keyword": "v"})
     elif field == "sources":
         d = corpus.documents
-        d = d[d["source"].notna() & (d["source"].astype(str).str.strip() != "")]
+        d = d[d["source"].notna() & (d["source"].map(str).str.strip() != "")]
         src = d[["eid", "source"]].rename(columns={"source": "v"})
     elif field == "countries":
         f = corpus.affiliations
-        f = f[f["country"].notna() & (f["country"].astype(str).str.strip() != "")]
+        f = f[f["country"].notna() & (f["country"].map(str).str.strip() != "")]
         src = f[["eid", "country"]].rename(columns={"country": "v"})
     elif field == "institutions":
         from .production import _org_frame
@@ -62,7 +64,7 @@ def _top_values(by_doc: Dict[str, Set[str]], n: int) -> Set[str]:
     counts: Counter = Counter()
     for vals in by_doc.values():
         counts.update(vals)
-    return {v for v, _ in counts.most_common(n)}
+    return {v for v, _ in top_by_count(counts, n)}
 
 
 def _links(left: Dict[str, Set[str]], right: Dict[str, Set[str]],
@@ -126,5 +128,6 @@ def three_fields(corpus, left: str = "authors", middle: str = "keywords",
         return empty
 
     return (pd.DataFrame(links)
-              .sort_values(["depth", "value"], ascending=[True, False])
+              .sort_values(["depth", "value", "source", "target"],
+                           ascending=[True, False, True, True], kind="stable")
               .reset_index(drop=True))

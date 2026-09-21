@@ -60,7 +60,7 @@ def trend_topics(corpus, n: int = 25, min_documents: int = 2,
         return empty
 
     k = k.copy()
-    k["norm"] = k["keyword"].astype(str).str.strip().str.lower()
+    k["norm"] = k["keyword"].map(str).str.strip().str.lower()
     k = k.drop_duplicates(subset=["eid", "norm"])
 
     g = (k.groupby("norm")
@@ -75,7 +75,7 @@ def trend_topics(corpus, n: int = 25, min_documents: int = 2,
     for c in ("year_q1", "year_median", "year_q3"):
         g[c] = g[c].round().astype("Int64")
 
-    return (g.sort_values(["year_median", "documents"], ascending=[True, False])
+    return (g.sort_values(["year_median", "documents"], ascending=[True, False], kind="stable")
              .reset_index(drop=True)
              .head(n))
 
@@ -104,6 +104,7 @@ def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
     """
     from ..networks import build as nets
     from ..networks.analysis import normalize
+    from .._stable import ordered_communities, ordered_graph
 
     graph = normalize(nets.co_word(corpus, top_n=top_n, min_weight=min_weight,
                                    kind=kind), "equivalence")
@@ -115,14 +116,12 @@ def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
 
     import networkx as nx
 
-    G = nx.Graph()
-    for node in graph["nodes"]:
-        G.add_node(node["id"], label=node["label"],
-                   occurrences=node["occurrences"])
-    for e in graph["edges"]:
-        G.add_edge(e["source"], e["target"], weight=e["weight"])
-
-    communities = list(nx.community.greedy_modularity_communities(G, weight="weight"))
+    # Ordre FIXE de construction et de numérotation : sans lui, la
+    # modularité gloutonne départageait ses ex æquo selon le hachage des
+    # chaînes, différent à chaque exécution (voir `_stable`).
+    G = ordered_graph(graph["nodes"], graph["edges"])
+    communities = ordered_communities(
+        nx.community.greedy_modularity_communities(G, weight="weight"))
 
     rows = []
     for i, members in enumerate(communities, start=1):
@@ -140,7 +139,9 @@ def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
                 external += w
 
         occ = {n: G.nodes[n]["occurrences"] for n in members}
-        ordered = sorted(members, key=lambda n: -occ[n])
+        # À fréquence égale, l'ordre alphabétique : c'est lui qui choisit le
+        # NOM du groupe quand deux termes sont ex æquo.
+        ordered = sorted(members, key=lambda n: (-occ[n], str(G.nodes[n]["label"]).lower(), str(n)))
         labels = [G.nodes[n]["label"] for n in ordered]
 
         rows.append({
@@ -173,6 +174,6 @@ def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
         return "emerging_declining"
 
     df["quadrant"] = df.apply(quadrant, axis=1)
-    df = df.sort_values("occurrences", ascending=False).reset_index(drop=True)
+    df = df.sort_values("occurrences", ascending=False, kind="stable").reset_index(drop=True)
     return {"clusters": df, "medians": {"centrality": round(med_c, 2),
                                         "density": round(med_d, 2)}}

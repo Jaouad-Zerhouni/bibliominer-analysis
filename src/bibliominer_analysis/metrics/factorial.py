@@ -41,16 +41,16 @@ def _incidence(corpus, kind: str = "author", top_n: int = 50,
     k = corpus.keywords
     if kind in ("author", "index"):
         k = k[k["kind"] == kind]
-    k = k[k["keyword"].notna() & (k["keyword"].astype(str).str.strip() != "")]
+    k = k[k["keyword"].notna() & (k["keyword"].map(str).str.strip() != "")]
     if k.empty:
         return None, None, None
 
     k = k.copy()
-    k["norm"] = k["keyword"].astype(str).str.strip().str.lower()
+    k["norm"] = k["keyword"].map(str).str.strip().str.lower()
     k = k.drop_duplicates(subset=["eid", "norm"])
 
     counts = k.groupby("norm")["eid"].nunique()
-    counts = counts[counts >= min_documents].sort_values(ascending=False).head(top_n)
+    counts = counts[counts >= min_documents].sort_values(ascending=False, kind="stable").head(top_n)
     if counts.empty:
         return None, None, None
 
@@ -254,7 +254,7 @@ def conceptual_structure(corpus, method: str = "CA", kind: str = "author",
         "dim2": np.round(coords[:, 1], 4),
         "occurrences": [int(counts.get(t, 0)) for t in terms],
         "cluster": assign.astype(int) + 1,
-    }).sort_values(["cluster", "occurrences"], ascending=[True, False])
+    }).sort_values(["cluster", "occurrences"], ascending=[True, False], kind="stable")
 
     groups = []
     for cid, g in df.groupby("cluster"):

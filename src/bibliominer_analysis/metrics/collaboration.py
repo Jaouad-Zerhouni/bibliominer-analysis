@@ -47,7 +47,7 @@ import pandas as pd
 def _authors_per_doc(corpus) -> pd.Series:
     """Nombre d'auteurs DISTINCTS par document."""
     a = corpus.authors
-    a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+    a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     if a.empty:
         return pd.Series(dtype=int)
     return a.drop_duplicates(subset=["eid", "name"]).groupby("eid").size()
@@ -183,14 +183,14 @@ def price_law(corpus) -> Dict[str, Any]:
     l'indicateur, pas le fait qu'il « tombe juste ».
     """
     a = corpus.authors
-    a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+    a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     if a.empty:
         return {"authors": 0, "expected_core": 0, "observed_share": None,
                 "half_reached_with": None}
 
-    key = a["scopus_id"].fillna("name:" + a["name"].astype(str))
+    key = a["scopus_id"].fillna("name:" + a["name"].map(str))
     per_author = (a.assign(key=key).drop_duplicates(subset=["key", "eid"])
-                   .groupby("key").size().sort_values(ascending=False))
+                   .groupby("key").size().sort_values(ascending=False, kind="stable"))
 
     n_authors = int(len(per_author))
     total = int(per_author.sum())
@@ -232,7 +232,7 @@ def authorship_groups(corpus) -> pd.DataFrame:
             "citations_per_document"]
 
     a = corpus.authors
-    a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+    a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     docs = corpus.documents[["eid"]].copy()
     docs["citations"] = pd.to_numeric(corpus.documents["cited_by"],
                                       errors="coerce").fillna(0).astype(int)

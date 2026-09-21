@@ -53,7 +53,7 @@ def main_information(corpus) -> Dict[str, Any]:
 
     # --- auteurs -----------------------------------------------------------
     a = corpus.authors
-    a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+    a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     per_doc = a.drop_duplicates(subset=["eid", "name"]).groupby("eid").size()
     single = int((per_doc == 1).sum())
     authors_per_doc = round(float(per_doc.mean()), 2) if not per_doc.empty else 0.0
@@ -66,7 +66,7 @@ def main_information(corpus) -> Dict[str, Any]:
 
     # --- collaboration internationale --------------------------------------
     aff = corpus.affiliations
-    aff = aff[aff["country"].notna() & (aff["country"].astype(str).str.strip() != "")]
+    aff = aff[aff["country"].notna() & (aff["country"].map(str).str.strip() != "")]
     countries_per_doc = aff.groupby("eid")["country"].nunique()
     intl = int((countries_per_doc > 1).sum())
     docs_with_country = int(len(countries_per_doc))
@@ -75,9 +75,9 @@ def main_information(corpus) -> Dict[str, Any]:
     # --- mots-clés et références -------------------------------------------
     kw = corpus.keywords
     n_kw_author = int(kw.loc[kw["kind"] == "author", "keyword"]
-                        .astype(str).str.lower().nunique())
+                        .map(str).str.lower().nunique())
     n_kw_index = int(kw.loc[kw["kind"] == "index", "keyword"]
-                       .astype(str).str.lower().nunique())
+                       .map(str).str.lower().nunique())
 
     refs = corpus.references
     refs_per_doc = (round(float(refs.groupby("eid").size().mean()), 1)
@@ -133,7 +133,7 @@ def most_cited_documents(corpus, n: int = 20) -> pd.DataFrame:
 
     cols = ["title", "first_author", "year", "source", "doc_type",
             "citations", "citations_per_year", "doi"]
-    return (d.sort_values("citations", ascending=False)
+    return (d.sort_values("citations", ascending=False, kind="stable")
              .head(n)[cols].reset_index(drop=True))
 
 
@@ -154,9 +154,9 @@ def most_cited_references(corpus, n: int = 20) -> pd.DataFrame:
     # Identité : DOI si présent, sinon titre normalisé — même règle que le
     # réseau de co-citation, pour que les deux vues concordent.
     key = r["ref_doi"].fillna("")
-    key = key.where(key.astype(str).str.strip() != "",
-                    "t:" + r["ref_title"].fillna("").astype(str).str.lower().str.strip())
-    r["key"] = key.astype(str).str.lower().str.strip()
+    key = key.where(key.map(str).str.strip() != "",
+                    "t:" + r["ref_title"].fillna("").map(str).str.lower().str.strip())
+    r["key"] = key.map(str).str.lower().str.strip()
     r = r[r["key"] != ""]
     if r.empty:
         return empty
@@ -169,6 +169,6 @@ def most_cited_references(corpus, n: int = 20) -> pd.DataFrame:
                 ref_doi=("ref_doi", "first"),
                 local_citations=("eid", "nunique"))
            .reset_index(drop=True)
-           .sort_values("local_citations", ascending=False)
+           .sort_values("local_citations", ascending=False, kind="stable")
            .reset_index(drop=True))
     return g.head(n)

@@ -21,6 +21,8 @@ directement affichable — le package ne dessine pas, il fournit la structure.
 
 from __future__ import annotations
 
+from .._stable import top_by_count
+
 import re
 from collections import Counter
 from itertools import combinations
@@ -62,9 +64,14 @@ def _to_graph(counts: Counter, pairs: Counter,
               "occurrences": int(counts[k]),
               "degree": int(degree[k])}
              for k in counts if k in linked]
-    nodes.sort(key=lambda n: -n["occurrences"])
+    # Ordre COMPLET, ex æquo départagés par l'identifiant : `counts` est
+    # souvent rempli depuis un ensemble, dont Python change l'ordre à chaque
+    # exécution. L'ordre des nœuds décide de l'ordre de dessin et de ceux qui
+    # reçoivent une étiquette — la figure changeait d'un lancement à l'autre.
+    nodes.sort(key=lambda n: (-n["occurrences"], str(n["id"])))
+    edges.sort(key=lambda e: (-e["weight"], str(e["source"]), str(e["target"])))
 
-    return {"nodes": nodes, "edges": sorted(edges, key=lambda e: -e["weight"]),
+    return {"nodes": nodes, "edges": edges,
             "n_nodes": len(nodes), "n_edges": len(edges)}
 
 
@@ -108,13 +115,18 @@ def co_citation(corpus, top_n: int = 50, min_weight: int = 2) -> Dict[str, Any]:
         return {"nodes": [], "edges": [], "n_nodes": 0, "n_edges": 0}
 
     counts = Counter(r.drop_duplicates(subset=["eid", "key"])["key"])
-    keep = {k for k, _ in counts.most_common(top_n)}
+    keep = {k for k, _ in top_by_count(counts, top_n)}
 
+    # Une même référence est écrite différemment d'un article citant à
+    # l'autre (« Minku L.L. » ici, « Mahmood Y. » là). L'étiquette prend
+    # l'écriture la PLUS FRÉQUENTE — à égalité, la première dans l'ordre
+    # alphabétique (`mode` trie) — jamais la première rencontrée, qui
+    # dépendait de l'ordre des lignes de l'export.
     labels: Dict[str, str] = {}
     for key, g in r[r["key"].isin(keep)].groupby("key"):
-        title = g["ref_title"].dropna()
-        year = g["ref_year"].dropna()
-        authors = g["ref_authors"].dropna()
+        title = g["ref_title"].dropna().mode()
+        year = g["ref_year"].dropna().mode()
+        authors = g["ref_authors"].dropna().mode()
         name = title.iat[0] if not title.empty else key
         first = authors.iat[0].split(",")[0].strip() if not authors.empty else ""
         y = int(year.iat[0]) if not year.empty else None
@@ -141,11 +153,11 @@ def co_word(corpus, top_n: int = 50, min_weight: int = 2,
         return {"nodes": [], "edges": [], "n_nodes": 0, "n_edges": 0}
 
     k = k.copy()
-    k["norm"] = k["keyword"].astype(str).str.strip().str.lower()
+    k["norm"] = k["keyword"].map(str).str.strip().str.lower()
     k = k.drop_duplicates(subset=["eid", "norm"])
 
     counts = Counter(k["norm"])
-    keep = {w for w, _ in counts.most_common(top_n)}
+    keep = {w for w, _ in top_by_count(counts, top_n)}
     labels = (k[k["norm"].isin(keep)]
               .groupby("norm")["keyword"]
               .agg(lambda s: s.mode().iat[0]).to_dict())
@@ -166,16 +178,16 @@ def co_authorship(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any
     collaboration réelle, contrairement à une co-citation isolée.
     """
     a = corpus.authors
-    a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+    a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     if a.empty:
         return {"nodes": [], "edges": [], "n_nodes": 0, "n_edges": 0}
 
     a = a.copy()
-    a["key"] = a["scopus_id"].fillna("name:" + a["name"].astype(str))
+    a["key"] = a["scopus_id"].fillna("name:" + a["name"].map(str))
     a = a.drop_duplicates(subset=["eid", "key"])
 
     counts = Counter(a["key"])
-    keep = {k for k, _ in counts.most_common(top_n)}
+    keep = {k for k, _ in top_by_count(counts, top_n)}
     labels = (a[a["key"].isin(keep)]
               .groupby("key")["name"]
               .agg(lambda s: s.mode().iat[0]).to_dict())
@@ -205,7 +217,7 @@ def co_institution(corpus, top_n: int = 50, min_weight: int = 1,
 
     aff = aff.drop_duplicates(subset=["eid", "org"])
     counts = Counter(aff["org"])
-    keep = {k for k, _ in counts.most_common(top_n)}
+    keep = {k for k, _ in top_by_count(counts, top_n)}
     labels = {k: k for k in keep}
 
     groups = aff[aff["org"].isin(keep)].groupby("eid")["org"].apply(list).to_dict()
@@ -219,13 +231,13 @@ def co_country(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any]:
     C'est le réseau qui montre l'insertion internationale du corpus.
     """
     aff = corpus.affiliations
-    aff = aff[aff["country"].notna() & (aff["country"].astype(str).str.strip() != "")]
+    aff = aff[aff["country"].notna() & (aff["country"].map(str).str.strip() != "")]
     if aff.empty:
         return {"nodes": [], "edges": [], "n_nodes": 0, "n_edges": 0}
 
     aff = aff.drop_duplicates(subset=["eid", "country"])
     counts = Counter(aff["country"])
-    keep = {k for k, _ in counts.most_common(top_n)}
+    keep = {k for k, _ in top_by_count(counts, top_n)}
     labels = {k: k for k in keep}
 
     groups = aff[aff["country"].isin(keep)].groupby("eid")["country"].apply(list).to_dict()
@@ -259,7 +271,7 @@ def bibliographic_coupling(corpus, top_n: int = 50,
     # sont eux qui peuvent réellement se coupler. Un document à deux
     # références n'apporte que du bruit.
     per_doc = r.groupby("eid")["key"].apply(set)
-    keep = set(per_doc.map(len).sort_values(ascending=False).head(top_n).index)
+    keep = set(per_doc.map(len).sort_values(ascending=False, kind="stable").head(top_n).index)
 
     pairs: Counter = Counter()
     docs = sorted(keep)
@@ -319,7 +331,7 @@ def co_citation_authors(corpus, top_n: int = 50,
 
     r = r.drop_duplicates(subset=["eid", "key"])
     counts = Counter(r["key"])
-    keep = {k for k, _ in counts.most_common(top_n)}
+    keep = {k for k, _ in top_by_count(counts, top_n)}
 
     # Libellé : la graphie la plus fréquente parmi celles rencontrées.
     labels: Dict[str, str] = {}
@@ -345,7 +357,7 @@ def country_map(corpus) -> pd.DataFrame:
     mca/total est l'indicateur d'ouverture internationale usuel.
     """
     aff = corpus.affiliations
-    aff = aff[aff["country"].notna() & (aff["country"].astype(str).str.strip() != "")]
+    aff = aff[aff["country"].notna() & (aff["country"].map(str).str.strip() != "")]
     empty = pd.DataFrame(columns=["country", "documents", "citations",
                                   "sca", "mca", "mca_ratio"])
     if aff.empty:
@@ -369,7 +381,7 @@ def country_map(corpus) -> pd.DataFrame:
     g["mca"] = g["mca"].astype(int)
     g["sca"] = g["documents"] - g["mca"]
     g["mca_ratio"] = (100 * g["mca"] / g["documents"]).round(1)
-    return g.sort_values("documents", ascending=False).reset_index(drop=True)
+    return g.sort_values("documents", ascending=False, kind="stable").reset_index(drop=True)
 
 
 def co_city(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any]:
@@ -390,7 +402,7 @@ def co_city(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any]:
         return {"nodes": [], "edges": [], "n_nodes": 0, "n_edges": 0}
 
     a = aff[["eid", "city", "country"]].copy()
-    a["city"] = a["city"].astype(str).str.strip()
+    a["city"] = a["city"].map(str).str.strip()
     a = a[(a["city"] != "") & (~a["city"].str.lower().isin({"nan", "none"}))]
     if a.empty:
         return {"nodes": [], "edges": [], "n_nodes": 0, "n_edges": 0}
@@ -401,7 +413,7 @@ def co_city(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any]:
                    .agg(lambda s: s.mode().iat[0]).to_dict())
 
     counts = Counter(a["city"])
-    keep = {c for c, _ in counts.most_common(top_n)}
+    keep = {c for c, _ in top_by_count(counts, top_n)}
     labels = {c: c for c in keep}
 
     groups = a[a["city"].isin(keep)].groupby("eid")["city"].apply(list).to_dict()

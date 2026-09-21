@@ -95,8 +95,8 @@ def reference_spectroscopy(corpus, year_min: Optional[int] = None,
 def _top_reference_per_year(refs: pd.DataFrame) -> dict:
     """Référence la plus fréquemment citée, année par année."""
     r = refs.copy()
-    key = r["ref_doi"].astype(str).str.strip().str.lower()
-    fallback = r["ref_title"].astype(str).str.strip().str.lower()
+    key = r["ref_doi"].map(str).str.strip().str.lower()
+    fallback = r["ref_title"].map(str).str.strip().str.lower()
     r["key"] = np.where(key.isin(["", "nan", "none"]), fallback, key)
     r = r[r["key"].notna() & (r["key"] != "") & (r["key"] != "nan")]
     if r.empty:
@@ -117,7 +117,7 @@ def _top_reference_per_year(refs: pd.DataFrame) -> dict:
     }).reset_index()
     counts["label"] = counts["label"].astype(object).where(counts["label"].notna(), None)
     counts["authors"] = counts["authors"].astype(object).where(counts["authors"].notna(), None)
-    counts = counts.sort_values(["ref_year", "n"], ascending=[True, False])
+    counts = counts.sort_values(["ref_year", "n"], ascending=[True, False], kind="stable")
     best = counts.drop_duplicates("ref_year")
 
     out = {}

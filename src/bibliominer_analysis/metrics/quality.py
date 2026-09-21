@@ -41,7 +41,7 @@ def is_filled(series: pd.Series) -> pd.Series:
     """
     if series is None or len(series) == 0:
         return pd.Series([], dtype=bool)
-    text = series.astype(str).str.strip().str.lower()
+    text = series.map(str).str.strip().str.lower()
     return ~text.isin(_MISSING)
 
 
@@ -158,7 +158,7 @@ def duplicates(corpus) -> pd.DataFrame:
     rows = []
     if "doi" in docs.columns:
         d = docs[is_filled(docs["doi"])].copy()
-        d["key"] = d["doi"].astype(str).str.strip().str.lower()
+        d["key"] = d["doi"].map(str).str.strip().str.lower()
         for key, g in d.groupby("key"):
             if len(g) > 1:
                 rows.append({"kind": "DOI", "key": key, "documents": len(g),
@@ -177,7 +177,7 @@ def duplicates(corpus) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame(columns=cols)
     return pd.DataFrame(rows, columns=cols).sort_values(
-        "documents", ascending=False).reset_index(drop=True)
+        "documents", ascending=False, kind="stable").reset_index(drop=True)
 
 
 def anomalies(corpus) -> pd.DataFrame:

@@ -41,19 +41,18 @@ def _period_clusters(sub, top_n: int, min_weight: int,
 
     import networkx as nx
 
-    G = nx.Graph()
-    for node in graph["nodes"]:
-        G.add_node(node["id"], label=node["label"], occurrences=node["occurrences"])
-    for e in graph["edges"]:
-        G.add_edge(e["source"], e["target"], weight=e["weight"])
+    from .._stable import ordered_communities, ordered_graph
+
+    G = ordered_graph(graph["nodes"], graph["edges"])
 
     out = []
-    for members in nx.community.greedy_modularity_communities(G, weight="weight"):
+    for members in ordered_communities(
+            nx.community.greedy_modularity_communities(G, weight="weight")):
         members = set(members)
         if len(members) < min_cluster_size:
             continue
         occ = {G.nodes[m]["label"]: int(G.nodes[m]["occurrences"]) for m in members}
-        ordered = sorted(occ, key=lambda w: -occ[w])
+        ordered = sorted(occ, key=lambda w: (-occ[w], w.lower(), w))
         out.append({
             "label": ordered[0],
             "terms": occ,                       # terme -> occurrences
@@ -62,7 +61,7 @@ def _period_clusters(sub, top_n: int, min_weight: int,
             "top_terms": ", ".join(ordered[:8]),
         })
     # Le plus gros groupe en premier : la lecture du Sankey suit ce poids.
-    return sorted(out, key=lambda c: -c["occurrences"])
+    return sorted(out, key=lambda c: (-c["occurrences"], c["label"]))
 
 
 def _slice_bounds(corpus, cuts: Optional[Sequence[int]],

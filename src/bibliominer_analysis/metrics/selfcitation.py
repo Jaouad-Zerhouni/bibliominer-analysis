@@ -32,10 +32,10 @@ def _members(corpus, level: str) -> Dict[str, set]:
 
     if level == "authors":
         a = corpus.authors
-        a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+        a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
         if a.empty:
             return out
-        key = a["scopus_id"].fillna("name:" + a["name"].astype(str))
+        key = a["scopus_id"].fillna("name:" + a["name"].map(str))
         frame = pd.DataFrame({"eid": a["eid"].to_numpy(), "key": key.to_numpy()})
     elif level == "institutions":
         from .production import _org_frame
@@ -47,7 +47,7 @@ def _members(corpus, level: str) -> Dict[str, set]:
     elif level == "countries":
         aff = corpus.affiliations
         aff = aff[aff["country"].notna()
-                  & (aff["country"].astype(str).str.strip() != "")]
+                  & (aff["country"].map(str).str.strip() != "")]
         if aff.empty:
             return out
         frame = pd.DataFrame({"eid": aff["eid"].to_numpy(),
@@ -123,7 +123,7 @@ def _received_citations(pairs: pd.DataFrame,
     """
     received: Dict[str, int] = {}
     self_hits: Dict[str, int] = {}
-    for citing, cited in zip(pairs["citing"].astype(str), pairs["cited"].astype(str)):
+    for citing, cited in zip(pairs["citing"].map(str), pairs["cited"].map(str)):
         citing_authors = authors_of.get(citing, set())
         for key in authors_of.get(cited, ()):
             received[key] = received.get(key, 0) + 1
@@ -153,14 +153,14 @@ def authors_self_citation(corpus, n: Optional[int] = 20,
             "external_citations", "self_rate"]
     pairs = citation_pairs(corpus)
     a = corpus.authors
-    a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+    a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     if pairs.empty or a.empty:
         return pd.DataFrame(columns=cols)
 
-    a = a.assign(key=a["scopus_id"].fillna("name:" + a["name"].astype(str)))
+    a = a.assign(key=a["scopus_id"].fillna("name:" + a["name"].map(str)))
     docs_of: Dict[str, set] = {}
     authors_of: Dict[str, set] = {}
-    for eid, key in zip(a["eid"].astype(str), a["key"]):
+    for eid, key in zip(a["eid"].map(str), a["key"]):
         docs_of.setdefault(key, set()).add(eid)
         authors_of.setdefault(eid, set()).add(key)
     name_of = a.groupby("key")["name"].agg(lambda s: s.mode().iat[0]).to_dict()
@@ -185,5 +185,5 @@ def authors_self_citation(corpus, n: Optional[int] = 20,
     if not rows:
         return pd.DataFrame(columns=cols)
     out = pd.DataFrame(rows, columns=cols).sort_values(
-        ["local_citations", "self_rate"], ascending=False).reset_index(drop=True)
+        ["local_citations", "self_rate"], ascending=False, kind="stable").reset_index(drop=True)
     return out.head(n) if n else out

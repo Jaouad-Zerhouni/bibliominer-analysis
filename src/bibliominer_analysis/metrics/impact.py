@@ -171,7 +171,7 @@ def authors_impact(corpus, n: Optional[int] = 20,
     œuvre.
     """
     a = corpus.authors
-    a = a[a["name"].notna() & (a["name"].astype(str).str.strip() != "")]
+    a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     empty = pd.DataFrame(columns=["author", "scopus_id", "documents", "citations",
                                   "h_index", "g_index", "first_author",
                                   "first_year", "last_year"])
@@ -184,7 +184,7 @@ def authors_impact(corpus, n: Optional[int] = 20,
     a = a.merge(docs, on="eid", how="left")
     a["citations"] = a["citations"].fillna(0).astype(int)
     a["rank"] = pd.to_numeric(a["position"], errors="coerce")
-    a["key"] = a["scopus_id"].fillna("name:" + a["name"].astype(str))
+    a["key"] = a["scopus_id"].fillna("name:" + a["name"].map(str))
 
     corpus_last = pd.to_numeric(corpus.documents["year"], errors="coerce").max()
 
@@ -219,7 +219,7 @@ def authors_impact(corpus, n: Optional[int] = 20,
         return empty
     out = out[out["documents"] >= min_documents]
     out = out.sort_values(["h_index", "citations", "documents"],
-                          ascending=False).reset_index(drop=True)
+                          ascending=False, kind="stable").reset_index(drop=True)
     return out.head(n) if n else out
 
 
@@ -270,7 +270,7 @@ def institutions_impact(corpus, n: Optional[int] = 20,
         })
 
     out = pd.DataFrame(rows).sort_values(
-        ["h_index", "citations", "documents"], ascending=False).reset_index(drop=True)
+        ["h_index", "citations", "documents"], ascending=False, kind="stable").reset_index(drop=True)
     return out.head(n) if n else out
 
 
