@@ -43,7 +43,9 @@ SLOW_SECONDS = 20.0
 #: Méthode -> arguments. TOUTES les méthodes publiques doivent y figurer.
 CALLS = {
     "access_over_time": {}, "access_routes": {}, "access_status": {},
-    "access_summary": {}, "agr": {}, "anomalies": {},
+    "access_summary": {}, "affiliation_profile": {}, "agr": {},
+    "anomalies": {}, "authors_by_affiliation_count": {},
+    "documents_by_affiliation_count": {},
     "authors_impact": {"n": 20}, "authors_over_time": {"n": 12},
     "authors_self_citation": {"n": 20}, "authorship_groups": {},
     "authorship_pattern": {}, "average_citations_per_year": {},

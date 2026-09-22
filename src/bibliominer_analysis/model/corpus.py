@@ -355,6 +355,24 @@ class Corpus:
         """Degré de collaboration, CI, CC, MCC, AAPP."""
         return collab.collaboration_indicators(self)
 
+    def affiliation_profile(self) -> Dict[str, Any]:
+        """Combien d'articles à une seule affiliation, à deux, à davantage ;
+        combien signés par un auteur seul ; combien d'auteurs à plusieurs
+        rattachements."""
+        from ..metrics import affiliation_profile as prof
+        return prof.affiliation_profile(self)
+
+    def documents_by_affiliation_count(self) -> pd.DataFrame:
+        """Répartition des documents par nombre d'affiliations distinctes."""
+        from ..metrics import affiliation_profile as prof
+        return prof.documents_by_affiliation_count(self)
+
+    def authors_by_affiliation_count(self, n: Optional[int] = 20) -> pd.DataFrame:
+        """Auteurs rattachés à plusieurs institutions, et ceux qui en portent
+        plusieurs sur un MÊME article (double rattachement déclaré)."""
+        from ..metrics import affiliation_profile as prof
+        return prof.authors_by_affiliation_count(self, n)
+
     def authorship_pattern(self) -> pd.DataFrame:
         """Répartition des documents par nombre de signataires."""
         return collab.authorship_pattern(self)

@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 from . import schema as S
 
 _INDEX_RE = re.compile(S.AUTHOR_INDEX_PATTERN)
+_AWA_MULTI_RE = re.compile(S.AWA_MULTI_AFFILIATION_PATTERN)
 #: « Idri, Ali (6602789810) » -> nom + identifiant Scopus
 _FULLNAME_RE = re.compile(r"^(.*?)\s*\((\d{5,})\)\s*$")
 
@@ -262,6 +263,9 @@ def author_affiliation_positions(block: str,
     entrée, sans position, qui garde le texte.
     """
     _, text = strip_index(block)
+    # « [2 affiliations] Hosni M., … » : la marque du cleaning dit à l'œil
+    # que cet auteur en porte plusieurs. Elle ne fait pas partie du nom.
+    text = _AWA_MULTI_RE.sub("", text)
     parts = [p.strip() for p in text.split(",") if p.strip()]
     if not parts:
         return []
@@ -284,15 +288,31 @@ def _labelled_positions(parts: List[str], doc_affs) -> list:
 
 
 def _raw_positions(parts: List[str], doc_affs) -> list:
+    """Export brut : on retient les affiliations du document dont le texte
+    figure dans le bloc de l'auteur.
+
+    Une affiliation COURTE peut être un morceau d'une longue — « ENSAM,
+    University Moulay Ismail of Meknes » est la fin de « IEST Research Team,
+    AIDTM Laboratory, ENSAM, University Moulay Ismail of Meknes ». La
+    retenir donnerait à l'auteur un rattachement qu'il n'a pas. On garde
+    donc les correspondances les plus longues d'abord, et l'on écarte celles
+    qui tombent À L'INTÉRIEUR d'une correspondance déjà retenue.
+    """
     tail = ", ".join(parts[1:]).lower()
-    found = []
+    spans = []
     for pos, aff in enumerate(doc_affs, start=1):
         raw = (aff.get("raw") or "").strip().lower()
         at = tail.find(raw) if raw else -1
         if at >= 0:
-            found.append((at, pos, aff.get("raw")))
-    found.sort()
-    return [(pos, raw) for _, pos, raw in found]
+            spans.append((at, at + len(raw), pos, aff.get("raw")))
+
+    kept = []
+    for start, end, pos, raw in sorted(spans, key=lambda s: -(s[1] - s[0])):
+        if any(k[0] <= start and end <= k[1] for k in kept):
+            continue
+        kept.append((start, end, pos, raw))
+    kept.sort()
+    return [(pos, raw) for _, _, pos, raw in kept]
 
 
 # ---------------------------------------------------------------------------

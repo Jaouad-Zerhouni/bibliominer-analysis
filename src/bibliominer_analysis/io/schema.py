@@ -57,6 +57,11 @@ REF_FIELDS = ("ref_pos", "ref_doi", "ref_year", "ref_authors", "ref_title")
 #: Préfixe d'indexation des auteurs posé par le cleaning : « 3:Abran A. ».
 AUTHOR_INDEX_PATTERN = r"^\s*(\d+)\s*:\s*"
 
+#: Marque posée par le cleaning devant un auteur à PLUSIEURS affiliations :
+#: « [2 affiliations] Hosni M., subparent: … ». C'est une aide de lecture
+#: humaine ; elle ne fait pas partie du nom.
+AWA_MULTI_AFFILIATION_PATTERN = r"^\s*\[(\d+)\s+affiliations\]\s*"
+
 # --- Affiliations étiquetées ------------------------------------------------
 #: Libellés écrits par le cleaning, dans l'ordre de sortie. Un champ vide est
 #: OMIS à l'export : on ne peut donc pas se fier à la position, seulement aux

@@ -109,3 +109,22 @@ def test_a_parent_2_equal_to_parent_1_counts_once():
     assert c.summary()["institutions"] == 1
     assert c.city_hierarchy().iloc[0]["institution_affiliations"] == \
         "University of Montpellier (1)"
+
+
+def test_a_short_affiliation_inside_a_longer_one_is_not_a_second_rattachement():
+    """Constaté sur un vrai article : « ENSAM, University Moulay Ismail of
+    Meknes » est la FIN de « IEST Research Team, AIDTM Laboratory, ENSAM,
+    University Moulay Ismail of Meknes ». Le premier auteur se voyait donner
+    trois affiliations au lieu de deux."""
+    long_aff = ("IEST Research Team, AIDTM Laboratory, ENSAM, "
+                "University Moulay Ismail of Meknes, Meknes, Morocco")
+    short_aff = "ENSAM, University Moulay Ismail of Meknes, Meknes, Morocco"
+    rabat = "MMCS Research Team, LMAID, ENSMR, Rabat, Morocco"
+    affs = P.parse_affiliations("; ".join([long_aff, rabat, short_aff]))
+
+    zerhouni = P.author_affiliation_positions(f"Zerhouni J., {long_aff}, {rabat}", affs)
+    assert [pos for pos, _ in zerhouni] == [1, 2]
+
+    # L'auteur qui porte VRAIMENT l'affiliation courte la garde.
+    bakkas = P.author_affiliation_positions(f"Bakkas M., {short_aff}", affs)
+    assert [pos for pos, _ in bakkas] == [3]
