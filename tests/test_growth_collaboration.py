@@ -273,3 +273,19 @@ def test_trend_exige_trois_annees():
     res = _corpus([(2020, 1), (2021, 1)]).trend_forecast()
     assert res["fit"] is None
     assert "trois" in res["message"].lower()
+
+
+def test_a_year_without_any_document_does_not_break_production():
+    """Constaté : une année SANS document dans la série (2014, 2016, pas
+    2015) faisait tomber `by_year` — erreur 500 sur l'écran Production."""
+    import pandas as pd
+    from bibliominer_analysis import Corpus
+    rows = [{"EID": "e1", "Title": "A", "Year": "2014", "Cited by": "4",
+             "Authors": "A.", "Source title": "J", "Document Type": "Article"},
+            {"EID": "e2", "Title": "B", "Year": "2016", "Cited by": "2",
+             "Authors": "B.", "Source title": "J", "Document Type": "Article"}]
+    g = Corpus.from_dataframe(pd.DataFrame(rows)).production_by_year()
+    assert list(g["year"]) == [2014, 2015, 2016]
+    assert list(g["documents"]) == [1, 0, 1]
+    assert pd.isna(g.loc[g["year"] == 2015, "citations_per_doc"]).all()
+    assert g.loc[g["year"] == 2014, "citations_per_doc"].iloc[0] == 4.0

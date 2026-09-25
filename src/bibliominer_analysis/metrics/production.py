@@ -45,7 +45,12 @@ def by_year(corpus) -> pd.DataFrame:
     g = full.merge(g, on="year", how="left").fillna({"documents": 0, "citations": 0})
     g["documents"] = g["documents"].astype(int)
     g["citations"] = g["citations"].astype(int)
-    g["citations_per_doc"] = (g["citations"] / g["documents"].replace(0, pd.NA)).round(2)
+    # Une année SANS document (ajoutée à zéro ci-dessus) n'a pas de moyenne :
+    # vide, pas zéro. `where` garde une colonne NUMÉRIQUE ; `replace(0, pd.NA)`
+    # la rendait « object », et `round` échouait (erreur 500 sur Production
+    # dès qu'une année manquait dans la série).
+    per_doc = g["citations"] / g["documents"].where(g["documents"] > 0)
+    g["citations_per_doc"] = per_doc.astype(float).round(2)
     g["cumulative"] = g["documents"].cumsum()
     return g
 
