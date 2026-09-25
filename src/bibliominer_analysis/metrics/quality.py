@@ -102,6 +102,22 @@ def field_completeness(corpus) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=cols)
 
 
+def _with_a_city(affiliations: pd.DataFrame) -> pd.DataFrame:
+    """Les affiliations qui DOIVENT avoir une ville.
+
+    « site: virtual » (laboratoire virtuel, plusieurs sites) n'a pas de ville
+    par décision : le compter comme une ville manquante ferait baisser la
+    couverture pour un choix fait exprès. Un jeu importé avant cette colonne
+    n'en a pas : rien n'est retiré.
+    """
+    if "site" not in affiliations.columns:
+        return affiliations
+    site = affiliations["site"].map(lambda v: str(v).strip().lower()
+                                    if isinstance(v, str) else "")
+    from ..io.schema import VIRTUAL_SITE
+    return affiliations[site != VIRTUAL_SITE]
+
+
 def table_completeness(corpus) -> pd.DataFrame:
     """Remplissage des tables liées : auteurs, affiliations, mots-clés, références.
 
@@ -124,8 +140,10 @@ def table_completeness(corpus) -> pd.DataFrame:
                          "total": 0 if table is None else len(table),
                          "share": 0.0, "status": LIMITED})
             continue
-        filled = int(is_filled(table[field]).sum())
-        share = round(100.0 * filled / len(table), 1)
+        if table_name == "affiliations" and field == "city":
+            table = _with_a_city(table)
+        filled = int(is_filled(table[field]).sum()) if len(table) else 0
+        share = round(100.0 * filled / len(table), 1) if len(table) else 0.0
         rows.append({"table": table_name, "field": field, "filled": filled,
                      "total": len(table), "share": share,
                      "status": _status(share)})
@@ -244,6 +262,10 @@ def indicator_readiness(corpus) -> pd.DataFrame:
         t = getattr(corpus, table, None)
         if t is None or t.empty or field not in t.columns:
             return 0.0
+        if table == "affiliations" and field == "city":
+            t = _with_a_city(t)
+            if t.empty:
+                return 0.0
         return round(100.0 * int(is_filled(t[field]).sum()) / len(t), 1)
 
     rows: List[Dict[str, Any]] = []

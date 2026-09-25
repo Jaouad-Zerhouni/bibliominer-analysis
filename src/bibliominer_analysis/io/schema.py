@@ -71,12 +71,21 @@ AFF_LABELS = {
     "parent 1": "parent1",
     "parent 2": "parent2",
     "city": "city",
+    # « site: virtual » : l'utilisateur a coché « No single city » au
+    # nettoyage (laboratoire virtuel, plusieurs sites). Pas de ville, par
+    # DÉCISION — ce n'est pas une ville manquante.
+    "site": "site",
     "region": "region",
     "country": "country",
 }
 
-#: Colonnes de la table `affiliations`, dans l'ordre.
-AFF_COLUMNS = ("subparent", "parent1", "parent2", "city", "region", "country")
+#: Colonnes de la table `affiliations`, dans l'ordre d'écriture du cleaning
+#: (l'ordre sert aussi à découper les blocs d'auteurs).
+AFF_COLUMNS = ("subparent", "parent1", "parent2", "city", "site", "region",
+               "country")
+
+#: Valeur de `site` pour une affiliation sans ville unique.
+VIRTUAL_SITE = "virtual"
 
 #: Libellé canonique posé par le cleaning sur un chercheur sans rattachement.
 INDEPENDENT_LABEL = "Independent researcher"

@@ -133,3 +133,21 @@ def test_tables_liees_evaluees():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1)]))
     t = q.table_completeness(c)
     assert set(t["table"]) == {"authors", "affiliations", "keywords", "references"}
+
+
+# ------------------------------------------ « No single city » (site: virtual)
+
+def test_a_virtual_site_is_read_and_not_a_missing_city():
+    """« site: virtual » : l'utilisateur a coché « No single city » au
+    nettoyage (laboratoire virtuel). Pas de ville PAR DÉCISION : ni une
+    ville nommée « virtual », ni une ville manquante."""
+    docs = [_doc(1), _doc(2, aff="parent 1: LIRIMA, site: virtual, country: France")]
+    c = Corpus.from_dataframe(pd.DataFrame(docs))
+    lirima = c.affiliations[c.affiliations["parent1"] == "LIRIMA"].iloc[0]
+    assert lirima["site"] == "virtual"
+    assert not isinstance(lirima["city"], str) or not lirima["city"]
+    assert lirima["country"] == "France"
+
+    table = q.table_completeness(c)
+    city = table[(table["table"] == "affiliations") & (table["field"] == "city")].iloc[0]
+    assert city["share"] == 100.0 and city["total"] == 1
