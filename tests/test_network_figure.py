@@ -170,3 +170,41 @@ def test_the_layout_stays_the_same_across_runs():
     """Y compris l'ORDRE dans lequel les composantes sont juxtaposées."""
     from bibliominer_analysis.networks.analysis import layout
     assert layout(_TWO_COMPONENTS) == layout(_TWO_COMPONENTS)
+
+
+def test_a_dense_group_is_spread_out_not_stacked():
+    """Constaté : le MDS classique empilait les co-auteurs d'un même groupe
+    au même endroit (une colonne de disques, noms superposés). La carte est
+    maintenant desserrée, et reste identique d'un calcul à l'autre."""
+    import numpy as np
+    from bibliominer_analysis.networks.analysis import layout
+    # une clique de 12 nœuds : toutes les distances égales, le cas qui écrasait
+    nodes = [{"id": f"n{i}", "label": f"N{i}", "occurrences": 3} for i in range(12)]
+    edges = [{"source": f"n{i}", "target": f"n{j}", "weight": 2}
+             for i in range(12) for j in range(i + 1, 12)]
+    g = {"nodes": nodes, "edges": edges}
+    a, b = layout(g), layout(g)
+    assert a == b                                   # déterministe
+    xy = np.array(list(a.values()))
+    d = np.sqrt(((xy[:, None] - xy[None]) ** 2).sum(-1))
+    np.fill_diagonal(d, np.inf)
+    assert d.min() > 0.3                            # aucun nœud sur un autre
+
+
+def test_labels_are_short_and_printable():
+    from bibliominer_analysis.figures.network import short_label
+    from bibliominer_analysis.figures.palette import tick_label
+    assert short_label("Ali Idri (2015) — Accuracy Comparison of Analogy-Based") == "Ali Idri (2015)"
+    assert short_label("Fernández‐Alemán J.L.") == "Fernández-Alemán J.L."
+    long_name = ("Proceedings of the Annual International Conference of the IEEE "
+                 "Engineering in Medicine and Biology Society, EMBS")
+    lines = tick_label(long_name, 34).split("\n")
+    assert len(lines) == 2 and all(len(x) <= 34 for x in lines)
+    assert lines[-1].endswith("…")
+    assert tick_label("IEEE Software") == "IEEE Software"
+
+
+def test_nodes_are_sized_by_occurrences_when_weight_is_absent():
+    from bibliominer_analysis.figures.network import _node_areas
+    areas = _node_areas([{"occurrences": 1}, {"occurrences": 10}], "weight")
+    assert areas[1] > areas[0]

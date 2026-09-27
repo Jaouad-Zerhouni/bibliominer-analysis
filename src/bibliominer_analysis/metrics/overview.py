@@ -101,6 +101,11 @@ def main_information(corpus) -> Dict[str, Any]:
         "authors": corpus.n_authors(),
         "authors_per_document": authors_per_doc,
         "single_authored_documents": single,
+        # Auteurs moyens des seuls documents CO-SIGNÉS (l'« indice de
+        # collaboration » de bibliometrix). À ne pas confondre avec le CI de
+        # Lawani (`collaboration.collaboration_indicators`), qui moyenne sur
+        # TOUS les documents et vaut `authors_per_document`. L'interface les
+        # nomme donc « Authors / co-authored document » et « CI (Lawani) ».
         "collaboration_index": collab_index,
         "countries": int(aff["country"].nunique()) if not aff.empty else 0,
         "international_documents": intl,

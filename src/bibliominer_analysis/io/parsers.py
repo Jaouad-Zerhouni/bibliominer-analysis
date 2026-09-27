@@ -167,7 +167,8 @@ def parse_affiliation(segment: str) -> Dict[str, Optional[str]]:
 
     Format brut Scopus (non nettoyé) : on ne peut rien affirmer sur les
     segments intermédiaires. On applique la seule convention fiable — le
-    DERNIER segment est le pays, l'avant-dernier la ville — et on laisse le
+    DERNIER segment est le pays, l'avant-dernier la ville — à condition que
+    ce dernier segment SOIT un pays reconnu (`io.countries.is_country`) ; le
     reste à ``None`` plutôt que de deviner.
     """
     rec: Dict[str, Optional[str]] = {c: None for c in S.AFF_COLUMNS}
@@ -193,8 +194,17 @@ def parse_affiliation(segment: str) -> Dict[str, Optional[str]]:
 
     # --- repli : export Scopus brut ---------------------------------------
     rec["labelled"] = False
-    if len(parts) >= 1:
-        rec["country"] = parts[-1]
+    from .countries import is_country
+    if not is_country(parts[-1]):
+        # Le dernier segment n'est pas un pays (« …, University Moulay Ismail
+        # of Meknes ») : il devenait pourtant le « pays », et la ville le
+        # segment d'avant. Sans pays reconnu, la géographie reste vide plutôt
+        # que fausse ; le segment le plus à droite est l'organisme mère.
+        rec["parent1"] = parts[-1]
+        if len(parts) >= 2:
+            rec["subparent"] = parts[-2]
+        return rec
+    rec["country"] = parts[-1]
     if len(parts) >= 2:
         rec["city"] = parts[-2]
     if len(parts) >= 3:
@@ -319,34 +329,83 @@ def _raw_positions(parts: List[str], doc_affs) -> list:
 # Références réconciliées
 # ---------------------------------------------------------------------------
 
-def parse_references(cell: Any) -> List[Dict[str, Any]]:
-    """Références réconciliées par le cleaning.
+#: Une référence réconciliée commence par sa clé « refN | ».
+_RECONCILED_REF = re.compile(r"^\s*ref\d+\s*\|")
+#: Dans le texte Scopus BRUT, une référence finit par son année entre
+#: parenthèses ; la suivante commence après le « ; » qui la suit. Un simple
+#: découpage sur « ; » coupait AUSSI entre les auteurs d'une même référence
+#: (« Ali A.; Gravino C., A systematic… ») : chaque auteur devenait une
+#: « référence » sans titre ni année.
+_RAW_REF_END = re.compile(r"(?<=\(\d{4}\))\s*;\s*")
+_YEAR = re.compile(r"\((\d{4})\)")
+_DOI = re.compile(r"10\.\d{4,9}/[^\s,;]+")
 
-        ``ref1 | 10.1007/... | 2016 | Biau, Scornet | A random forest guided tour``
 
-    Une référence brute (sans barres verticales) est conservée telle quelle
-    dans ``ref_title`` : on ne perd jamais l'information, même non structurée.
+def _reconciled(item: str, i: int) -> Dict[str, Any]:
+    fields = [f.strip() for f in item.split(S.REF_FIELD_SEP)]
+    pos_raw, doi, year, authors, title = fields[0], fields[1], fields[2], fields[3], fields[4]
+    m = re.search(r"(\d+)", pos_raw)
+    return {
+        "ref_pos": int(m.group(1)) if m else i,
+        "ref_doi": (doi or None) or None,
+        "ref_year": _to_int(year),
+        "ref_authors": authors or None,
+        "ref_title": title or None,
+        "ref_raw": item,
+    }
+
+
+def _raw_scopus(item: str, i: int) -> Dict[str, Any]:
+    """« Ali A.; Gravino C., A systematic literature review…, Journal…, 31,
+    (2019) » -> auteurs, titre, année, DOI.
+
+    Les auteurs sont séparés par « ; », le dernier est suivi du titre après
+    une virgule. Quand la forme n'est pas celle-là, le texte entier reste
+    le titre : on ne perd jamais l'information.
     """
-    out: List[Dict[str, Any]] = []
-    for i, item in enumerate(split_list(cell), start=1):
-        fields = [f.strip() for f in item.split(S.REF_FIELD_SEP)]
-        if len(fields) >= 5:
-            pos_raw, doi, year, authors, title = fields[0], fields[1], fields[2], fields[3], fields[4]
-            m = re.search(r"(\d+)", pos_raw)
-            out.append({
-                "ref_pos": int(m.group(1)) if m else i,
-                "ref_doi": (doi or None) or None,
-                "ref_year": _to_int(year),
-                "ref_authors": authors or None,
-                "ref_title": title or None,
-                "ref_raw": item,
-            })
-        else:
-            out.append({
-                "ref_pos": i, "ref_doi": None, "ref_year": None,
-                "ref_authors": None, "ref_title": item, "ref_raw": item,
-            })
-    return out
+    years = _YEAR.findall(item)
+    doi = _DOI.search(item)
+    parts = [p.strip() for p in item.split(";")]
+    last_author, _, rest = parts[-1].partition(", ")
+    authors = [p for p in parts[:-1] if p] + ([last_author] if rest else [])
+    title = rest.split(", ")[0].strip() if rest else item
+    return {
+        "ref_pos": i,
+        "ref_doi": doi.group(0).rstrip(".").lower() if doi else None,
+        "ref_year": _to_int(years[-1]) if years else None,
+        "ref_authors": ", ".join(authors) or None,
+        "ref_title": title or None,
+        "ref_raw": item,
+    }
+
+
+def parse_references(cell: Any) -> List[Dict[str, Any]]:
+    """Les références d'un document, dans les deux écritures possibles.
+
+    Réconciliées par le cleaning :
+        ``ref1 | 10.1007/... | 2016 | Biau, Scornet | A random forest guided tour``
+    Brutes, telles que Scopus les exporte :
+        ``Ali A.; Gravino C., A systematic literature review…, (2019); …``
+
+    Une référence qui ne se laisse pas lire garde son texte entier dans
+    ``ref_title`` : on ne perd jamais l'information, même non structurée.
+    """
+    s = _cell(cell)
+    if not s:
+        return []
+    if _RECONCILED_REF.match(s):
+        out = []
+        for i, item in enumerate(split_list(s), start=1):
+            if len(item.split(S.REF_FIELD_SEP)) >= 5:
+                out.append(_reconciled(item, i))
+            else:
+                out.append({"ref_pos": i, "ref_doi": None, "ref_year": None,
+                            "ref_authors": None, "ref_title": item, "ref_raw": item})
+        return out
+    items = (_RAW_REF_END.split(s) if _YEAR.search(s)
+             else [p for p in s.split(S.LIST_SEP)])
+    return [_raw_scopus(item.strip(), i)
+            for i, item in enumerate((x for x in items if x.strip()), start=1)]
 
 
 def _to_int(value: Any) -> Optional[int]:

@@ -383,8 +383,74 @@ def _mds_component(G, nodes: list) -> Dict[str, list]:
     from ..metrics.factorial import _classical_mds
 
     coords, _ = _classical_mds(D, 2)
-    return {node: [float(coords[i, 0]), float(coords[i, 1])]
-            for node, i in index.items()}
+    start = {node: [float(coords[i, 0]), float(coords[i, 1])]
+             for node, i in index.items()}
+    return _readable(G.subgraph(nodes), start)
+
+
+#: Graine FIXE : la disposition à ressorts est déterministe, la carte ne
+#: bouge pas d'une ouverture à l'autre, ni entre l'écran et la figure.
+_LAYOUT_SEED = 7
+
+
+def _readable(G, start: Dict[str, list]) -> Dict[str, list]:
+    """Du MDS à une carte LISIBLE.
+
+    Le MDS classique écrase un groupe très lié sur un seul point : quand
+    toutes les distances d'un groupe sont presque égales (des co-auteurs qui
+    signent tous ensemble), ses nœuds tombent au même endroit. Constaté sur
+    un vrai corpus : un réseau de co-auteurs dessiné comme une colonne de
+    disques empilés, noms superposés.
+
+    Deux passes, toutes deux déterministes :
+      1. une disposition à ressorts PARTANT du MDS (graine fixe) — elle garde
+         la forme d'ensemble et desserre les groupes ;
+      2. un écartement des paires trop proches, jusqu'à une distance minimale
+         qui dépend du nombre de nœuds — aucun disque ne cache un autre.
+    """
+    import networkx as nx
+    import numpy as np
+
+    nodes = sorted(start)
+    if len(nodes) < 3:
+        return start
+    pos = nx.spring_layout(G, pos={n: np.array(start[n]) for n in nodes},
+                           weight="weight", iterations=150, seed=_LAYOUT_SEED)
+    xy = np.array([pos[n] for n in nodes], dtype=float)
+    xy = _spread(xy)
+    return {n: [float(xy[i, 0]), float(xy[i, 1])] for i, n in enumerate(nodes)}
+
+
+def _spread(xy, passes: int = 80):
+    """Écarte les points trop proches, sans rien déplacer d'autre.
+
+    Coordonnées ramenées à [-1, 1], distance minimale 1.6/√n : assez pour
+    qu'un disque ne recouvre pas son voisin, assez peu pour garder la forme.
+    Deux points confondus sont séparés selon une direction fixée par leur
+    rang — jamais au hasard.
+    """
+    import numpy as np
+
+    n = len(xy)
+    span = np.ptp(xy, axis=0).max() or 1.0
+    xy = (xy - xy.mean(axis=0)) / span * 2.0
+    min_d = 1.6 / np.sqrt(n)
+    angles = np.arange(n) * 2.399963          # angle d'or : directions fixes
+    fallback = np.stack([np.cos(angles), np.sin(angles)], axis=1)
+    for _ in range(passes):
+        diff = xy[:, None, :] - xy[None, :, :]
+        dist = np.sqrt((diff ** 2).sum(-1))
+        np.fill_diagonal(dist, np.inf)
+        close = dist < min_d
+        if not close.any():
+            break
+        safe = np.where(dist == 0, 1.0, dist)
+        unit = diff / safe[..., None]
+        same = dist == 0
+        unit[same] = (fallback[:, None, :] - fallback[None, :, :])[same]
+        push = np.where(close, (min_d - np.where(np.isinf(dist), min_d, dist)) / 2, 0.0)
+        xy = xy + (unit * push[..., None]).sum(axis=1)
+    return xy
 
 
 def _pack(blocks: List[Dict[str, list]]) -> Dict[str, list]:
@@ -511,9 +577,17 @@ def density_grid(graph: Dict[str, Any], coords: Dict[str, list],
     xs = np.linspace(lo[0], hi[0], size)
     ys = np.linspace(lo[1], hi[1], size)
     if bandwidth is None:
-        # Règle simple et stable : un huitième de la plus grande étendue. Un
-        # noyau trop étroit rend une carte de points, trop large une tache unie.
-        bandwidth = float(max(hi - lo)) / 8.0
+        # L'écart typique entre voisins : un noyau trop étroit rend une carte
+        # de points, trop large une tache unie. L'ancienne règle (un huitième
+        # de la plus grande étendue) dépendait de la place des petits îlots
+        # posés en marge : sur un réseau en plusieurs composantes, l'étendue
+        # gonflait et tout le groupe principal fondait en une seule tache.
+        if len(P) > 1:
+            d = np.sqrt(((P[:, None, :] - P[None, :, :]) ** 2).sum(-1))
+            np.fill_diagonal(d, np.inf)
+            bandwidth = float(np.median(d.min(axis=1)))
+        else:
+            bandwidth = float(max(hi - lo)) / 8.0
     bandwidth = max(bandwidth, 1e-6)
 
     gx, gy = np.meshgrid(xs, ys, indexing="ij")

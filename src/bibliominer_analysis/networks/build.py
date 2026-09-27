@@ -355,11 +355,17 @@ def country_map(corpus) -> pd.DataFrame:
     ``sca`` (single country articles) : documents dont TOUTES les affiliations
     sont du même pays. ``mca`` (multiple country) : les autres. Le rapport
     mca/total est l'indicateur d'ouverture internationale usuel.
+
+    ``map_name`` : le nom du pays sur le fond de carte (world-atlas), vide s'il
+    est trop petit pour y figurer ; ``lon``/``lat`` : où le placer (centre du
+    territoire, ou capitale d'un petit pays). Vides pour un nom qui n'est pas
+    un pays reconnu. Ainsi l'interface et les figures placent les pays de la
+    même façon, sans table de noms à maintenir de chaque côté.
     """
     aff = corpus.affiliations
     aff = aff[aff["country"].notna() & (aff["country"].map(str).str.strip() != "")]
     empty = pd.DataFrame(columns=["country", "documents", "citations",
-                                  "sca", "mca", "mca_ratio"])
+                                  "sca", "mca", "mca_ratio", "map_name", "lon", "lat"])
     if aff.empty:
         return empty
 
@@ -381,6 +387,11 @@ def country_map(corpus) -> pd.DataFrame:
     g["mca"] = g["mca"].astype(int)
     g["sca"] = g["documents"] - g["mca"]
     g["mca_ratio"] = (100 * g["mca"] / g["documents"]).round(1)
+    from ..io.countries import atlas_name, position
+    g["map_name"] = g["country"].map(atlas_name)
+    where = g["country"].map(position)
+    g["lon"] = where.map(lambda p: round(p[0], 4) if p else None)
+    g["lat"] = where.map(lambda p: round(p[1], 4) if p else None)
     return g.sort_values("documents", ascending=False, kind="stable").reset_index(drop=True)
 
 

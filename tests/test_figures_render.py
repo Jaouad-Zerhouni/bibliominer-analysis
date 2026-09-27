@@ -148,3 +148,41 @@ def test_couleurs_categorielles_dans_l_ordre_valide():
     # décoder un PNG.
     svg = render_figure(spec, fmt="svg").decode("utf-8", errors="ignore")
     assert CATEGORICAL_LIGHT[0].lower() in svg.lower()
+
+
+def test_axes_logarithmiques_pour_zipf():
+    """Zipf se lit en log-log : l'option doit changer l'échelle, pas lever."""
+    spec = FigureSpec(kind="scatter", x_log=True, y_log=True,
+                      series=[Series(name="observed",
+                                     points=[(1, 40), (2, 20), (10, 4), (100, 1)])])
+    from dataclasses import replace
+
+    log_svg = render_figure(spec, fmt="svg")
+    linear_svg = render_figure(replace(spec, x_log=False, y_log=False), fmt="svg")
+    assert log_svg != linear_svg
+
+
+def test_etiquettes_de_points_superposes_fusionnees():
+    """Deux thèmes au même endroit : une seule étiquette « premier +1 »."""
+    spec = FigureSpec(kind="scatter", series=[Series(
+        name="themes", points=[(0, 50), (0, 50), (1, 60)],
+        labels=["Alpha theme", "Beta theme", "Gamma theme"])])
+    svg = render_figure(spec, fmt="svg").decode("utf-8", errors="ignore")
+    assert "Alpha theme +1" in svg
+    assert "Beta theme" not in svg
+    assert "Gamma theme" in svg
+
+
+def test_beaucoup_de_categories_graduations_clairsemees():
+    """77 rangs de Bradford : l'axe n'écrit pas 77 étiquettes côte à côte."""
+    from bibliominer_analysis.figures import render as r
+
+    cats = [str(i) for i in range(1, 78)]
+    spec = FigureSpec(kind="line", categories=cats,
+                      series=[Series(name="cumulative", values=list(range(77)))])
+    fig = r.Figure()
+    ax = fig.add_subplot()
+    r._draw_lines(ax, spec, ["#000000"])
+    ticks = [t.get_text() for t in ax.get_xticklabels()]
+    assert len(ticks) <= r._MAX_X_TICKS + 1
+    assert ticks[0] == "1" and ticks[-1] == "77"

@@ -49,6 +49,49 @@ CHROME: Dict[str, Dict[str, str]] = {
 }
 
 
+#: Tirets typographiques qu'Arial et DejaVu n'ont pas (« Fernández‐Alemán »
+#: s'affichait avec un carré vide) : on les écrit en tiret simple.
+_HYPHENS = str.maketrans({"\u2010": "-", "\u2011": "-", "\u2012": "-"})
+
+
+def printable(text: object) -> str:
+    """Un texte que la police sait dessiner."""
+    return str(text if text is not None else "").translate(_HYPHENS)
+
+
+def short_text(text: object, limit: int = 24) -> str:
+    """Un texte court sur une ligne, abrégé par « … »."""
+    s = printable(text).strip()
+    return s if len(s) <= limit else s[: limit - 1].rstrip() + "…"
+
+
+def tick_label(text: object, width: int = 34, lines: int = 2) -> str:
+    """Une étiquette d'axe lisible : coupée aux mots sur ``lines`` lignes de
+    ``width`` caractères au plus, puis abrégée par « … ».
+
+    Un nom de revue de 120 caractères poussait les barres hors du cadre :
+    matplotlib n'avait plus de place pour les axes et la figure s'écrasait.
+    """
+    words = printable(text).split()
+    out, current = [], ""
+    for word in words:
+        candidate = (current + " " + word).strip()
+        if len(candidate) <= width or not current:
+            current = candidate
+            continue
+        out.append(current)
+        current = word
+        if len(out) == lines:
+            break
+    else:
+        out.append(current)
+        return "\n".join(line[:width] for line in out)
+    # Il reste du texte : la dernière ligne se termine par « … ».
+    last = out[-1]
+    out[-1] = (last[: width - 1].rstrip() + "…") if len(last) >= width else last + " …"
+    return "\n".join(out)
+
+
 def categorical(mode: str) -> List[str]:
     return list(CATEGORICAL_DARK if mode == "dark" else CATEGORICAL_LIGHT)
 

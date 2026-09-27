@@ -123,6 +123,19 @@ def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
     communities = ordered_communities(
         nx.community.greedy_modularity_communities(G, weight="weight"))
 
+    # Le seuil `min_weight` sert à DÉTECTER les groupes, pas à les mesurer.
+    # Centralité et densité se calculent sur toutes les co-occurrences entre
+    # les termes retenus (Callon : tous les liens externes comptent). Mesurées
+    # sur le réseau seuillé, un petit corpus se cassait en îlots : 13 thèmes
+    # sur 15 à centralité 0, médiane 0, et plus aucun thème en « niche » ni
+    # en « émergent » — des quadrants sans signification.
+    kept = set(G.nodes)
+    full = normalize(nets.co_word(corpus, top_n=top_n, min_weight=1, kind=kind),
+                     "equivalence")
+    measured = [(e["source"], e["target"], float(e.get("weight", 1)))
+                for e in full["edges"]
+                if e["source"] in kept and e["target"] in kept]
+
     rows = []
     for i, members in enumerate(communities, start=1):
         members = set(members)
@@ -130,8 +143,7 @@ def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
             continue
 
         internal = external = 0.0
-        for u, v, data in G.edges(data=True):
-            w = float(data.get("weight", 1))
+        for u, v, w in measured:
             u_in, v_in = u in members, v in members
             if u_in and v_in:
                 internal += w

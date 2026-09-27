@@ -173,3 +173,84 @@ def _ensure_columns(name: str, table: pd.DataFrame) -> pd.DataFrame:
         if c not in table.columns:
             table[c] = pd.Series(dtype="object")
     return table[cols]
+
+
+def _most_used(values: pd.Series) -> str:
+    """La graphie la plus employée ; à égalité, la première dans l'ordre
+    alphabétique (résultat identique d'une exécution à l'autre)."""
+    counts = values.value_counts()
+    return sorted(counts[counts == counts.max()].index)[0]
+
+
+def _loose_key(text: str) -> str:
+    """Clé de comparaison : minuscules, sans accents, lettres et chiffres seuls."""
+    import unicodedata
+    s = unicodedata.normalize("NFKD", text)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch)).lower()
+    return "".join(ch for ch in s if ch.isalnum())
+
+
+def unify_spellings(tables: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+    """Une seule graphie par auteur et par mot-clé, pour TOUTES les analyses.
+
+    Scopus écrit le même auteur de plusieurs façons d'un article à l'autre
+    (« Fernández-Alemán J.L. », « Fernandez-Aleman J.L. », « Fernández Alemán
+    J.L. ») sous un même identifiant ; et les auteurs écrivent « Machine
+    learning » ou « Machine Learning ». Les classements regroupaient déjà par
+    identifiant ou sans la casse, mais l'évolution des auteurs, la dynamique
+    des mots-clés et le diagramme à trois champs regroupaient par texte brut :
+    un même auteur, un même mot, y apparaissaient deux fois, chacun avec une
+    partie de ses documents.
+
+    Chaque identifiant Scopus prend donc son nom le plus employé, et chaque
+    mot-clé (même type, même texte sans la casse) sa graphie la plus
+    employée. Un auteur sans identifiant garde son nom tel quel : deux
+    homonymes restent indiscernables.
+    """
+    out = dict(tables)
+
+    a = out.get("authors")
+    if a is not None and not a.empty and {"scopus_id", "name"} <= set(a.columns):
+        known = a["scopus_id"].notna() & a["name"].notna()
+        if known.any():
+            a = a.copy()
+            names = a.loc[known, "name"].map(str).str.strip()
+            best = names.groupby(a.loc[known, "scopus_id"]).agg(_most_used)
+            a.loc[known, "name"] = a.loc[known, "scopus_id"].map(best)
+            out["authors"] = a
+
+    # Organisations : même nom à la casse, aux accents et à la ponctuation
+    # près (« Faculty of Sciences Oujda - FSO » / « Faculty of Sciences
+    # Oujda-FSO ») = une seule graphie. Jamais de traduction ni de
+    # rapprochement de noms différents : c'est le travail du nettoyage.
+    f = out.get("affiliations")
+    if f is not None and not f.empty:
+        f = f.copy()
+        for col in ("subparent", "parent1", "parent2"):
+            # Des NOMS seulement : une colonne booléenne ou numérique (un
+            # indicateur) n'a pas de graphie, la convertir en texte la
+            # détruirait.
+            if col not in f.columns or pd.api.types.is_bool_dtype(f[col])                     or pd.api.types.is_numeric_dtype(f[col]):
+                continue
+            known = f[col].notna() & (f[col].map(str).str.strip() != "")
+            if not known.any():
+                continue
+            text = f.loc[known, col].map(str).str.strip()
+            loose = text.map(_loose_key)
+            best = text.groupby(loose).agg(_most_used)
+            f.loc[known, col] = loose.map(best)
+        out["affiliations"] = f
+
+    k = out.get("keywords")
+    if k is not None and not k.empty and "keyword" in k.columns:
+        known = k["keyword"].notna()
+        if known.any():
+            k = k.copy()
+            text = k.loc[known, "keyword"].map(str).str.strip()
+            kind = (k.loc[known, "kind"].map(str) if "kind" in k.columns
+                    else pd.Series("", index=text.index))
+            norm = kind + "|" + text.str.lower()
+            best = text.groupby(norm).agg(_most_used)
+            k.loc[known, "keyword"] = norm.map(best)
+            out["keywords"] = k
+    return out

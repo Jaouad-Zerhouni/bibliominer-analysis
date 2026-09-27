@@ -13,5 +13,11 @@ qu'une seule fonction à connaître.
 """
 
 from .render import FigureError, render_figure
+from .world import atlas_name, render_world_map
+from .charts import (render_dendrogram, render_density_map, render_thematic_evolution,
+                     render_three_fields, render_treemap, render_word_cloud)
+from .network import render_network
 
-__all__ = ["render_figure", "FigureError"]
+__all__ = ["render_figure", "FigureError", "render_network", "render_world_map",
+           "atlas_name", "render_treemap", "render_word_cloud", "render_three_fields",
+           "render_thematic_evolution", "render_dendrogram", "render_density_map"]

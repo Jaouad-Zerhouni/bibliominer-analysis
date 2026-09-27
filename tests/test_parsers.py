@@ -123,3 +123,31 @@ def test_references_vides():
 def test_keywords_dedoublonnes_sans_casse():
     k = P.parse_keywords("Machine Learning; machine learning; Random Forest")
     assert k == ["Machine Learning", "Random Forest"]
+
+
+def test_raw_scopus_references_are_split_per_reference_not_per_author():
+    """Constaté : dans l'export Scopus brut, les auteurs d'une référence sont
+    séparés par « ; », comme les références entre elles. Découpée sur « ; »,
+    chaque référence devenait autant de « références » que d'auteurs (8 854
+    au lieu de 2 847 sur un vrai corpus), sans titre ni année : ni citations
+    locales, ni historiographe."""
+    from bibliominer_analysis.io.parsers import parse_references
+    cell = ("Ali A.; Gravino C., A systematic literature review of software effort "
+            "prediction, Journal of software: evolution and process, 31, 10, (2019); "
+            "Azzeh M.; Nassif A. B.; Minku L. L., An empirical evaluation of ensemble "
+            "adjustment methods, Journal of Systems and Software, 103, pp. 36-52, (2015)")
+    refs = parse_references(cell)
+    assert len(refs) == 2
+    assert refs[0]["ref_year"] == 2019
+    assert refs[0]["ref_authors"] == "Ali A., Gravino C."
+    assert refs[0]["ref_title"] == "A systematic literature review of software effort prediction"
+    assert refs[1]["ref_year"] == 2015
+    assert refs[1]["ref_authors"].startswith("Azzeh M.")
+
+
+def test_reconciled_references_are_read_as_before():
+    from bibliominer_analysis.io.parsers import parse_references
+    refs = parse_references("ref1 | 10.1/x | 2016 | Biau G., Scornet E. | A random "
+                            "forest guided tour ; ref2 |  | 2019 | Doe J. | Other title")
+    assert [r["ref_doi"] for r in refs] == ["10.1/x", None]
+    assert refs[0]["ref_title"] == "A random forest guided tour"

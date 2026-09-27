@@ -46,7 +46,7 @@ _MPL_FORMAT = {"jpg": "jpeg"}
 
 #: Bornes de l'aire des disques, en points². En dessous, un nœud disparaît ;
 #: au-dessus, il masque ses voisins et la carte devient illisible.
-_MIN_AREA, _MAX_AREA = 40.0, 1400.0
+_MIN_AREA, _MAX_AREA = 30.0, 700.0
 
 
 class NetworkFigureError(ValueError):
@@ -63,6 +63,11 @@ def _node_areas(nodes: List[Dict[str, Any]], size_by: str) -> List[float]:
     Toutes les valeurs égales -> tous les disques identiques, plutôt qu'une
     division par zéro.
     """
+    # La grandeur demandée n'existe pas sur ce réseau (``weight`` n'est posé
+    # qu'après `annotate`) : on prend le nombre d'occurrences, que porte tout
+    # nœud. Sans ce repli, tous les disques avaient la même taille.
+    if not any(node.get(size_by) is not None for node in nodes):
+        size_by = "occurrences"
     values = [float(node.get(size_by) or 0.0) for node in nodes]
     low, high = min(values), max(values)
     if high <= low:
@@ -139,7 +144,7 @@ def _place_labels(fig, ax, nodes, areas, positions, colour, limit: int) -> None:
         # avale son étiquette, et une petite la laisse flotter loin.
         radius_pt = (area ** 0.5) / 2
         text = ax.annotate(
-            str(node.get("label") or node.get("id")), (x, y),
+            short_label(node.get("label") or node.get("id")), (x, y),
             zorder=4, fontsize=7.5, color=colour, ha="center", va="bottom",
             xytext=(0, radius_pt + 3.5), textcoords="offset points")
 
@@ -148,6 +153,21 @@ def _place_labels(fig, ax, nodes, areas, positions, colour, limit: int) -> None:
             text.remove()                   # elle en cacherait une autre
         else:
             kept.append(box)
+
+
+def short_label(label: Any, limit: int = 28) -> str:
+    """L'étiquette À L'ÉCRAN d'un nœud : courte, lisible.
+
+    Une référence co-citée s'appelle « Ali Idri (2015) — Accuracy Comparison
+    of Analogy-Based… » : sur la carte, « Ali Idri (2015) » suffit à la
+    reconnaître, le titre complet reste dans la table du réseau. Au-delà de
+    ``limit`` caractères, le texte est coupé d'un « … ».
+    """
+    from .palette import printable
+    text = printable(label).strip()
+    if " — " in text:
+        text = text.split(" — ", 1)[0].strip()
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
 def _add_community_legend(ax, nodes, palette, skin) -> None:
@@ -246,6 +266,13 @@ def render_network(
     if fmt not in _FORMATS:
         raise NetworkFigureError(
             f"Unsupported format '{fmt}'. Use one of {sorted(_FORMATS)}.")
+
+    # Pas encore de communautés : on les calcule (déterministe), sinon tous
+    # les nœuds restent gris et la carte ne montre aucun regroupement.
+    if not any(node.get("community") is not None for node in nodes):
+        from ..networks.analysis import annotate
+        graph = annotate({"nodes": nodes, "edges": edges})
+        nodes = list(graph.get("nodes") or [])
 
     positions = coords if coords else compute_layout(graph)
     placed = [node for node in nodes if str(node.get("id")) in positions]

@@ -57,6 +57,10 @@ class Corpus:
 
     def __init__(self, tables: Dict[str, pd.DataFrame],
                  source_path: Optional[PathLike] = None):
+        # Une graphie par auteur et par mot-clé AVANT toute analyse : voir
+        # `unify_spellings`. Ici plutôt qu'à la lecture du CSV, pour que les
+        # corpus déjà importés (relus en Parquet) en profitent aussi.
+        tables = R.unify_spellings(tables)
         for name in R.TABLE_NAMES:
             setattr(self, name, tables[name])
         self.source_path = str(source_path) if source_path else None
@@ -530,9 +534,18 @@ class Corpus:
         """Collaboration entre VILLES, chaque lien marqué national/international."""
         return nets.co_city(self, top_n, min_weight)
 
-    def corresponding_author_countries(self, n: Optional[int] = 20) -> pd.DataFrame:
-        """Pays du premier auteur, avec SCP / MCP."""
+    def first_author_countries(self, n: Optional[int] = 20) -> pd.DataFrame:
+        """Documents par pays du PREMIER auteur, avec SCP / MCP.
+
+        Pas l'auteur correspondant : Scopus n'exporte pas toujours l'adresse
+        de correspondance, et un compte qui en dépendrait changerait d'un
+        export à l'autre. Le premier auteur est présent partout."""
         return ctry.corresponding_author_countries(self, n)
+
+    def corresponding_author_countries(self, n: Optional[int] = 20) -> pd.DataFrame:
+        """Ancien nom de `first_author_countries`, gardé pour les scripts
+        existants : le calcul porte bien sur le premier auteur."""
+        return self.first_author_countries(n)
 
     # -- citations locales ----------------------------------------------------
 

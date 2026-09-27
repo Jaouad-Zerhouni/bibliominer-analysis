@@ -55,6 +55,10 @@ class Series:
     #: pures : un compte (barres) et sa tendance (ligne) sur le même axe
     #: catégoriel -- voir `_draw_mixed`.
     kind: Optional[str] = None
+    #: nuage de points : un nom par point, écrit à côté (carte thématique,
+    #: structure conceptuelle). Facultatif ; seuls les points les plus
+    #: éloignés du centre sont étiquetés si les noms se chevauchent.
+    labels: Optional[List[str]] = None
 
 
 @dataclass
@@ -67,6 +71,10 @@ class FigureSpec:
     y_label: str = ""
     orientation: str = "vertical"  # "vertical" | "horizontal" -- barres seul.
     mode: str = "light"  # "light" | "dark"
+    #: axes logarithmiques — Zipf (rang/fréquence) et Lotka se LISENT en
+    #: log-log ; en échelle linéaire, la queue écrase tout le graphique.
+    x_log: bool = False
+    y_log: bool = False
     width_in: float = 7.2
     height_in: float = 4.2
     dpi: int = 200
@@ -122,6 +130,11 @@ def _render(spec: FigureSpec, fmt: str) -> bytes:
         _draw_scatter(ax, spec, colors)
 
     _apply_chrome(ax, spec, c)
+    if spec.x_log:
+        ax.set_xscale("log")
+    if spec.y_log:
+        ax.set_yscale("log")
+    _declutter(fig, ax)
 
     buf = io.BytesIO()
     fig.savefig(
@@ -177,6 +190,25 @@ def _apply_chrome(ax, spec: FigureSpec, c: Dict[str, str]) -> None:
             text.set_fontfamily(_FONT_STACK)
 
 
+#: au-delà, une graduation sur deux (trois, ...) : 77 rangs de Bradford
+#: écrits côte à côte se chevauchaient en une bande illisible.
+_MAX_X_TICKS = 25
+
+
+def _category_ticks(ax, cats: List[str], width: int = 18) -> None:
+    """Graduations catégorielles de l'axe x, clairsemées si elles sont trop
+    nombreuses pour être lues (la première et la dernière restent)."""
+    from .palette import tick_label
+    step = max(1, -(-len(cats) // _MAX_X_TICKS))
+    shown = list(range(0, len(cats), step))
+    if shown and shown[-1] != len(cats) - 1 and len(cats) - 1 - shown[-1] >= step / 2:
+        shown.append(len(cats) - 1)
+    ax.set_xticks(shown)
+    ax.set_xticklabels([tick_label(cats[i], width) for i in shown],
+                       rotation=0 if len(shown) <= 12 else 45,
+                       ha="right" if len(shown) > 12 else "center")
+
+
 def _draw_bars(ax, spec: FigureSpec, colors: List[str]) -> None:
     cats = spec.categories or []
     n = len(spec.series)
@@ -200,14 +232,13 @@ def _draw_bars(ax, spec: FigureSpec, colors: List[str]) -> None:
             ax.bar(pos, s.values, width=width * 0.92, color=color,
                    label=s.name, zorder=3)
 
+    from .palette import tick_label
     if horizontal:
         ax.set_yticks(list(positions))
-        ax.set_yticklabels(cats)
+        ax.set_yticklabels([tick_label(c, 34) for c in cats])
         ax.invert_yaxis()  # la première catégorie en haut, comme à l'écran.
     else:
-        ax.set_xticks(list(positions))
-        ax.set_xticklabels(cats, rotation=0 if len(cats) <= 12 else 45,
-                           ha="right" if len(cats) > 12 else "center")
+        _category_ticks(ax, cats)
 
 
 def _draw_lines(ax, spec: FigureSpec, colors: List[str]) -> None:
@@ -220,12 +251,16 @@ def _draw_lines(ax, spec: FigureSpec, colors: List[str]) -> None:
                 f"{len(cats)} catégorie(s) — les deux doivent s'accorder."
             )
         color = colors[i % len(colors)]
-        ax.plot(x, s.values, color=color, linewidth=2, marker="o",
-                markersize=5, label=s.name, zorder=3)
+        # Un marqueur par point se lit jusqu'à une quarantaine de points ; au-
+        # delà (138 auteurs de la loi de Price), la courbe devient un chapelet
+        # épais. Une série de quelques points seulement garde les siens, sinon
+        # elle serait invisible.
+        finite = sum(1 for v in s.values if v is not None and v == v)
+        marker = "o" if len(cats) <= 40 or finite <= 3 else None
+        ax.plot(x, s.values, color=color, linewidth=2, marker=marker,
+                markersize=5 if len(cats) <= 40 else 7, label=s.name, zorder=3)
 
-    ax.set_xticks(list(x))
-    ax.set_xticklabels(cats, rotation=0 if len(cats) <= 12 else 45,
-                       ha="right" if len(cats) > 12 else "center")
+    _category_ticks(ax, [str(c) for c in cats])
 
 
 def _draw_mixed(ax, spec: FigureSpec, colors: List[str]) -> None:
@@ -269,9 +304,45 @@ def _draw_mixed(ax, spec: FigureSpec, colors: List[str]) -> None:
                 marker="o", markersize=4, label=s.name, zorder=4)
         color_i += 1
 
-    ax.set_xticks(list(x))
-    ax.set_xticklabels(cats, rotation=0 if len(cats) <= 12 else 45,
-                       ha="right" if len(cats) > 12 else "center")
+    _category_ticks(ax, cats)
+
+
+def _point_labels(ax) -> list:
+    """Les étiquettes de points de ce graphique, à trier après le rendu."""
+    if not hasattr(ax, "_bibliominer_labels"):
+        ax._bibliominer_labels = []
+    return ax._bibliominer_labels
+
+
+def _declutter(fig, ax) -> None:
+    """Retire les étiquettes de points qui en chevauchent une autre.
+
+    Les points les plus éloignés du centre gardent leur nom en priorité :
+    au centre d'une carte factorielle, les termes s'entassent et se lisent
+    mal de toute façon, alors que les termes excentrés sont ceux qui
+    donnent leur sens aux axes. Se fait APRÈS les échelles (log) et la mise
+    en page, quand les positions à l'écran sont définitives.
+    """
+    labels = getattr(ax, "_bibliominer_labels", [])
+    if len(labels) < 2:
+        return
+    xs = [x for _, x, _ in labels]
+    ys = [y for _, _, y in labels]
+    cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
+    sx = (max(xs) - min(xs)) or 1.0
+    sy = (max(ys) - min(ys)) or 1.0
+    order = sorted(labels, key=lambda l: -(((l[1] - cx) / sx) ** 2 + ((l[2] - cy) / sy) ** 2))
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    legend = ax.get_legend()
+    # La légende compte comme déjà placée : une étiquette ne passe pas dessous.
+    kept = [legend.get_window_extent(renderer)] if legend is not None else []
+    for label, _, _ in order:
+        box = label.get_window_extent(renderer).expanded(1.05, 1.15)
+        if any(box.overlaps(other) for other in kept):
+            label.remove()
+        else:
+            kept.append(box)
 
 
 def _draw_scatter(ax, spec: FigureSpec, colors: List[str]) -> None:
@@ -285,3 +356,21 @@ def _draw_scatter(ax, spec: FigureSpec, colors: List[str]) -> None:
         ys = [p[1] for p in s.points]
         ax.scatter(xs, ys, color=colors[i % len(colors)], s=42,
                    alpha=0.85, edgecolors="none", label=s.name, zorder=3)
+        if s.labels:
+            # Des points au même endroit (thèmes de même centralité et
+            # densité) écrivaient leurs noms l'un sur l'autre : une seule
+            # étiquette par position, « premier nom +n ».
+            from .palette import short_text
+            at: Dict[Tuple[float, float], List[str]] = {}
+            for (px, py), text in zip(s.points, s.labels):
+                # Une étiquette vide : ce point-là n'est pas nommé.
+                if text is not None and str(text).strip():
+                    at.setdefault((round(px, 6), round(py, 6)), []).append(str(text))
+            for (px, py), names in at.items():
+                text = short_text(names[0], 24)
+                if len(names) > 1:
+                    text += f" +{len(names) - 1}"
+                label = ax.annotate(text, (px, py), xytext=(4, 3),
+                                    textcoords="offset points", fontsize=7,
+                                    color="#3b3f45", zorder=4)
+                _point_labels(ax).append((label, px, py))
