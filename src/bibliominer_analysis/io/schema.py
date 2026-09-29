@@ -1,4 +1,4 @@
-"""Contrat de format entre `cleaning_service` et l'analyse.
+"""Contrat de format entre le nettoyage (`bibliominer-cleaning`) et l'analyse.
 
 Tout ce qui décrit la FORME du fichier d'entrée vit ici, et nulle part
 ailleurs : le jour où le cleaning change une convention, on modifie ce
@@ -6,7 +6,7 @@ fichier et les parseurs suivent.
 
 Le package accepte DEUX niveaux de fichier :
 
-  - « bibliominer » : sortie de `cleaning_service` (auteurs indexés,
+  - « bibliominer » : sortie du nettoyage Bibliominer (auteurs indexés,
     affiliations étiquetées, références réconciliées) ;
   - « scopus brut » : un export Scopus non nettoyé.
 
