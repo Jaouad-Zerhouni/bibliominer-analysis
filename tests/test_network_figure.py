@@ -157,13 +157,65 @@ def test_every_node_of_a_component_gets_its_own_place():
 
 
 def test_components_do_not_sit_on_top_of_each_other():
-    """Juxtaposées, pas superposées : sinon on lirait un seul amas."""
+    """Juxtaposées, pas superposées : sinon on lirait un seul amas. Côte à
+    côte OU l'une sous l'autre (rangées) : leurs cadres sont disjoints."""
     from bibliominer_analysis.networks.analysis import layout
 
     coords = layout(_TWO_COMPONENTS)
-    main_x = [coords[i][0] for i in ("a", "b", "c", "d", "e")]
-    other_x = [coords[i][0] for i in ("x", "y", "z")]
-    assert min(other_x) > max(main_x) or min(main_x) > max(other_x)
+    main = [coords[i] for i in ("a", "b", "c", "d", "e")]
+    other = [coords[i] for i in ("x", "y", "z")]
+
+    def apart(axis):
+        return (min(p[axis] for p in other) > max(p[axis] for p in main)
+                or min(p[axis] for p in main) > max(p[axis] for p in other))
+
+    assert apart(0) or apart(1)
+
+
+def _many_small_groups(groups=18, size=3):
+    """Le cas d'un vrai réseau de co-auteurs : une vingtaine de petites
+    équipes sans lien entre elles."""
+    nodes, edges = [], []
+    for g in range(groups):
+        ids = [f"g{g}n{k}" for k in range(size)]
+        nodes += [{"id": i, "label": i, "occurrences": 1 + (g + k) % 5}
+                  for k, i in enumerate(ids)]
+        edges += [{"source": a, "target": b, "weight": 1}
+                  for a in ids for b in ids if a < b]
+    return {"nodes": nodes, "edges": edges}
+
+
+def test_many_components_fill_the_frame_not_a_strip():
+    """Constaté sur un vrai corpus : dix-sept équipes alignées sur UNE ligne,
+    une bande vingt fois plus large que haute — cadrée à l'écran, un chapelet
+    de disques empilés. Elles remplissent maintenant des rangées."""
+    import numpy as np
+    from bibliominer_analysis.networks.analysis import layout
+
+    xy = np.array(list(layout(_many_small_groups()).values()))
+    width, height = np.ptp(xy, axis=0)
+    assert width / height < 3.0, f"une bande {width / height:.1f} fois plus large que haute"
+
+
+def test_no_disc_covers_another_at_drawing_size():
+    """Chaque nœud est écarté de ses voisins de la somme de leurs rayons
+    DESSINÉS (10 + 26·√(occ/max) px de diamètre, cadre de la carte)."""
+    import numpy as np
+    from bibliominer_analysis.networks.analysis import (LAYOUT_HEIGHT, LAYOUT_WIDTH,
+                                                        layout)
+
+    graph = _many_small_groups(groups=25, size=4)
+    coords = layout(graph)
+    ids = sorted(coords)
+    xy = np.array([coords[i] for i in ids])
+    span = np.ptp(xy, axis=0)
+    xy = (xy - xy.min(axis=0)) * min(LAYOUT_WIDTH / span[0], LAYOUT_HEIGHT / span[1])
+    occ = {n["id"]: n["occurrences"] for n in graph["nodes"]}
+    top = max(occ.values())
+    radius = np.array([(10 + 26 * np.sqrt(occ[i] / top)) / 2 for i in ids])
+    dist = np.sqrt(((xy[:, None] - xy[None]) ** 2).sum(-1))
+    np.fill_diagonal(dist, np.inf)
+    assert (dist >= radius[:, None] + radius[None] - 0.5).all()
 
 
 def test_the_layout_stays_the_same_across_runs():

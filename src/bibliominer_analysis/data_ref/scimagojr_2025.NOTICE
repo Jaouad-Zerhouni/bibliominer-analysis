@@ -1,0 +1,15 @@
+SCImago Journal & Country Rank - journal list, 2025 edition (scimagojr_2025.csv)
+
+Source: https://www.scimagojr.com ("Download data", CSV export).
+
+This table is third-party data. It is NOT covered by the MIT licence of this
+package: it is distributed under SCImago's own terms, which allow the
+information of the portal to be used for non-commercial purposes as long as it
+is cited.
+
+Cite it as:
+    SCImago (n.d.). SJR - SCImago Journal & Country Rank [Portal].
+    Retrieved from https://www.scimagojr.com
+
+The SJR indicators are computed by SCImago from Scopus data (Elsevier B.V.).
+For any commercial use, check the current terms with SCImago first.

@@ -207,7 +207,7 @@ def trend_forecast(corpus, horizon: int = 5,
         # Deux points donnent toujours un R² de 1 : une tendance n'a de sens
         # qu'à partir de trois observations.
         return {"table": empty, "fit": None,
-                "message": "Au moins trois années sont nécessaires."}
+                "message": "At least three years are needed."}
 
     years = per_year.index.to_numpy(dtype=float)
     counts = per_year.to_numpy(dtype=float)
@@ -217,15 +217,15 @@ def trend_forecast(corpus, horizon: int = 5,
         mask = counts > 0
         if mask.sum() < 3:
             return {"table": empty, "fit": None,
-                    "message": "Trop d'années vides pour un ajustement exponentiel."}
+                    "message": "Too many empty years for an exponential fit."}
         b, a = np.polyfit(t[mask], np.log(counts[mask]), 1)
         predict = lambda x: np.exp(a) * np.exp(b * x)  # noqa: E731
-        slope_label = "facteur multiplicatif annuel"
+        slope_label = "annual growth factor"
         slope_value = round(float(np.exp(b)), 4)
     else:
         b, a = np.polyfit(t, counts, 1)
         predict = lambda x: a + b * x                   # noqa: E731
-        slope_label = "publications supplémentaires par an"
+        slope_label = "additional documents per year"
         slope_value = round(float(b), 3)
 
     fitted = predict(t)

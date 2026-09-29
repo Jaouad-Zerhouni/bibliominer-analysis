@@ -126,5 +126,5 @@ def test_corpus_vide_ne_plante_pas():
 
 
 def test_colonnes_indispensables():
-    with pytest.raises(ValueError, match="Colonnes indispensables"):
+    with pytest.raises(ValueError, match="Required columns missing"):
         Corpus.from_dataframe(pd.DataFrame([{"Autre": "x"}]))

@@ -272,7 +272,8 @@ def test_trend_exige_trois_annees():
     """Deux points donnent toujours un R² de 1 : ce n'est pas une tendance."""
     res = _corpus([(2020, 1), (2021, 1)]).trend_forecast()
     assert res["fit"] is None
-    assert "trois" in res["message"].lower()
+    # Le message s'affiche tel quel dans l'interface, qui est en anglais.
+    assert "three years" in res["message"].lower()
 
 
 def test_a_year_without_any_document_does_not_break_production():

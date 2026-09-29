@@ -87,12 +87,20 @@ CALLS = {
     "top_sources": {}, "top_terms": {"field": "abstract"},
     "topic_dendrogram": {}, "trend_forecast": {}, "trend_topics": {},
     "word_dynamics": {}, "year_range": {}, "zipf": {},
+    # ce que l'interface montre, assemblé par le paquet (views.py)
+    "citation_balance": {}, "citation_graph": {}, "density_map": {},
+    "document_list": {}, "most_normalized_documents": {},
+    "network": {"unit": "keywords", "normalization": "association",
+                "overlay": True},
+    "term_network": {},
 }
 
 #: Appelées à part, parce qu'elles prennent un graphe ou construisent le corpus.
 SEPARATE = {"from_csv", "from_dataframe", "from_tables", "filter",
             "network_density", "network_layout", "network_metrics",
-            "network_summary", "attach_layout"}
+            "network_summary", "attach_layout",
+            # le catalogue des figures : `test_every_catalog_figure_renders`
+            "figure", "figure_spec", "figure_catalog"}
 
 NETWORKS = ("co_word", "co_authorship", "co_citation", "co_citation_authors",
             "co_country", "co_institution", "co_city", "bibliographic_coupling",
@@ -150,6 +158,37 @@ def test_no_infinite_value_reaches_the_output(run):
     _, results, _, _ = run
     bad = [k for k, v in results.items() if not _finite(v)]
     assert not bad, bad
+
+
+def test_citation_balance_received_equals_emitted(run):
+    """Chaque citation interne est reçue par l'un et émise par l'autre."""
+    _, r, _, _ = run
+    b = r["citation_balance"]
+    assert int(b["received"].sum()) == int(b["emitted"].sum())
+    assert list(b["balance"]) == sorted(b["balance"], reverse=True)
+
+
+def test_document_list_is_the_corpus(run):
+    corpus, r, _, _ = run
+    docs = r["document_list"]
+    assert len(docs) == min(100, len(corpus.documents))
+    assert list(docs["citations"]) == sorted(docs["citations"], reverse=True)
+
+
+def test_every_catalog_figure_renders(run):
+    """Chaque figure de l'interface, produite par le paquet sur ce fichier :
+    une image, ou un refus EXPLIQUÉ quand la donnée manque (SCImago…)."""
+    corpus, _, _, _ = run
+    errors = {}
+    for name in Corpus.figure_catalog()["name"]:
+        try:
+            assert corpus.figure(name, dpi=40)[:4] == b"\x89PNG", name
+        except ValueError as exc:
+            if not any(word in str(exc) for word in ("no data", "empty", "without")):
+                errors[name] = str(exc)
+        except Exception as exc:                      # noqa: BLE001
+            errors[name] = "%s: %s" % (type(exc).__name__, exc)
+    assert not errors, json.dumps(errors, indent=1)
 
 
 def test_main_information_is_consistent(run):

@@ -45,6 +45,7 @@ from ..metrics import overview as ov
 from ..metrics import themes as th
 from ..metrics import production as prod
 from ..networks import build as nets
+from .. import views as vw
 
 PathLike = Union[str, Path]
 
@@ -703,3 +704,83 @@ class Corpus:
     def normalized_citations(self) -> pd.DataFrame:
         """Citations rapportées à la moyenne de leur année de publication."""
         return imp.normalized_citations(self)
+
+    # -- ce que l'interface affiche, assemblé ---------------------------------
+    # Chaque méthode est CE que montre une carte de l'interface, pour les mêmes
+    # options (voir `views.py`) : l'API web ne fait que les appeler.
+
+    def document_list(self, n: Optional[int] = 100, sort: str = "citations") -> pd.DataFrame:
+        """Les documents : titre, premier auteur, année, source, type,
+        citations globales et locales, DOI. `sort` : citations, year, title."""
+        return vw.document_list(self, n, sort)
+
+    def most_normalized_documents(self, n: Optional[int] = 25) -> pd.DataFrame:
+        """Les documents classés par citations normalisées par année."""
+        return vw.most_normalized_documents(self, n)
+
+    def network(self, unit: str = "authors", top_n: int = 50, min_weight: int = 1,
+                normalization: str = "none", overlay: bool = False,
+                kind: str = "author", level: str = "parent",
+                resolution: float = 1.0) -> Dict[str, Any]:
+        """Le réseau du « Network lab », mesuré : `unit` parmi authors,
+        keywords, institutions, countries, references, cited-authors,
+        coupling ; `normalization` parmi none, association, jaccard, salton,
+        inclusion, equivalence."""
+        return vw.network(self, unit, top_n, min_weight, normalization, overlay,
+                          kind, level, resolution)
+
+    def density_map(self, unit: str = "keywords", top_n: int = 50, min_weight: int = 1,
+                    size: int = 48, kind: str = "author",
+                    level: str = "parent") -> Dict[str, Any]:
+        """La carte de densité d'un réseau du « Network lab »."""
+        return vw.density_map(self, unit, top_n, min_weight, size, kind, level)
+
+    def term_network(self, field: str = "abstract", ngram: int = 2, top_n: int = 40,
+                     min_weight: int = 2, min_documents: int = 2,
+                     normalization: str = "none",
+                     stopwords: Optional[Iterable[str]] = None) -> Dict[str, Any]:
+        """Le réseau des termes du texte, mesuré (page Text mining)."""
+        return vw.term_network(self, field, ngram, top_n, min_weight, min_documents,
+                               normalization, stopwords)
+
+    def citation_graph(self, unit: str = "sources", top_n: int = 40, min_weight: int = 1,
+                       level: str = "parent") -> Dict[str, Any]:
+        """Le réseau de citation directe, mesuré (page Citation network)."""
+        return vw.citation_graph(self, unit, top_n, min_weight, level)
+
+    def citation_balance(self, unit: str = "sources", top_n: int = 40,
+                         min_weight: int = 1, level: str = "parent") -> pd.DataFrame:
+        """Citations reçues moins émises, par entité du réseau de citation."""
+        return vw.citation_balance(self, unit, top_n, min_weight, level)
+
+    # -- figures de l'interface ------------------------------------------------
+
+    @staticmethod
+    def figure_catalog() -> pd.DataFrame:
+        """Toutes les figures de l'interface : nom, titre, page, section,
+        options (avec leur valeur à l'écran) et méthode qui porte les données."""
+        from ..figures.catalog import catalog_table
+        return catalog_table()
+
+    def figure_spec(self, name: str, **options: Any):
+        """La description (`FigureSpec`) d'une figure simple de l'interface —
+        barres, lignes, nuage —, à modifier avant `render_figure`."""
+        from ..figures.catalog import figure_spec
+        return figure_spec(self, name, **options)
+
+    def figure(self, name: str, fmt: Optional[str] = None, path: Optional[Any] = None,
+               dpi: int = 300, **options: Any) -> bytes:
+        """Une figure de l'interface, en image (PNG, SVG, PDF ou JPG).
+
+        ``name`` : celui de `figure_catalog()` (``top-authors``,
+        ``collaboration-map``…). Les options par défaut sont celles de l'écran ;
+        ``n=10`` pour un top 10, et `filter` pour une période :
+
+            >>> corpus.filter(years=(2023, 2025)).figure(
+            ...     "top-authors", n=10, path="top_authors.svg")
+
+        Avec ``path``, l'image est aussi écrite ; son extension choisit le
+        format. PNG à 300 dpi par défaut, SVG vectoriel.
+        """
+        from ..figures.catalog import figure_bytes
+        return figure_bytes(self, name, fmt=fmt, path=path, dpi=dpi, **options)

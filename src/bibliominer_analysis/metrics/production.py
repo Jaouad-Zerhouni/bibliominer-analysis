@@ -93,7 +93,7 @@ def org_column(level: str = "parent") -> str:
     try:
         return _ORG_LEVELS[level]
     except KeyError:
-        raise ValueError("level doit valoir « parent » ou « subparent », pas %r"
+        raise ValueError("level must be 'parent' or 'subparent', not %r"
                          % level) from None
 
 

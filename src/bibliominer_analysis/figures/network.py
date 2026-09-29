@@ -48,6 +48,9 @@ _MPL_FORMAT = {"jpg": "jpeg"}
 #: au-dessus, il masque ses voisins et la carte devient illisible.
 _MIN_AREA, _MAX_AREA = 30.0, 700.0
 
+#: Groupes nommés dans la légende ; les suivants sont résumés en une ligne.
+_LEGEND_MAX = 10
+
 
 class NetworkFigureError(ValueError):
     """Le réseau ne peut pas être dessiné — et on dit pourquoi."""
@@ -96,17 +99,22 @@ def _node_colours(nodes: List[Dict[str, Any]], palette: List[str],
     return out
 
 
-def _draw_edges(ax, edges, positions, colour) -> None:
+def _draw_edges(ax, edges, positions, colour, n_nodes: int) -> None:
     """Les liens, sous les nœuds, avec une épaisseur qui suit leur poids.
 
     Une carte où tous les liens pèsent visuellement pareil ne dit rien de sa
     propre structure : c'est justement l'inégalité des poids qui fait
     apparaître les regroupements.
+
+    Au-delà de trois liens par nœud, le fond s'efface : huit cents liens à
+    la même opacité faisaient une pelote grise qui cachait les nœuds. Les
+    liens forts restent nets.
     """
     weights = [float(edge.get("weight") or 0.0) for edge in edges]
     heaviest = max(weights) if weights else 0.0
     if heaviest <= 0:
         heaviest = 1.0
+    floor = min(0.15, max(0.04, 0.15 * 3 * n_nodes / max(len(edges), 1)))
 
     for edge, weight in zip(edges, weights):
         source, target = str(edge.get("source")), str(edge.get("target"))
@@ -117,7 +125,7 @@ def _draw_edges(ax, edges, positions, colour) -> None:
                 [positions[source][1], positions[target][1]],
                 color=colour, zorder=1,
                 linewidth=0.3 + 1.7 * share,
-                alpha=0.15 + 0.45 * share)
+                alpha=floor + (0.6 - floor) * share)
 
 
 def _place_labels(fig, ax, nodes, areas, positions, colour, limit: int) -> None:
@@ -187,13 +195,21 @@ def _add_community_legend(ax, nodes, palette, skin) -> None:
     if len(counts) < 2:
         return
 
+    # Au-delà de dix groupes, la légende devenait plus haute que la carte
+    # (dix-sept lignes « Cluster 15 · 2 nodes »). Les dix plus gros sont
+    # nommés, les autres résumés en une ligne.
+    ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    shown, rest = sorted(ranked[:_LEGEND_MAX]), ranked[_LEGEND_MAX:]
     handles = [
         Line2D([], [], marker="o", linestyle="none", markersize=7,
                markerfacecolor=palette[community % len(palette)],
                markeredgecolor=skin["surface"],
                label=f"Cluster {community} · {size} nodes")
-        for community, size in sorted(counts.items())
+        for community, size in shown
     ]
+    if rest:
+        handles.append(Line2D([], [], linestyle="none", label=(
+            f"+ {len(rest)} smaller clusters · {sum(s for _, s in rest)} nodes")))
     # SOUS la carte, jamais dedans. Posée dans un coin du graphe, elle
     # recouvrait des nœuds — et une légende qui cache la donnée qu'elle
     # explique est un contresens.
@@ -292,7 +308,7 @@ def render_network(
     ax.set_facecolor(skin["surface"])
 
     if edges:
-        _draw_edges(ax, edges, positions, skin["muted"])
+        _draw_edges(ax, edges, positions, skin["muted"], len(placed))
 
     areas = _node_areas(placed, size_by)
     ax.scatter([positions[str(node["id"])][0] for node in placed],

@@ -356,28 +356,41 @@ def overlay_years(corpus, unit: str, level: str = "parent") -> Dict[str, float]:
 # Disposition et carte de densité (la vue « density » de VOSviewer)
 # ---------------------------------------------------------------------------
 
+def _shortest_paths(G, index: Dict[str, int]):
+    """Tous les plus courts chemins (poids ``distance``), en matrice.
+
+    Floyd–Warshall vectorisé : les mêmes longueurs que Dijkstra depuis chaque
+    nœud, mais calculées par numpy. Sur un réseau de 250 références (7 000
+    liens), Dijkstra en Python pur prenait 8 s — l'écran attendait.
+    """
+    import numpy as np
+
+    size = len(index)
+    D = np.full((size, size), np.inf)
+    np.fill_diagonal(D, 0.0)
+    for a, b, data in G.edges(data=True):
+        i, j = index[a], index[b]
+        if i != j:
+            value = min(D[i, j], float(data["distance"]))
+            D[i, j] = D[j, i] = value
+    for k in range(size):
+        D = np.minimum(D, D[:, k, None] + D[None, k, :])
+    return D
+
+
 def _mds_component(G, nodes: list) -> Dict[str, list]:
     """Place les nœuds d'UNE composante connexe, par MDS sur ses chemins.
 
     Une composante seule n'a que des distances finies : le MDS y travaille
     sur des écarts qui veulent tous dire quelque chose.
     """
-    import networkx as nx
-    import numpy as np
-
     if len(nodes) == 1:
         return {nodes[0]: [0.0, 0.0]}
     if len(nodes) == 2:
         return {nodes[0]: [-0.5, 0.0], nodes[1]: [0.5, 0.0]}
 
     index = {node: i for i, node in enumerate(nodes)}
-    size = len(nodes)
-    D = np.zeros((size, size))
-    for src, targets in nx.all_pairs_dijkstra_path_length(
-            G.subgraph(nodes), weight="distance"):
-        i = index[src]
-        for dst, value in targets.items():
-            D[i, index[dst]] = value
+    D = _shortest_paths(G.subgraph(nodes), index)
     D = (D + D.T) / 2.0
 
     from ..metrics.factorial import _classical_mds
@@ -453,8 +466,13 @@ def _spread(xy, passes: int = 80):
     return xy
 
 
-def _pack(blocks: List[Dict[str, list]]) -> Dict[str, list]:
-    """Juxtapose les composantes, de la plus grande à la plus petite.
+#: Le cadre visé par la disposition : le format d'une carte à l'écran
+#: (≈ 1100 × 600 px) et d'une figure exportée, un peu plus large que haute.
+LAYOUT_WIDTH, LAYOUT_HEIGHT = 860.0, 480.0
+
+
+def _pack(blocks: List[Dict[str, list]], gap: float = 0.6) -> Dict[str, list]:
+    """Range les composantes en RANGÉES, au format de la carte.
 
     Entre deux composantes DÉCONNECTÉES, la distance n'a aucun sens : aucun
     chemin ne les relie. Les faire entrer dans un même MDS revenait à lui
@@ -463,31 +481,121 @@ def _pack(blocks: List[Dict[str, list]]) -> Dict[str, list]:
     donc côte à côte, ce qui n'affirme rien de plus qu'un voisinage
     graphique.
 
+    Côte à côte, mais pas sur UNE ligne : un réseau de co-auteurs compte
+    souvent quinze ou vingt petits groupes. Alignés, ils formaient une bande
+    vingt fois plus large que haute ; cadrée à l'écran, la bande devenait
+    un chapelet de disques empilés, noms illisibles (constaté sur un vrai
+    corpus). Les composantes remplissent donc des rangées successives, de la
+    plus grande à la plus petite, jusqu'au format de la carte.
+
     Chaque bloc est mis à l'échelle en √n : une composante de trois nœuds
     n'occupe pas la largeur d'une de vingt.
     """
-    placed: Dict[str, list] = {}
-    cursor = 0.0
-    gap = 0.35
+    import math
 
-    for block in sorted(blocks, key=len, reverse=True):
-        xs = [p[0] for p in block.values()]
-        ys = [p[1] for p in block.values()]
-        width = (max(xs) - min(xs)) or 1e-9
-        height = (max(ys) - min(ys)) or 1e-9
+    import numpy as np
+
+    boxes = []
+    for block in blocks:
+        ids = list(block)
+        xy = np.array([block[i] for i in ids], dtype=float)
+        span = max(float(np.ptp(xy[:, 0])), float(np.ptp(xy[:, 1])), 1e-9)
         # Une composante isolée (tous les nœuds au même endroit) doit rester
         # visible : on lui donne une largeur minimale plutôt qu'un point.
-        span = max(width, height, 1e-6)
-        scale = (len(block) ** 0.5) / span
-        cx, cy = (max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2
+        scale = math.sqrt(len(ids)) / span if len(ids) > 1 else 1.0
+        xy = (xy - xy.min(axis=0)) * scale
+        width = max(float(xy[:, 0].max()), 0.4)
+        height = max(float(xy[:, 1].max()), 0.4)
+        boxes.append((ids, xy, width, height))
 
-        block_width = width * scale
-        for node, (x, y) in block.items():
-            placed[node] = [round(cursor + (x - cx) * scale + block_width / 2, 4),
-                            round((y - cy) * scale, 4)]
-        cursor += block_width + gap
+    aspect = LAYOUT_WIDTH / LAYOUT_HEIGHT
+    area = sum((w + gap) * (h + gap) for _, _, w, h in boxes)
+    row_width = max(max(w for _, _, w, _ in boxes), math.sqrt(area * aspect))
 
+    rows, row, used = [], [], 0.0
+    for box in boxes:
+        if row and used + box[2] > row_width:
+            rows.append(row)
+            row, used = [], 0.0
+        row.append(box)
+        used += box[2] + gap
+    rows.append(row)
+
+    placed: Dict[str, list] = {}
+    top = 0.0
+    for row in rows:
+        height = max(box[3] for box in row)
+        total = sum(box[2] for box in row) + gap * (len(row) - 1)
+        x = (row_width - total) / 2              # rangée centrée
+        for ids, xy, width, box_height in row:
+            offset = top - (height - box_height) / 2 - box_height
+            for node, (px, py) in zip(ids, xy):
+                placed[node] = [x + float(px), offset + float(py)]
+            x += width + gap
+        top -= height + gap                      # l'axe y monte
     return placed
+
+
+def _declutter(graph: Dict[str, Any], coords: Dict[str, list],
+               rounds: int = 4, passes: int = 150, gap: float = 4.0) -> Dict[str, list]:
+    """Aucun disque sur un autre, à la taille où la carte est DESSINÉE.
+
+    L'écartement de `_readable` travaille à l'intérieur d'une composante,
+    avec une distance minimale identique pour tous les nœuds. Or un nœud
+    très cité est dessiné quatre fois plus large qu'un petit : deux gros
+    disques voisins se recouvraient quand même (« Nassif » sur « Hosni »).
+
+    Les coordonnées sont ramenées au cadre de la carte (`LAYOUT_WIDTH` ×
+    `LAYOUT_HEIGHT`, en pixels d'écran) ; chaque nœud y reçoit le rayon que
+    l'interface lui donne (10 + 26·√(occurrences / max) px de diamètre), et
+    les paires trop proches sont écartées, symétriquement, de ce qui leur
+    manque. Déterministe : deux points confondus s'écartent selon une
+    direction fixée par leur rang.
+    """
+    import numpy as np
+
+    ids = sorted(coords)
+    if len(ids) < 2:
+        return coords
+    xy = np.array([coords[i] for i in ids], dtype=float)
+    occurrences = {str(n["id"]): float(n.get("occurrences") or 1.0)
+                   for n in graph.get("nodes", [])}
+    top = max(occurrences.values(), default=1.0) or 1.0
+    radius = np.array([(10.0 + 26.0 * np.sqrt(occurrences.get(i, 1.0) / top)) / 2.0
+                       for i in ids])
+    need = radius[:, None] + radius[None, :] + gap
+    # Chaque paire une seule fois (triangle supérieur) : les autres ne sont
+    # jamais regardées.
+    upper = np.triu(np.ones((len(ids), len(ids)), dtype=bool), 1)
+    angles = np.arange(len(ids)) * 2.399963       # angle d'or : directions fixes
+    fallback = np.stack([np.cos(angles), np.sin(angles)], axis=1)
+
+    for _ in range(rounds):
+        # Recadrer à chaque tour : écarter agrandit la carte, et c'est la
+        # carte RECADRÉE qui sera dessinée.
+        span = np.ptp(xy, axis=0)
+        span[span == 0] = 1.0
+        xy = (xy - xy.min(axis=0)) * min(LAYOUT_WIDTH / span[0], LAYOUT_HEIGHT / span[1])
+        moved = False
+        for _ in range(passes):
+            diff = xy[:, None, :] - xy[None, :, :]
+            dist2 = (diff ** 2).sum(-1)
+            i, j = np.nonzero(upper & (dist2 < need ** 2))
+            if not len(i):
+                break
+            moved = True
+            dist = np.sqrt(dist2[i, j])
+            unit = diff[i, j] / np.where(dist == 0, 1.0, dist)[:, None]
+            same = dist == 0
+            unit[same] = (fallback[i] - fallback[j])[same]
+            # Chacun des deux fait la moitié du chemin qui manque.
+            push = unit * ((need[i, j] - dist) / 2.0)[:, None]
+            np.add.at(xy, i, push)
+            np.add.at(xy, j, -push)
+        if not moved:
+            break
+    return {node: [round(float(xy[k, 0]), 2), round(float(xy[k, 1]), 2)]
+            for k, node in enumerate(ids)}
 
 
 def layout(graph: Dict[str, Any]) -> Dict[str, list]:
@@ -507,6 +615,9 @@ def layout(graph: Dict[str, Any]) -> Dict[str, list]:
     ce contraste artificiel devenait le fait le plus saillant du nuage. Le
     MDS y consacrait son premier axe, et la structure réelle — celle qu'on
     vient de calculer — se repliait sur une droite. Voir `_pack`.
+
+    Les coordonnées sont en pixels d'une carte de `LAYOUT_WIDTH` ×
+    `LAYOUT_HEIGHT` : aucun disque n'y recouvre un autre (`_declutter`).
     """
     import networkx as nx
 
@@ -522,7 +633,8 @@ def layout(graph: Dict[str, Any]) -> Dict[str, list]:
     # sinon deux exécutions pourraient les juxtaposer dans un autre ordre.
     components = sorted((sorted(c) for c in nx.connected_components(G)),
                         key=lambda c: (-len(c), c[0]))
-    return _pack([_mds_component(G, nodes) for nodes in components])
+    packed = _pack([_mds_component(G, nodes) for nodes in components])
+    return _declutter(graph, packed)
 
 
 def attach_layout(graph: Dict[str, Any]) -> Dict[str, Any]:

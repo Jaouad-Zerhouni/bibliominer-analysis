@@ -67,8 +67,8 @@ def build_tables(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     missing = [c for c in S.REQUIRED_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(
-            "Colonnes indispensables absentes : %s. "
-            "Ce fichier ne ressemble pas à un export Scopus." % ", ".join(missing)
+            "Required columns missing: %s. "
+            "This file does not look like a Scopus export." % ", ".join(missing)
         )
 
     docs: List[Dict[str, Any]] = []

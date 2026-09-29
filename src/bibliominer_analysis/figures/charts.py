@@ -127,15 +127,21 @@ def render_word_cloud(table: pd.DataFrame, label: str = "keyword", value: str = 
     for i, (word, weight) in enumerate(zip(t[label], t[value])):
         text = ax.text(0, 0, str(word), fontsize=8 + 26 * (float(weight) / top) ** 0.7,
                        ha="center", va="center", color=pal[i % len(pal)])
+        # La boîte du mot est mesurée UNE fois, au centre : déplacer un texte
+        # ne change pas sa taille. Chaque position de la spirale se teste
+        # alors par un simple décalage — la mesurer à chaque essai (jusqu'à
+        # 2 500 par mot) prenait dix secondes pour cent vingt mots.
+        bb = text.get_window_extent(renderer)
+        (bx0, by0), (bx1, by1) = inv.transform([(bb.x0, bb.y0), (bb.x1, bb.y1)])
         for step in range(2500):
             angle, radius = step * 0.35, step * 0.0022
-            text.set_position((radius * math.cos(angle), 0.7 * radius * math.sin(angle)))
-            bb = text.get_window_extent(renderer)
-            (x0, y0), (x1, y1) = inv.transform([(bb.x0, bb.y0), (bb.x1, bb.y1)])
+            cx, cy = radius * math.cos(angle), 0.7 * radius * math.sin(angle)
+            x0, y0, x1, y1 = cx + bx0, cy + by0, cx + bx1, cy + by1
             box = (x0 - 0.01, y0 - 0.01, x1 + 0.01, y1 + 0.01)
             inside = x0 > -1 and x1 < 1 and y0 > -1 and y1 < 1
             if inside and all(box[2] < b[0] or box[0] > b[2] or box[3] < b[1] or box[1] > b[3]
                               for b in placed):
+                text.set_position((cx, cy))
                 placed.append(box)
                 break
         else:
