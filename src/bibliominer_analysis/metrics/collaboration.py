@@ -23,15 +23,15 @@ Formules, telles qu'établies par leurs auteurs :
     maximale. Sur un corpus réel A est grand, et MCC ≈ CC : c'est le
     comportement rapporté par les études qui l'appliquent.
 
-  - **CAI — indice de co-autorat** (Garg & Padhi, 2001)
+  - **CAI, indice de co-autorat** (Garg & Padhi, 2001)
         ``CAI = [(N_ij / N_i0) / (N_0j / N_00)] × 100``
     compare, période par période, la part d'un type de signature à sa part
     d'ensemble. **100 = conforme à la moyenne**, au-dessus = sur-représenté.
 
-  - **AAPP — productivité moyenne des auteurs**
+  - **AAPP, productivité moyenne des auteurs**
         ``AAPP = nombre de documents / nombre d'auteurs distincts``
 
-  - **Loi de Price** — la racine carrée des auteurs produit la moitié des
+  - **Loi de Price**, la racine carrée des auteurs produit la moitié des
     signatures. On donne l'écart entre le théorique et l'observé.
 """
 
@@ -179,7 +179,7 @@ def price_law(corpus) -> Dict[str, Any]:
     """Loi de Price : √N auteurs devraient produire la moitié des signatures.
 
     On compare le théorique et l'observé. Un écart important signale un corpus
-    plus (ou moins) concentré que ce que Price prédit — c'est l'intérêt de
+    plus (ou moins) concentré que ce que Price prédit, c'est l'intérêt de
     l'indicateur, pas le fait qu'il « tombe juste ».
     """
     a = corpus.authors
@@ -220,7 +220,7 @@ def authorship_groups(corpus) -> pd.DataFrame:
 
     Le regroupement s'arrête à « 4 et plus » parce qu'au-delà les effectifs
     s'émiettent : distinguer 7 signataires de 8 n'apprend rien, alors que le
-    passage de 1 à 2 auteurs est la frontière qui compte — celle de la
+    passage de 1 à 2 auteurs est la frontière qui compte, celle de la
     collaboration.
 
     Les quatre lignes sont TOUJOURS présentes, à zéro si besoin. Une catégorie

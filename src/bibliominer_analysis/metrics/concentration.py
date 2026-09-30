@@ -5,12 +5,12 @@ fois chacune, ou de trois personnes en ayant écrit trente. Les classements ne
 distinguent pas ces deux situations : ils montrent le haut du tableau, jamais la
 forme de la distribution.
 
-  - **Gini** — 0 = tout le monde produit autant, 1 = une seule entité produit
+  - **Gini**, 0 = tout le monde produit autant, 1 = une seule entité produit
     tout. Sur des auteurs, un Gini au-dessus de ~0,6 signale un domaine porté
     par quelques personnes.
-  - **Courbe de Lorenz** — la représentation dont le Gini n'est que le résumé.
+  - **Courbe de Lorenz**, la représentation dont le Gini n'est que le résumé.
     Elle montre *où* se situe l'inégalité, ce qu'un seul nombre ne dit pas.
-  - **CR4 / CR10** — part des 4 et des 10 premiers. Plus lisible qu'un Gini
+  - **CR4 / CR10**, part des 4 et des 10 premiers. Plus lisible qu'un Gini
     pour un lecteur non spécialiste, et suffisant pour la plupart des propos.
 
 Lotka (`laws.py`) répond à une question voisine mais différente : il teste si la
@@ -113,7 +113,7 @@ def concentration(corpus, unit: str = "authors") -> Dict[str, Any]:
     Retour : ``unit``, ``entities``, ``documents``, ``gini``, ``cr4``,
     ``cr10``, ``top_share_10pct``, ``lorenz`` (liste de points).
 
-    ``top_share_10pct`` est la part produite par les 10 % les plus actifs —
+    ``top_share_10pct`` est la part produite par les 10 % les plus actifs,
     la formulation que comprend n'importe quel lecteur, contrairement au Gini.
     """
     s = _series(corpus, unit)
@@ -143,7 +143,7 @@ def concentration(corpus, unit: str = "authors") -> Dict[str, Any]:
 
 
 def concentration_summary(corpus) -> pd.DataFrame:
-    """Une ligne par dimension — la comparaison est plus parlante que le détail.
+    """Une ligne par dimension, la comparaison est plus parlante que le détail.
 
     Colonnes : ``unit``, ``entities``, ``documents``, ``gini``, ``cr4``,
     ``cr10``, ``top_share_10pct``.

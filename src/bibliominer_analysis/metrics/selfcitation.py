@@ -7,13 +7,13 @@ indicateurs que les comités de lecture demandent explicitement.
 
 Une citation est une **auto-citation** à un niveau donné quand le document
 citant et le document cité partagent au moins une entité à ce niveau : un
-auteur, une organisation, un pays. Les trois niveaux ne se recouvrent pas —
+auteur, une organisation, un pays. Les trois niveaux ne se recouvrent pas,
 deux équipes distinctes d'un même pays produisent une auto-citation *nationale*
 sans aucune auto-citation d'auteur.
 
 **Limite à énoncer avant tout usage** : le calcul ne porte que sur les
 citations INTERNES au corpus. Les auto-citations venues d'articles hors corpus
-sont invisibles ici. Le taux mesuré est donc un plancher, jamais le taux réel —
+sont invisibles ici. Le taux mesuré est donc un plancher, jamais le taux réel,
 et l'annoncer autrement serait trompeur.
 """
 
@@ -144,7 +144,7 @@ def authors_self_citation(corpus, n: Optional[int] = 20,
 
     Un auteur est identifié comme partout ailleurs dans le package : par son
     identifiant Scopus, sinon par son nom. Défaut corrigé : ce seul calcul
-    passait par le NOM, et fusionnait deux homonymes — l'un « s'auto-citait »
+    passait par le NOM, et fusionnait deux homonymes, l'un « s'auto-citait »
     alors en citant l'autre.
     """
     from .local import citation_pairs

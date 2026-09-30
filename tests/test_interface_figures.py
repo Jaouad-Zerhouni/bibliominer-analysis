@@ -1,6 +1,6 @@
 """Les graphiques de l'interface qui ne sont ni barres, ni lignes, ni nuages
-de points — cartes du monde, treemap, nuage de mots, Sankey, dendrogramme,
-carte de densité — ont chacun leur rendu dans le package.
+de points, cartes du monde, treemap, nuage de mots, Sankey, dendrogramme,
+carte de densité, ont chacun leur rendu dans le package.
 
 Et les corrections de calcul qui vont avec : une graphie par auteur et par
 mot-clé, la carte thématique mesurée sur toutes les co-occurrences.

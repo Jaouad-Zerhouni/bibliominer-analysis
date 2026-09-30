@@ -1,8 +1,8 @@
 """Cartes du monde publiables : carte des pays (choroplèthe) et carte des
 collaborations internationales.
 
-Le fond de carte est celui de l'interface web — `world-atlas`
-(countries-110m, Natural Earth, licence ISC dans ``data_ref``) — pour que la
+Le fond de carte est celui de l'interface web, `world-atlas`
+(countries-110m, Natural Earth, licence ISC dans ``data_ref``), pour que la
 figure du package et la carte de l'écran montrent les mêmes frontières. Le
 TopoJSON est décodé ici, sans dépendance cartographique (ni geopandas, ni
 cartopy) : projection équirectangulaire, simple et lisible.
@@ -200,8 +200,8 @@ def render_world_map(values: Dict[str, float], value_label: str = "Documents",
 
     ``values`` : {pays du corpus -> valeur}. Sans ``links``, carte des pays :
     chaque pays est coloré selon sa valeur (une seule teinte, du clair au
-    foncé ; gris clair = absent du corpus). Avec ``links`` — des triplets
-    (pays, pays, poids) — carte des collaborations : chaque pays a sa
+    foncé ; gris clair = absent du corpus). Avec ``links``, des triplets
+    (pays, pays, poids), carte des collaborations : chaque pays a sa
     couleur, définie en légende, et un arc relie chaque paire, d'autant plus
     épais que le poids est fort.
 

@@ -30,7 +30,7 @@ def _report():
     r = Report(filters={"years": "2023-2025"}, created=datetime(2026, 1, 1))
     r.add_table("Actors", "Top 10 authors",
                 pd.DataFrame({"author": ["Idri A.", "Hosni M."], "documents": [12, 9]}),
-                note="years 2023–2025")
+                note="years 2023-2025")
     r.add_indicators("Impact", "Collaboration", {"CAGR": 12.5, "nested": {"x": 1}},
                      definitions={"CAGR": "Compound annual growth rate"})
     r.add_figure("Corpus", "Annual production", SPEC)
@@ -67,7 +67,7 @@ def test_tableaux_excel_et_indicateurs():
 def test_readme_dit_les_filtres_et_les_notes():
     readme = zipfile.ZipFile(io.BytesIO(_report().to_bytes())).read("README.txt").decode()
     assert "Filters: years: 2023-2025" in readme
-    assert "Top 10 authors — years 2023–2025" in readme
+    assert "Top 10 authors (years 2023-2025)" in readme
     assert readme.index("1-corpus/") < readme.index("2-actors/") < readme.index("5-networks/")
 
 

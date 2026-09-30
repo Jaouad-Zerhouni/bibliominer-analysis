@@ -103,7 +103,7 @@ def test_vecteur_propre_d_une_etoile():
     """Étoile à 3 branches : λ = √3, vecteur (√3, 1, 1, 1)/√6.
 
     Centre = 0,7071, feuilles = 0,4082. Graphe biparti : l'ancienne itération
-    oscillait sans converger et s'arrêtait sur 0,5 pour les quatre nœuds —
+    oscillait sans converger et s'arrêtait sur 0,5 pour les quatre nœuds,
     centre et feuilles indiscernables.
     """
     A = np.zeros((4, 4))

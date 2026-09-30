@@ -3,21 +3,21 @@
 Les formules sont celles de la littérature, écrites explicitement pour qu'on
 puisse les vérifier :
 
-  - **CAGR** — croissance annuelle composée
+  - **CAGR**, croissance annuelle composée
         ``((N_fin / N_début)^(1/n) − 1) × 100``   (n = nombre d'intervalles)
 
-  - **AGR** — croissance annuelle simple, d'une année sur l'autre
+  - **AGR**, croissance annuelle simple, d'une année sur l'autre
         ``(N_t − N_{t−1}) / N_{t−1} × 100``
 
-  - **RGR** — taux de croissance relatif (Mahapatra, 1985)
+  - **RGR**, taux de croissance relatif (Mahapatra, 1985)
         ``R = (ln W₂ − ln W₁) / (T₂ − T₁)``
     où W est le nombre **cumulé** de publications. Le RGR décroît
     mécaniquement avec le temps : un corpus mûr croît moins vite en relatif.
 
-  - **Temps de doublement** — durée nécessaire pour doubler le stock
+  - **Temps de doublement**, durée nécessaire pour doubler le stock
         ``Dt = ln(2) / RGR = 0,693 / RGR``
 
-  - **Cochran** — taille d'échantillon représentatif
+  - **Cochran**, taille d'échantillon représentatif
         ``n₀ = Z²·p·q / e²``  puis correction pour population finie
         ``n = n₀ / (1 + (n₀ − 1)/N)``
 
@@ -50,7 +50,7 @@ def cagr(corpus) -> Optional[float]:
     """Croissance annuelle composée, en pourcentage.
 
     Renvoie ``None`` si le corpus couvre moins de deux ans ou si la première
-    année est vide — le taux serait alors infini, ce qui n'a aucun sens.
+    année est vide, le taux serait alors infini, ce qui n'a aucun sens.
     """
     per_year = _docs_per_year(corpus)
     if len(per_year) < 2:
@@ -66,7 +66,7 @@ def agr(corpus) -> pd.DataFrame:
     """Croissance annuelle simple, année par année.
 
     La première année n'a pas de taux (pas d'année précédente), et une année
-    qui suit une année vide non plus — diviser par zéro donnerait un infini
+    qui suit une année vide non plus, diviser par zéro donnerait un infini
     qu'on préfère laisser vide plutôt que d'afficher un nombre faux.
     """
     per_year = _docs_per_year(corpus)
@@ -184,19 +184,19 @@ def trend_forecast(corpus, horizon: int = 5,
 
     Deux modèles :
 
-      - **linéaire** : ``N = a + b·t`` — ajusté directement sur les effectifs.
+      - **linéaire** : ``N = a + b·t``, ajusté directement sur les effectifs.
         ``b`` se lit comme « publications supplémentaires par an ».
       - **exponentiel** : ``ln N = a + b·t``, soit ``N = e^a · e^(b·t)``.
         Ajusté sur les logarithmes, il convient à une croissance qui
         s'accélère. Les années vides en sont exclues (ln 0 n'existe pas).
 
     Le **R² est calculé sur l'échelle d'origine dans les deux cas**, sinon on
-    comparerait un R² de logarithmes à un R² d'effectifs — et l'exponentiel
+    comparerait un R² de logarithmes à un R² d'effectifs, et l'exponentiel
     paraîtrait toujours meilleur.
 
     La dernière année est souvent **incomplète** (indexation en cours) : elle
     tire la tendance vers le bas. `last_year_partial` la signale, mais on ne
-    l'écarte pas d'office — c'est à l'utilisateur de trancher.
+    l'écarte pas d'office, c'est à l'utilisateur de trancher.
 
     Renvoie ``{"table": DataFrame, "fit": {...}}`` où la table porte les années
     observées **et** projetées, avec ``kind`` valant « observed » ou « forecast ».

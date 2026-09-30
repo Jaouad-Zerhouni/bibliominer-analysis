@@ -117,7 +117,7 @@ def build_tables(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         # « Authors with affiliations » a UN bloc par auteur, dans l'ordre des
         # auteurs. Un bloc peut porter PLUSIEURS affiliations : une ligne par
         # (auteur, affiliation), chacune pointant l'affiliation identique du
-        # document — jamais « la n-ième », qui n'a aucun rapport avec l'auteur.
+        # document, jamais « la n-ième », qui n'a aucun rapport avec l'auteur.
         awa = P.split_list(row.get(S.COL_AUTHORS_AFF))
         if awa and parsed_authors:
             for rank, item in enumerate(awa, start=1):

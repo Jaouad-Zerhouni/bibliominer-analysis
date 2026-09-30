@@ -4,7 +4,7 @@ La carte thématique (`themes.py`) est une photographie. Ici on en prend
 plusieurs, à des périodes successives, et on relie les groupes entre eux : un
 thème qui se scinde en deux, deux thèmes qui fusionnent, un thème qui
 disparaît. C'est la seule vue qui distingue vraiment un sujet **émergent** d'un
-sujet **déclinant** — le quadrant en bas à gauche de Callon confond les deux.
+sujet **déclinant**, le quadrant en bas à gauche de Callon confond les deux.
 
 Le lien entre un groupe d'une période et un groupe de la suivante est l'**indice
 d'inclusion pondéré** :

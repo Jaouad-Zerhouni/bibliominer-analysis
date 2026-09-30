@@ -1,4 +1,4 @@
-"""Fiche signalétique du corpus — l'équivalent du « Main Information ».
+"""Fiche signalétique du corpus, l'équivalent du « Main Information ».
 
 C'est le tableau qu'on met en tête d'un article bibliométrique : il décrit le
 corpus avant toute analyse. Chaque valeur y est définie sans ambiguïté, parce
@@ -22,7 +22,7 @@ def main_information(corpus) -> Dict[str, Any]:
       dernière année complète, ``(N_fin/N_début)^(1/années) − 1``. Il n'a de
       sens que sur au moins deux années.
     - **âge moyen des documents** : années écoulées depuis la publication,
-      comptées par rapport à l'année la plus récente DU CORPUS — pas par
+      comptées par rapport à l'année la plus récente DU CORPUS, pas par
       rapport à aujourd'hui, sinon la valeur changerait tous les ans.
     - **auteurs par document** : moyenne des signataires, doublons retirés.
     - **documents à auteur unique** : un seul signataire.
@@ -156,7 +156,7 @@ def most_cited_references(corpus, n: int = 20) -> pd.DataFrame:
         return empty
 
     r = refs.copy()
-    # Identité : DOI si présent, sinon titre normalisé — même règle que le
+    # Identité : DOI si présent, sinon titre normalisé, même règle que le
     # réseau de co-citation, pour que les deux vues concordent.
     key = r["ref_doi"].fillna("")
     key = key.where(key.map(str).str.strip() != "",

@@ -63,7 +63,7 @@ def sources_impact(corpus, n: Optional[int] = 20,
 
 
 def top_sources_ranked(corpus, n: Optional[int] = 20) -> pd.DataFrame:
-    """Revues par nombre de documents — le classement le plus simple."""
+    """Revues par nombre de documents, le classement le plus simple."""
     d = _docs_with_citations(corpus)
     if d.empty:
         return pd.DataFrame(columns=["source", "documents", "citations"])

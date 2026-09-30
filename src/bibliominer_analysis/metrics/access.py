@@ -1,6 +1,6 @@
 """Accès ouvert : ce que dit l'export, ce que dit SCImago, et pourquoi c'est différent.
 
-Deux sources d'information, deux questions distinctes — les confondre est
+Deux sources d'information, deux questions distinctes, les confondre est
 l'erreur courante :
 
   - **Le fichier importé** porte un statut **par article** (« Gold », « Green »,
@@ -9,18 +9,18 @@ l'erreur courante :
   - **SCImago** porte un statut **par revue**. C'est une propriété du support :
     la revue est-elle entièrement ouverte.
 
-Un article en accès ouvert dans une revue sur abonnement existe — c'est
+Un article en accès ouvert dans une revue sur abonnement existe, c'est
 précisément l'hybride, et le vert (dépôt en archive). L'inverse aussi :
 une revue ouverte dont Scopus n'a pas renseigné le champ. Aucune des deux
 sources ne remplace l'autre.
 
 Les voies, dans la terminologie usuelle :
 
-  - **Or** — publié ouvert dans une revue entièrement ouverte.
-  - **Hybride** — ouvert par paiement dans une revue sur abonnement.
-  - **Bronze** — lisible gratuitement sur le site de l'éditeur, sans licence
+  - **Or**, publié ouvert dans une revue entièrement ouverte.
+  - **Hybride**, ouvert par paiement dans une revue sur abonnement.
+  - **Bronze**, lisible gratuitement sur le site de l'éditeur, sans licence
     explicite : l'accès peut être retiré à tout moment.
-  - **Vert** — déposé par l'auteur dans une archive.
+  - **Vert**, déposé par l'auteur dans une archive.
 
 Un statut **absent n'est pas un statut fermé**. Scopus ne renseigne le champ
 que pour une partie des documents ; compter les vides comme « sur abonnement »
@@ -49,7 +49,7 @@ _ANY_OA = re.compile(r"\bopen\s*access\b", re.I)
 def routes_of(value: Any) -> list:
     """Voies d'accès ouvert déclarées pour un document.
 
-    Un même article peut en cumuler plusieurs — « Gold » ET « Green » quand il
+    Un même article peut en cumuler plusieurs, « Gold » ET « Green » quand il
     est publié ouvert puis déposé en archive. On les garde toutes : n'en
     retenir qu'une perdrait l'information la plus intéressante, celle du dépôt.
     """
@@ -93,7 +93,7 @@ def access_status(corpus) -> pd.DataFrame:
 
     Deux lignes seulement, et c'est volontaire. Scopus ne signale que les
     articles OUVERTS ; il n'ecrit jamais « fermé ». « Non signalé » regroupe
-    donc les articles fermés et ceux dont le statut manque — les separer
+    donc les articles fermés et ceux dont le statut manque, les separer
     supposerait une information qu'on n'a pas.
     """
     cols = ["status", "documents", "share", "citations", "citations_per_document"]
@@ -168,7 +168,7 @@ def access_over_time(corpus) -> pd.DataFrame:
 
     Le denominateur est l'ENSEMBLE des documents de l'annee, pas seulement
     ceux signales : comme Scopus n'ecrit jamais « ferme », se restreindre aux
-    documents renseignes donnerait 100 % chaque annee — un chiffre exact et
+    documents renseignes donnerait 100 % chaque annee, un chiffre exact et
     parfaitement inutile.
     """
     cols = ["year", "documents", "open_access", "share"]
@@ -195,7 +195,7 @@ def access_summary(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
     ``open_share_of_reported``, ``journal_open_documents``, ``disagreement``.
 
     ``disagreement`` compte les documents déclarés ouverts alors que leur revue
-    ne l'est pas — les hybrides et les dépôts en archive. C'est le chiffre qui
+    ne l'est pas, les hybrides et les dépôts en archive. C'est le chiffre qui
     justifie de garder les deux sources plutôt qu'une seule.
     """
     from .scimago import enrich_sources

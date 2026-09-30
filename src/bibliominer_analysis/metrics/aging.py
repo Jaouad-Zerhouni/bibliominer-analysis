@@ -10,7 +10,7 @@ Aucun indicateur de production ou de citation ne montre cela.
     de recherche ; en dessous de ~30 %, d'un champ d'archive.
   - **Âge médian des références** : la moitié des références sont plus vieilles.
   - **Demi-vie citée** : l'âge en deçà duquel se trouve la moitié des
-    références. Sur une distribution d'âges, c'est la médiane — on la nomme
+    références. Sur une distribution d'âges, c'est la médiane, on la nomme
     ainsi par convention bibliométrique.
 
 L'âge se calcule document par document (année du citant moins année de la

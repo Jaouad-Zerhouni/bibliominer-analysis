@@ -28,7 +28,7 @@ def test_is_filled_attrape_toutes_les_ecritures_d_une_absence():
     """« nan » et « None » sont des CHAINES apres conversion : le piege.
 
     Un test naif `valeur != ""` les compte comme remplies, et le tableau de
-    completude annonce 100 % partout — un controle faux d'une facon
+    completude annonce 100 % partout, un controle faux d'une facon
     particulierement traitresse, puisqu'il rassure.
     """
     s = pd.Series(["a", "", None, np.nan, "nan", "None", "  ", "NA", "null", "b"])

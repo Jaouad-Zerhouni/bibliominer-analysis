@@ -3,7 +3,7 @@ des nuages de points : treemap, nuage de mots, diagramme de Sankey (trois
 champs, évolution thématique), dendrogramme, carte de densité.
 
 Chacun prend le RÉSULTAT du calcul correspondant (celui que l'interface
-affiche) et rend une figure matplotlib — PNG, SVG ou PDF — avec la même
+affiche) et rend une figure matplotlib, PNG, SVG ou PDF, avec la même
 palette que `render_figure`. Ainsi tout graphique de l'application a son
 équivalent publiable depuis Python, sans navigateur.
 """
@@ -129,7 +129,7 @@ def render_word_cloud(table: pd.DataFrame, label: str = "keyword", value: str = 
                        ha="center", va="center", color=pal[i % len(pal)])
         # La boîte du mot est mesurée UNE fois, au centre : déplacer un texte
         # ne change pas sa taille. Chaque position de la spirale se teste
-        # alors par un simple décalage — la mesurer à chaque essai (jusqu'à
+        # alors par un simple décalage, la mesurer à chaque essai (jusqu'à
         # 2 500 par mot) prenait dix secondes pour cent vingt mots.
         bb = text.get_window_extent(renderer)
         (bx0, by0), (bx1, by1) = inv.transform([(bb.x0, bb.y0), (bb.x1, bb.y1)])

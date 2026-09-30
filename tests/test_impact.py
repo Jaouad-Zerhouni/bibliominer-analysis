@@ -1,7 +1,7 @@
 """Tests des indices h et g.
 
 Les valeurs attendues sont calculées À LA MAIN à partir des définitions
-canoniques — pas produites par le code lui-même. C'est la seule façon qu'un
+canoniques, pas produites par le code lui-même. C'est la seule façon qu'un
 test d'indicateur ait une valeur : sinon il ne fait que graver l'erreur.
 """
 

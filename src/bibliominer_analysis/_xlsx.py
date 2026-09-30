@@ -3,7 +3,7 @@
 Pourquoi ne pas passer par ``DataFrame.to_excel`` ? Parce qu'il exige
 openpyxl ou xlsxwriter : une dépendance de plus pour tout utilisateur du
 paquet, rien que pour écrire des tableaux. Un .xlsx n'est qu'un ZIP de
-quelques fichiers XML ; on en écrit le strict nécessaire — des feuilles,
+quelques fichiers XML ; on en écrit le strict nécessaire, des feuilles,
 une ligne d'en-tête en gras et figée, des largeurs de colonnes lisibles.
 
 Le fichier est DÉTERMINISTE : aucune date de création, des entrées ZIP
@@ -31,7 +31,7 @@ _PKG = "http://schemas.openxmlformats.org/package/2006/relationships"
 _HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
 _EPOCH = (1980, 1, 1, 0, 0, 0)
 
-#: Caractères interdits dans un XML 1.0 — un titre copié d'un PDF en contient.
+#: Caractères interdits dans un XML 1.0, un titre copié d'un PDF en contient.
 _ILLEGAL = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f￾￿]")
 #: Excel refuse ces caractères dans un nom de feuille.
 _SHEET_FORBIDDEN = re.compile(r"[\[\]:*?/\\]")

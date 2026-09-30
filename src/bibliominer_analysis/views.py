@@ -1,8 +1,8 @@
 """Les résultats TELS QUE l'interface les montre.
 
 Les briques existaient toutes dans le paquet (réseaux, normalisation,
-centralités, citations locales…), mais c'était l'API web — ou même le
-navigateur — qui les assemblait : la liste des documents, la balance des
+centralités, citations locales…), mais c'était l'API web, ou même le
+navigateur, qui les assemblait : la liste des documents, la balance des
 citations, le réseau complet du « Network lab ». Un utilisateur du paquet
 devait deviner l'assemblage, et pouvait obtenir autre chose que l'écran.
 
@@ -60,7 +60,7 @@ def document_list(corpus, n: Optional[int] = 100, sort: str = "citations") -> pd
 
 
 def most_normalized_documents(corpus, n: Optional[int] = 25) -> pd.DataFrame:
-    """Les documents classés par citations NORMALISÉES — rapportées à la
+    """Les documents classés par citations NORMALISÉES, rapportées à la
     moyenne des documents de la même année. La seule mesure qui permette de
     classer ensemble un article de 2016 et un de 2024."""
     d = corpus.documents[["eid", "title", "year", "source"]].copy()
@@ -116,7 +116,7 @@ def density_map(corpus, unit: str = "keywords", top_n: int = 50,
                 min_weight: int = 1, size: int = 48, kind: str = "author",
                 level: str = "parent") -> Dict[str, Any]:
     """La carte de densité d'un réseau (vue « density » de VOSviewer) : la
-    grille, et chaque nœud à sa position — déterministe, la même d'une
+    grille, et chaque nœud à sa position, déterministe, la même d'une
     ouverture à l'autre."""
     graph = _unit_graph(corpus, unit, top_n, min_weight, kind, level)
     coords = corpus.network_layout(graph)
@@ -137,7 +137,7 @@ def term_network(corpus, field: str = "abstract", ngram: int = 2, top_n: int = 4
                  normalization: str = "none",
                  stopwords: Optional[Iterable[str]] = None) -> Dict[str, Any]:
     """Le réseau de co-occurrence des termes du texte, mesuré (communautés,
-    centralités, résumé) — celui de la page Text mining."""
+    centralités, résumé), celui de la page Text mining."""
     graph = corpus.text_co_occurrence(field, ngram, top_n, min_weight,
                                       min_documents, stopwords)
     graph = corpus.network_metrics(normalize(graph, normalization))
@@ -147,7 +147,7 @@ def term_network(corpus, field: str = "abstract", ngram: int = 2, top_n: int = 4
 
 def citation_graph(corpus, unit: str = "sources", top_n: int = 40,
                    min_weight: int = 1, level: str = "parent") -> Dict[str, Any]:
-    """Le réseau de citation directe, mesuré — celui de la page Citation
+    """Le réseau de citation directe, mesuré, celui de la page Citation
     network."""
     graph = corpus.network_metrics(corpus.citation_network(unit, top_n, min_weight, level))
     graph["summary"] = corpus.network_summary(graph)

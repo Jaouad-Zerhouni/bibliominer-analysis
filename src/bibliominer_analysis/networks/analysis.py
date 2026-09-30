@@ -7,13 +7,13 @@ calcule ce que l'œil ne voit pas.
 **Les centralités ne disent pas la même chose**, et les confondre est l'erreur
 classique :
 
-  - **degré** — le nombre de liens. Qui est le plus actif.
-  - **intermédiarité** — la fréquence à laquelle un nœud se trouve sur le
+  - **degré**, le nombre de liens. Qui est le plus actif.
+  - **intermédiarité**, la fréquence à laquelle un nœud se trouve sur le
     chemin le plus court entre deux autres. Qui fait le **pont** entre des
     groupes qui ne se parlent pas. Un nœud peut avoir un degré médiocre et une
     intermédiarité énorme : c'est souvent le plus intéressant du corpus.
-  - **proximité** — la distance moyenne au reste. Qui atteint tout le monde vite.
-  - **PageRank** — être cité par des nœuds eux-mêmes centraux compte davantage
+  - **proximité**, la distance moyenne au reste. Qui atteint tout le monde vite.
+  - **PageRank**, être cité par des nœuds eux-mêmes centraux compte davantage
     qu'être cité par des nœuds isolés.
 
 **Les normalisations** viennent de VOSviewer : un lien brut favorise
@@ -34,7 +34,7 @@ NORMALIZATIONS = ("none", "association", "jaccard", "salton", "inclusion", "equi
 
 
 def _adjacency(G, order):
-    """Matrice d'adjacence pondérée, dense — nos réseaux tiennent en mémoire."""
+    """Matrice d'adjacence pondérée, dense, nos réseaux tiennent en mémoire."""
     import numpy as np
 
     index = {n: i for i, n in enumerate(order)}
@@ -51,7 +51,7 @@ def _pagerank(A, alpha: float = 0.85, iters: int = 200, tol: float = 1e-10):
 
     Écrit ici plutôt qu'appelé à networkx : depuis la version 3, `nx.pagerank`
     passe par scipy. Sans scipy il lève, et un bloc de secours renverrait 1/n
-    pour tout le monde — une colonne d'apparence normale mais entièrement
+    pour tout le monde, une colonne d'apparence normale mais entièrement
     vide de sens, donc pire qu'une colonne absente.
     """
     import numpy as np
@@ -81,7 +81,7 @@ def _eigenvector(A, iters: int = 2000, tol: float = 1e-12):
     """Centralité de vecteur propre par itération de la puissance.
 
     On itère sur **A + I**, pas sur A. Les deux ont les mêmes vecteurs propres,
-    mais sur un graphe BIPARTI (une étoile, un arbre — fréquents en
+    mais sur un graphe BIPARTI (une étoile, un arbre, fréquents en
     co-signature) A a deux valeurs propres dominantes opposées, +λ et −λ :
     l'itération simple oscille alors entre deux vecteurs sans jamais converger,
     et renvoyait celui où elle s'arrêtait. Le décalage de +1 rend la valeur
@@ -121,7 +121,7 @@ def normalize(graph: Dict[str, Any], method: str = "association") -> Dict[str, A
 
     Avec ``c_ij`` la co-occurrence et ``s_i`` le total de l'entité *i* :
 
-      - ``association`` : c_ij / (s_i · s_j) — la force d'association de
+      - ``association`` : c_ij / (s_i · s_j), la force d'association de
         VOSviewer, proportionnelle au rapport entre observé et attendu.
       - ``jaccard``      : c_ij / (s_i + s_j − c_ij)
       - ``salton``       : c_ij / √(s_i · s_j)
@@ -174,7 +174,7 @@ def annotate(graph: Dict[str, Any], communities: bool = True,
 
     ``overlay`` associe un identifiant de nœud à son année moyenne : c'est la
     vue « overlay » de VOSviewer, qui montre d'un coup quelles zones du réseau
-    sont récentes et lesquelles sont anciennes — information qu'aucune taille
+    sont récentes et lesquelles sont anciennes, information qu'aucune taille
     de nœud ne peut porter.
     """
     if not graph.get("nodes"):
@@ -188,7 +188,7 @@ def annotate(graph: Dict[str, Any], communities: bool = True,
     degree = nx.degree_centrality(G)
     clustering = nx.clustering(G, weight="weight")
     # Les poids sont des SIMILARITÉS : plus c'est fort, plus c'est proche. Les
-    # chemins les plus courts raisonnent en DISTANCES, d'où l'inversion — sans
+    # chemins les plus courts raisonnent en DISTANCES, d'où l'inversion, sans
     # elle, l'intermédiarité passerait par les liens les plus faibles.
     for _, _, d in G.edges(data=True):
         w = float(d.get("weight", 1)) or 1e-9
@@ -205,7 +205,7 @@ def annotate(graph: Dict[str, Any], communities: bool = True,
     if communities and G.number_of_edges():
         # `resolution` est le paramètre de VOSviewer : au-dessus de 1 on
         # obtient des groupes plus nombreux et plus petits, en dessous des
-        # groupes plus larges. Il n'a pas de valeur « juste » — c'est un choix
+        # groupes plus larges. Il n'a pas de valeur « juste », c'est un choix
         # de granularité, qui doit donc rester entre les mains du lecteur.
         try:
             groups = nx.community.louvain_communities(
@@ -254,9 +254,9 @@ def _communities_on_nodes(graph: Dict[str, Any]) -> Optional[List[set]]:
 def graph_summary(graph: Dict[str, Any]) -> Dict[str, Any]:
     """Indicateurs de forme du réseau entier.
 
-    ``density`` — part des liens possibles réellement présents.
-    ``transitivity`` — probabilité que deux voisins d'un nœud soient voisins.
-    ``components`` — nombre de morceaux disjoints ; plus d'un signale un
+    ``density``, part des liens possibles réellement présents.
+    ``transitivity``, probabilité que deux voisins d'un nœud soient voisins.
+    ``components``, nombre de morceaux disjoints ; plus d'un signale un
     domaine fragmenté, ce qu'un dessin de réseau masque souvent.
     ``mean_path_length`` et ``diameter`` portent sur la **plus grande**
     composante : sur un graphe non connexe ils seraient infinis.
@@ -314,7 +314,7 @@ def overlay_years(corpus, unit: str, level: str = "parent") -> Dict[str, float]:
     Aucune taille de nœud ne peut porter cette information, parce que la taille
     est déjà prise par la fréquence.
 
-    Les identifiants renvoyés suivent EXACTEMENT ceux de `networks.build` —
+    Les identifiants renvoyés suivent EXACTEMENT ceux de `networks.build`,
     sinon la jointure serait silencieusement vide.
     """
     import pandas as pd
@@ -359,9 +359,9 @@ def overlay_years(corpus, unit: str, level: str = "parent") -> Dict[str, float]:
 def _shortest_paths(G, index: Dict[str, int]):
     """Tous les plus courts chemins (poids ``distance``), en matrice.
 
-    Floyd–Warshall vectorisé : les mêmes longueurs que Dijkstra depuis chaque
+    Floyd-Warshall vectorisé : les mêmes longueurs que Dijkstra depuis chaque
     nœud, mais calculées par numpy. Sur un réseau de 250 références (7 000
-    liens), Dijkstra en Python pur prenait 8 s — l'écran attendait.
+    liens), Dijkstra en Python pur prenait 8 s, l'écran attendait.
     """
     import numpy as np
 
@@ -416,10 +416,10 @@ def _readable(G, start: Dict[str, list]) -> Dict[str, list]:
     disques empilés, noms superposés.
 
     Deux passes, toutes deux déterministes :
-      1. une disposition à ressorts PARTANT du MDS (graine fixe) — elle garde
+      1. une disposition à ressorts PARTANT du MDS (graine fixe), elle garde
          la forme d'ensemble et desserre les groupes ;
       2. un écartement des paires trop proches, jusqu'à une distance minimale
-         qui dépend du nombre de nœuds — aucun disque ne cache un autre.
+         qui dépend du nombre de nœuds, aucun disque ne cache un autre.
     """
     import networkx as nx
     import numpy as np
@@ -440,7 +440,7 @@ def _spread(xy, passes: int = 80):
     Coordonnées ramenées à [-1, 1], distance minimale 1.6/√n : assez pour
     qu'un disque ne recouvre pas son voisin, assez peu pour garder la forme.
     Deux points confondus sont séparés selon une direction fixée par leur
-    rang — jamais au hasard.
+    rang, jamais au hasard.
     """
     import numpy as np
 
@@ -476,7 +476,7 @@ def _pack(blocks: List[Dict[str, list]], gap: float = 0.6) -> Dict[str, list]:
 
     Entre deux composantes DÉCONNECTÉES, la distance n'a aucun sens : aucun
     chemin ne les relie. Les faire entrer dans un même MDS revenait à lui
-    demander de coder une distance qui n'existe pas — et il y dépensait son
+    demander de coder une distance qui n'existe pas, et il y dépensait son
     premier axe, repliant la vraie structure sur une droite. On les place
     donc côte à côte, ce qui n'affirme rien de plus qu'un voisinage
     graphique.
@@ -613,8 +613,8 @@ def layout(graph: Dict[str, Any]) -> Dict[str, list]:
     Les faire entrer dans un seul MDS demandait de donner une distance à des
     paires qu'aucun chemin ne relie : on leur en attribuait une, grande, et
     ce contraste artificiel devenait le fait le plus saillant du nuage. Le
-    MDS y consacrait son premier axe, et la structure réelle — celle qu'on
-    vient de calculer — se repliait sur une droite. Voir `_pack`.
+    MDS y consacrait son premier axe, et la structure réelle, celle qu'on
+    vient de calculer, se repliait sur une droite. Voir `_pack`.
 
     Les coordonnées sont en pixels d'une carte de `LAYOUT_WIDTH` ×
     `LAYOUT_HEIGHT` : aucun disque n'y recouvre un autre (`_declutter`).
@@ -643,7 +643,7 @@ def attach_layout(graph: Dict[str, Any]) -> Dict[str, Any]:
     Ce sont exactement celles de `layout`, donc celles de `render_network` :
     l'interface web dessine le réseau à ces positions au lieu de lancer sa
     propre simulation de forces. Sans cela, la carte affichée à l'écran et la
-    figure produite par le package avaient deux formes différentes — et la
+    figure produite par le package avaient deux formes différentes, et la
     carte de l'écran changeait à chaque ouverture.
 
     L'axe ``y`` suit la convention mathématique (vers le haut), comme

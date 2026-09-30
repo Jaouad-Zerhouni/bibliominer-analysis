@@ -3,7 +3,7 @@
 Toutes les analyses de ce paquet reposent sur des champs qui peuvent manquer.
 Sans références, pas de citations locales ni d'historiographe. Sans ISSN, pas
 de quartile. Sans résumé, pas de fouille de texte. Ces limites existent déjà,
-page par page — ce module les rassemble **avant** l'analyse, pour qu'on sache
+page par page, ce module les rassemble **avant** l'analyse, pour qu'on sache
 quels chiffres on a le droit de citer.
 
 Un piège précis motive tout ce fichier. Une valeur manquante convertie en
@@ -164,7 +164,7 @@ def duplicates(corpus) -> pd.DataFrame:
 
     Colonnes : ``kind``, ``key``, ``documents``, ``titles``.
 
-    Un doublon n'est pas forcément une erreur — un article peut exister en
+    Un doublon n'est pas forcément une erreur, un article peut exister en
     version conférence et en version revue. Mais il compte deux fois dans tous
     les indicateurs, et mieux vaut le savoir.
     """
@@ -283,7 +283,7 @@ def indicator_readiness(corpus) -> pd.DataFrame:
         "Computed on THIS corpus, not on each person's whole body of work.")
 
     add("Author analysis", share_of("authors", "name"), "Author names",
-        "Scopus identifier present on %.0f %% of rows — homonyms are only "
+        "Scopus identifier present on %.0f %% of rows, homonyms are only "
         "separable where it is." % share_of("authors", "scopus_id"))
 
     add("Institutions", share_of("affiliations", "parent1"), "Parent organisation",
@@ -300,7 +300,7 @@ def indicator_readiness(corpus) -> pd.DataFrame:
         "Abstract", "Terms are extracted from titles and abstracts.")
 
     # Les citations locales dépendent du DOI des références, et surtout du
-    # nombre de rapprochements RÉELLEMENT trouvés — le seul chiffre honnête.
+    # nombre de rapprochements RÉELLEMENT trouvés, le seul chiffre honnête.
     ref_doi = share_of("references", "ref_doi")
     try:
         from .local import citation_pairs

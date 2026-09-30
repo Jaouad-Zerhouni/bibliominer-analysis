@@ -41,7 +41,7 @@ COL_ISBN = "ISBN"
 COL_PUBLISHER = "Publisher"
 COL_EID = "EID"
 
-#: Colonne indispensable — sans elle on ne sait pas de quel corpus on parle.
+#: Colonne indispensable, sans elle on ne sait pas de quel corpus on parle.
 REQUIRED_COLUMNS = (COL_TITLE,)
 
 # --- Séparateurs ------------------------------------------------------------
@@ -65,7 +65,7 @@ AWA_MULTI_AFFILIATION_PATTERN = r"^\s*\[(\d+)\s+affiliations\]\s*"
 # --- Affiliations étiquetées ------------------------------------------------
 #: Libellés écrits par le cleaning, dans l'ordre de sortie. Un champ vide est
 #: OMIS à l'export : on ne peut donc pas se fier à la position, seulement aux
-#: libellés — c'est précisément pourquoi ils existent.
+#: libellés, c'est précisément pourquoi ils existent.
 AFF_LABELS = {
     "subparent": "subparent",
     "parent 1": "parent1",
@@ -73,7 +73,7 @@ AFF_LABELS = {
     "city": "city",
     # « site: virtual » : l'utilisateur a coché « No single city » au
     # nettoyage (laboratoire virtuel, plusieurs sites). Pas de ville, par
-    # DÉCISION — ce n'est pas une ville manquante.
+    # DÉCISION, ce n'est pas une ville manquante.
     "site": "site",
     "region": "region",
     "country": "country",

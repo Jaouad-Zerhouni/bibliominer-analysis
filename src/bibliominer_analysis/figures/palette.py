@@ -1,10 +1,10 @@
-"""La MÊME palette que l'interface — recopiée, pas réinventée.
+"""La MÊME palette que l'interface, recopiée, pas réinventée.
 
 Source de vérité : `analysis_service/frontend/src/theme/palette.ts`, validée
 par `scripts/validate_palette.js` (bande de luminosité, plancher de chroma,
 séparation daltonisme). Une figure exportée qui utiliserait d'autres teintes
 que celles vues à l'écran romprait le lien entre ce que l'utilisateur a lu et
-ce qu'il publie — et re-court le script de validation ici demanderait une
+ce qu'il publie, et re-court le script de validation ici demanderait une
 dépendance Node dans un paquet Python. Recopiée, avec le fichier source cité,
 pour qu'une modification de l'un rappelle de vérifier l'autre.
 """

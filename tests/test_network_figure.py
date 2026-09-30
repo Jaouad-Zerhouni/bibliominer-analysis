@@ -6,10 +6,10 @@ n'existaient qu'en JSON, et leur dessin vivait dans le navigateur.
 
 Deux exigences portent ces tests :
 
-  - **la carte se rejoue** — deux exécutions sur les mêmes données donnent
+  - **la carte se rejoue**, deux exécutions sur les mêmes données donnent
     le même fichier, sans quoi une figure publiée bougerait d'un tirage à
     l'autre et deviendrait indéfendable ;
-  - **rien n'est inventé** — un réseau vide lève plutôt que de rendre une
+  - **rien n'est inventé**, un réseau vide lève plutôt que de rendre une
     image blanche, qu'on croirait valide.
 """
 import pytest
@@ -50,7 +50,7 @@ def test_the_same_data_gives_the_same_file(graph, fmt):
     """Une figure publiée ne peut pas bouger d'une exécution à l'autre.
 
     Deux sources de bruit ont dû être neutralisées : l'horodatage que
-    matplotlib inscrit dans le fichier, et — en SVG — les identifiants
+    matplotlib inscrit dans le fichier, et, en SVG, les identifiants
     d'éléments tirés d'un grain aléatoire.
     """
     assert render_network(graph, fmt=fmt) == render_network(graph, fmt=fmt)
@@ -187,7 +187,7 @@ def _many_small_groups(groups=18, size=3):
 
 def test_many_components_fill_the_frame_not_a_strip():
     """Constaté sur un vrai corpus : dix-sept équipes alignées sur UNE ligne,
-    une bande vingt fois plus large que haute — cadrée à l'écran, un chapelet
+    une bande vingt fois plus large que haute, cadrée à l'écran, un chapelet
     de disques empilés. Elles remplissent maintenant des rangées."""
     import numpy as np
     from bibliominer_analysis.networks.analysis import layout
@@ -246,7 +246,7 @@ def test_a_dense_group_is_spread_out_not_stacked():
 def test_labels_are_short_and_printable():
     from bibliominer_analysis.figures.network import short_label
     from bibliominer_analysis.figures.palette import tick_label
-    assert short_label("Ali Idri (2015) — Accuracy Comparison of Analogy-Based") == "Ali Idri (2015)"
+    assert short_label("Ali Idri (2015) · Accuracy Comparison of Analogy-Based") == "Ali Idri (2015)"
     assert short_label("Fernández‐Alemán J.L.") == "Fernández-Alemán J.L."
     long_name = ("Proceedings of the Annual International Conference of the IEEE "
                  "Engineering in Medicine and Biology Society, EMBS")

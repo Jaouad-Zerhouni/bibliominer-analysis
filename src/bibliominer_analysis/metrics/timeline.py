@@ -1,8 +1,8 @@
 """Chronologies : auteurs, termes et citations moyennes année par année.
 
 Un classement dit *qui* domine ; une chronologie dit *quand*. Les deux se
-contredisent souvent — un auteur très bien classé peut n'avoir rien publié
-depuis six ans — et c'est précisément l'écart qui est informatif.
+contredisent souvent, un auteur très bien classé peut n'avoir rien publié
+depuis six ans, et c'est précisément l'écart qui est informatif.
 """
 
 from __future__ import annotations

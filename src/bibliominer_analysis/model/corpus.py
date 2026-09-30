@@ -1,4 +1,4 @@
-"""`Corpus` — le point d'entrée unique du package.
+"""`Corpus`, le point d'entrée unique du package.
 
 Il porte les six tables tidy et expose les indicateurs. Toute la logique
 bibliométrique passe par ici : l'application web, un notebook ou un script en
@@ -102,14 +102,14 @@ class Corpus:
         )
 
     def n_institutions(self) -> int:
-        """Organismes mères distincts — parent 1 ET parent 2 : un double
+        """Organismes mères distincts, parent 1 ET parent 2 : un double
         rattachement nomme deux institutions."""
         from ..metrics.production import institution_rows
         rows = institution_rows(self.affiliations)
         return int(rows["institution"].nunique()) if not rows.empty else 0
 
     def n_authors(self) -> int:
-        """Auteurs distincts — MÊME clé que `top_authors` : l'identifiant
+        """Auteurs distincts, MÊME clé que `top_authors` : l'identifiant
         Scopus s'il existe, sinon le nom. Compter les noms d'un côté et les
         identifiants de l'autre donnait deux chiffres différents pour la même
         chose."""
@@ -126,7 +126,7 @@ class Corpus:
         return int(years.min()), int(years.max())
 
     def summary(self) -> Dict[str, Any]:
-        """Chiffres clés — ce qu'affiche la page d'accueil de l'application."""
+        """Chiffres clés, ce qu'affiche la page d'accueil de l'application."""
         y = self.year_range()
         return {
             "documents": len(self.documents),
@@ -188,7 +188,7 @@ class Corpus:
         return Corpus(tables, source_path=self.source_path)
 
     # -- indicateurs ---------------------------------------------------------
-    # Chaque méthode délègue à `metrics/` et renvoie un DataFrame — jamais une
+    # Chaque méthode délègue à `metrics/` et renvoie un DataFrame, jamais une
     # figure : l'interface décide comment le dessiner.
 
     def production_by_year(self) -> pd.DataFrame:
@@ -652,13 +652,13 @@ class Corpus:
 
     @staticmethod
     def attach_layout(graph: Dict[str, Any]) -> Dict[str, Any]:
-        """Le réseau avec ``x``/``y`` sur chaque nœud — les positions que
+        """Le réseau avec ``x``/``y`` sur chaque nœud, les positions que
         l'interface dessine, et celles de `render_network`."""
         return netan.attach_layout(graph)
 
     @staticmethod
     def network_density(graph: Dict[str, Any], size: int = 48) -> Dict[str, Any]:
-        """Carte de densité du réseau — la vue « density » de VOSviewer."""
+        """Carte de densité du réseau, la vue « density » de VOSviewer."""
         return netan.density_grid(graph, netan.layout(graph), size=size)
 
     def citation_network(self, unit: str = "sources", top_n: int = 40,
@@ -763,8 +763,8 @@ class Corpus:
         return catalog_table()
 
     def figure_spec(self, name: str, **options: Any):
-        """La description (`FigureSpec`) d'une figure simple de l'interface —
-        barres, lignes, nuage —, à modifier avant `render_figure`."""
+        """La description (`FigureSpec`) d'une figure simple de l'interface,
+        barres, lignes, nuage, à modifier avant `render_figure`."""
         from ..figures.catalog import figure_spec
         return figure_spec(self, name, **options)
 

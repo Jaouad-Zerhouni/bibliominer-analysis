@@ -3,7 +3,7 @@
 La carte thématique de `themes.py` regroupe des *mots*. Ici on regroupe des
 *documents* : deux articles qui puisent aux mêmes références traitent
 probablement du même sujet, même s'ils n'emploient pas le même vocabulaire.
-C'est la différence qui compte — le couplage attrape les proximités que les
+C'est la différence qui compte, le couplage attrape les proximités que les
 mots-clés ratent, notamment entre communautés qui nomment différemment la même
 chose.
 
@@ -92,7 +92,7 @@ def clustering_by_coupling(corpus, top_n: int = 100, min_weight: int = 3,
         terms = Counter(kw[kw["eid"].isin(members)]["norm"])
         top_terms = [t for t, _ in top_by_count(terms, 8)]
         # Le document le plus cité du groupe ; à égalité, le plus petit
-        # identifiant — `idxmax` prenait le premier rencontré, dont l'ordre
+        # identifiant, `idxmax` prenait le premier rencontré, dont l'ordre
         # venait d'un ensemble (hachage aléatoire).
         best = (sub[impact].sort_index(kind="stable")
                 .sort_values(ascending=False, kind="stable").index[0]

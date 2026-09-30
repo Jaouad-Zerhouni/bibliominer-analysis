@@ -1,7 +1,7 @@
 # bibliominer-analysis
 
 Bibliometric analysis of a Scopus corpus, as a **library**: notebook, script,
-CI pipeline — no interface required.
+CI pipeline, no interface required.
 
 It is the computation layer behind [Bibliominer](https://github.com/Jaouad-Zerhouni/bibliominer).
 The web application consumes it rather than reimplementing it: one source of
@@ -13,8 +13,8 @@ pip install bibliominer-analysis
 
 ## What it takes as input
 
-A **cleaned** Scopus export (CSV). Cleaning — recovering DOIs, naming source
-titles, resolving affiliations, reconciling references — is the job of the
+A **cleaned** Scopus export (CSV). Cleaning, recovering DOIs, naming source
+titles, resolving affiliations, reconciling references, is the job of the
 companion package `bibliominer-cleaning`. This one starts where that one stops.
 
 ## What it computes
@@ -24,8 +24,8 @@ companion package `bibliominer-cleaning`. This one starts where that one stops.
 | **Production & impact** | documents per year, growth, citations, h-index, and the usual per-author / per-source / per-country breakdowns |
 | **Networks** | co-citation (references *and* authors), co-word, bibliographic coupling, collaboration |
 | **Network analysis** | degree, betweenness, closeness, PageRank, eigenvector, clustering, and community detection |
-| **Journals** | SCImago quartiles and categories — the reference table ships **inside** the package, so nothing is fetched at runtime |
-| **Figures** | every figure of the web interface — bars, lines, scatters, networks, world maps, treemap, word cloud, Sankey, dendrogram, density map — in PNG, SVG, PDF or JPG |
+| **Journals** | SCImago quartiles and categories, the reference table ships **inside** the package, so nothing is fetched at runtime |
+| **Figures** | every figure of the web interface, bars, lines, scatters, networks, world maps, treemap, word cloud, Sankey, dendrogram, density map, in PNG, SVG, PDF or JPG |
 | **Reports** | figures, tables and indicators gathered in one ZIP: a folder per section, PNG at 300 dpi + SVG, Excel tables |
 
 ## Everything the interface shows, in Python
@@ -34,11 +34,11 @@ The web interface calls this package for every number it displays, so a
 notebook gets the same tables, the same figures and the same options.
 
 **Filters.** The filter bar of the interface is `Corpus.filter`, which returns
-a new corpus — every method then works on it:
+a new corpus, every method then works on it:
 
 ```python
-corpus = Corpus.from_csv("corpus_cleaned.csv")        # say 2020–2025
-recent = corpus.filter(years=(2023, 2025))              # only 2023–2025
+corpus = Corpus.from_csv("corpus_cleaned.csv")        # say 2020-2025
+recent = corpus.filter(years=(2023, 2025))              # only 2023-2025
 articles = recent.filter(doc_types=["Article"], countries=["Morocco"])
 ```
 
@@ -50,8 +50,8 @@ recent.authors_impact(n=10)          # top 10 authors by h-index
 recent.production_by_country(n=5)    # top 5 countries
 ```
 
-**Figures.** Each figure of the interface has a name — the one its export
-file carries in the interface — and the interface's settings as defaults:
+**Figures.** Each figure of the interface has a name, the one its export
+file carries in the interface, and the interface's settings as defaults:
 
 ```python
 Corpus.figure_catalog()                                  # every figure, by page
@@ -96,9 +96,9 @@ Excel files are written by the package itself: no extra dependency.
 |---|---|---|
 | **Corpus** · Overview | `summary()`, `main_information()`, `most_cited_documents(10)`, `document_types()` | `document-types` |
 | Production | `production_by_year()`, `production_by_country(15)` | `documents-per-year`, `citations-per-year`, `production-per-country` |
-| Documents | `document_list(200, sort)`, `most_normalized_documents(20)` | — |
+| Documents | `document_list(200, sort)`, `most_normalized_documents(20)` | n/a |
 | Corpus profile | `price_index(window)`, `price_index_by_year()`, `reference_age_distribution()`, `concentration(unit)`, `concentration_summary()`, `self_citation_summary()`, `authors_self_citation(15)`, `interdisciplinarity()`, `subject_areas()`, `access_status()`, `access_routes()`, `access_over_time()` | `price-index`, `reference-ages`, `lorenz`, `self-citation-authors`, `subject-areas`, `open-access-over-time` |
-| Quality | `quality_summary()`, `indicator_readiness()`, `field_completeness()`, `table_completeness()`, `anomalies()`, `duplicates()` | — |
+| Quality | `quality_summary()`, `indicator_readiness()`, `field_completeness()`, `table_completeness()`, `anomalies()`, `duplicates()` | n/a |
 | **Actors** · Authors | `impact()`, `authors_impact(20)`, `authorship_groups()`, `authors_over_time(10)` | `top-authors`, `authorship-groups`, `authors-over-time` |
 | Institutions | `institutions_impact(20, level)`, `institutions_over_time(8, level)`, `institutions_by_country(20, level)`, `org_hierarchy(40)`, `affiliation_profile()`, `documents_by_affiliation_count()`, `authors_by_affiliation_count(20)` | `top-institutions`, `top-units`, `institutions-over-time`, `units-over-time`, `documents-by-affiliation-count`, `collaboration-between-institutions`, `collaboration-between-units` |
 | Sources | `scimago_coverage()`, `quartile_distribution()`, `quartile_over_time()`, `scimago_sources()`, `sources_impact(15)`, `sources_over_time(6)`, `most_local_cited_sources(15)` | `scimago-quartiles`, `quartiles-over-time`, `source-impact`, `sources-over-time`, `local-cited-sources` |
@@ -150,7 +150,7 @@ Nothing is written to disk unless you write it.
 
 Two runs on the same data produce the **same file, byte for byte**. Node
 positions come from a deterministic MDS on shortest paths, refined with a
-fixed seed, not from a free force simulation — a force layout is stochastic,
+fixed seed, not from a free force simulation, a force layout is stochastic,
 and a figure published in an article cannot change between runs. The timestamp matplotlib normally writes
 into the file is stripped for the same reason.
 
@@ -179,22 +179,22 @@ print(by_year(corpus))
 ```
 
 Every metric takes the same `Corpus` and returns plain Python / pandas
-objects — nothing to unwrap, nothing to serialise.
+objects, nothing to unwrap, nothing to serialise.
 
 ## Requirements
 
-Python ≥ 3.9. Depends on pandas, numpy, networkx and matplotlib — all pure
+Python ≥ 3.9. Depends on pandas, numpy, networkx and matplotlib, all pure
 Python or shipped as wheels, so there is nothing to compile.
 
 ## Data shipped with the package
 
 The SCImago journal list (`data_ref/scimagojr_2025.csv`) is third-party data,
 not covered by the MIT licence: SCImago allows its use for non-commercial
-purposes as long as it is cited — *SCImago (n.d.). SJR - SCImago Journal &
+purposes as long as it is cited, *SCImago (n.d.). SJR - SCImago Journal &
 Country Rank [Portal]. Retrieved from https://www.scimagojr.com*. The terms
 travel with the file, in `data_ref/scimagojr_2025.NOTICE`.
 
 ## License
 
-MIT — the `LICENSE` file ships with the package. The world map
+MIT, the `LICENSE` file ships with the package. The world map
 (`data_ref/countries-110m.json`) keeps its own ISC licence, next to it.

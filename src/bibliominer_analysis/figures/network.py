@@ -1,4 +1,4 @@
-"""Dessin d'un réseau bibliométrique — sans navigateur.
+"""Dessin d'un réseau bibliométrique, sans navigateur.
 
 Pourquoi ce module existe
 -------------------------
@@ -8,8 +8,8 @@ nœuds (`networks.analysis.layout`). Mais il ne savait pas les DESSINER :
 `figures.render` ne couvre que barres, lignes et nuages de points, et le
 rendu des réseaux vivait uniquement dans le navigateur de l'application web.
 
-Quelqu'un qui installe seulement `bibliominer-analysis` — un carnet, un
-script, une chaîne d'intégration — obtenait donc des chiffres et aucune
+Quelqu'un qui installe seulement `bibliominer-analysis`, un carnet, un
+script, une chaîne d'intégration, obtenait donc des chiffres et aucune
 carte. C'est ce que ce module comble.
 
 Ce qu'il garantit
@@ -17,7 +17,7 @@ Ce qu'il garantit
 **Le dessin est déterministe.** Les coordonnées viennent de
 `networks.analysis.layout`, un MDS sur les plus courts chemins : deux
 exécutions sur les mêmes données donnent la même carte. Une figure publiée
-dans un article ne peut pas bouger d'une exécution à l'autre — c'est
+dans un article ne peut pas bouger d'une exécution à l'autre, c'est
 précisément ce qu'une simulation de forces ne sait pas promettre.
 
 **Rien n'est inventé.** La taille d'un nœud porte une grandeur calculée (son
@@ -53,7 +53,7 @@ _LEGEND_MAX = 10
 
 
 class NetworkFigureError(ValueError):
-    """Le réseau ne peut pas être dessiné — et on dit pourquoi."""
+    """Le réseau ne peut pas être dessiné, et on dit pourquoi."""
 
 
 def _node_areas(nodes: List[Dict[str, Any]], size_by: str) -> List[float]:
@@ -129,7 +129,7 @@ def _draw_edges(ax, edges, positions, colour, n_nodes: int) -> None:
 
 
 def _place_labels(fig, ax, nodes, areas, positions, colour, limit: int) -> None:
-    """Étiquette les plus gros nœuds — en écartant celles qui se recouvrent.
+    """Étiquette les plus gros nœuds, en écartant celles qui se recouvrent.
 
     Deux étiquettes superposées n'en font pas deux illisibles : elles en font
     UNE fausse, où l'œil lit des mots qui n'existent pas (« Class balance » et
@@ -137,7 +137,7 @@ def _place_labels(fig, ax, nodes, areas, positions, colour, limit: int) -> None:
     qui en montre moins et dit vrai.
 
     On mesure les rectangles réellement rendus plutôt que de les estimer :
-    la largeur d'un texte dépend de la police, de la taille, du DPI — une
+    la largeur d'un texte dépend de la police, de la taille, du DPI, une
     estimation se trompe précisément là où les mots sont longs.
     """
     ranked = sorted(zip(nodes, areas),
@@ -166,15 +166,15 @@ def _place_labels(fig, ax, nodes, areas, positions, colour, limit: int) -> None:
 def short_label(label: Any, limit: int = 28) -> str:
     """L'étiquette À L'ÉCRAN d'un nœud : courte, lisible.
 
-    Une référence co-citée s'appelle « Ali Idri (2015) — Accuracy Comparison
+    Une référence co-citée s'appelle « Ali Idri (2015), Accuracy Comparison
     of Analogy-Based… » : sur la carte, « Ali Idri (2015) » suffit à la
     reconnaître, le titre complet reste dans la table du réseau. Au-delà de
     ``limit`` caractères, le texte est coupé d'un « … ».
     """
     from .palette import printable
     text = printable(label).strip()
-    if " — " in text:
-        text = text.split(" — ", 1)[0].strip()
+    if " · " in text:
+        text = text.split(" · ", 1)[0].strip()
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
@@ -211,7 +211,7 @@ def _add_community_legend(ax, nodes, palette, skin) -> None:
         handles.append(Line2D([], [], linestyle="none", label=(
             f"+ {len(rest)} smaller clusters · {sum(s for _, s in rest)} nodes")))
     # SOUS la carte, jamais dedans. Posée dans un coin du graphe, elle
-    # recouvrait des nœuds — et une légende qui cache la donnée qu'elle
+    # recouvrait des nœuds, et une légende qui cache la donnée qu'elle
     # explique est un contresens.
     legend = ax.legend(handles=handles, loc="upper left",
                        bbox_to_anchor=(0, -0.02), ncol=min(len(handles), 4),
@@ -226,7 +226,7 @@ def _fit_margins(fig, ax, areas) -> None:
 
     Une marge fixe est exprimée en fraction des données ; le rayon d'un nœud,
     lui, est en points. Un gros disque placé au bord se trouvait donc coupé
-    par la moitié — et un nœud tronqué se lit comme une erreur de rendu, pas
+    par la moitié, et un nœud tronqué se lit comme une erreur de rendu, pas
     comme un nœud. On mesure la taille réelle des axes pour convertir le
     rayon en fraction, et on ajoute ce qu'il faut.
     """
@@ -318,7 +318,7 @@ def render_network(
 
     # Une carte de réseau se lit en DISTANCES : deux nœuds proches sont
     # proches. Laisser matplotlib étirer un axe plus que l'autre déforme
-    # exactement ce qu'on vient de calculer — un amas rond devient une
+    # exactement ce qu'on vient de calculer, un amas rond devient une
     # colonne, et la carte ment sur sa propre structure.
     # `box` et non `datalim` : on rétrécit le CADRE à la forme des données
     # plutôt que d.étirer les données pour remplir le cadre. Avec

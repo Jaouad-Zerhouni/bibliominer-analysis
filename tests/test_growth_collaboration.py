@@ -278,7 +278,7 @@ def test_trend_exige_trois_annees():
 
 def test_a_year_without_any_document_does_not_break_production():
     """Constaté : une année SANS document dans la série (2014, 2016, pas
-    2015) faisait tomber `by_year` — erreur 500 sur l'écran Production."""
+    2015) faisait tomber `by_year`, erreur 500 sur l'écran Production."""
     import pandas as pd
     from bibliominer_analysis import Corpus
     rows = [{"EID": "e1", "Title": "A", "Year": "2014", "Cited by": "4",

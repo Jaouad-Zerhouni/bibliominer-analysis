@@ -1,4 +1,4 @@
-"""Figures PUBLIABLES, générées par Python (matplotlib) — jamais capturées
+"""Figures PUBLIABLES, générées par Python (matplotlib), jamais capturées
 depuis un rendu de navigateur.
 
 Une capture de graphique ECharts dépend de l'état d'affichage au moment du

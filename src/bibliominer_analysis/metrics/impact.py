@@ -10,7 +10,7 @@ Les définitions retenues sont les définitions canoniques, pas des variantes :
     toujours ≥ h : il tient compte des articles très cités, que le h-index
     plafonne.
 
-Les citations sont celles de Scopus (`Cited by`) — donc les citations
+Les citations sont celles de Scopus (`Cited by`), donc les citations
 **mondiales** de l'article, pas seulement celles reçues à l'intérieur du
 corpus. C'est la convention des classements bibliométriques usuels.
 """
@@ -61,7 +61,7 @@ def e_index(citations: Iterable[int]) -> float:
         e² = (somme des citations des h articles du noyau) − h²
         e  = √(e²)
 
-    Il ne remplace pas h, il le **complète** — c'est le sens du mot chez Zhang.
+    Il ne remplace pas h, il le **complète**, c'est le sens du mot chez Zhang.
     Lu avec h, il distingue une œuvre régulière d'une œuvre portée par quelques
     travaux très cités.
 
@@ -135,7 +135,7 @@ def _rank_counts(ranks, total: int) -> dict:
     avoir des carrières opposées, et seule cette ventilation le montre.
 
     Les quatre comptes somment TOUJOURS au nombre de documents : « 4ᵉ et plus »
-    est calculé par différence. Un rang illisible y tombe donc aussi — c'est le
+    est calculé par différence. Un rang illisible y tombe donc aussi, c'est le
     seau fourre-tout, et il vaut mieux un tableau qui s'additionne qu'une
     colonne muette. En pratique les exports Scopus numérotent toujours les
     signataires, ce cas ne se produit pas.
@@ -161,7 +161,7 @@ def authors_impact(corpus, n: Optional[int] = 20,
     ``last_year``.
 
     Un auteur est identifié par son **identifiant Scopus** s'il existe ; sinon
-    par son nom. Deux homonymes sans identifiant restent indiscernables — c'est
+    par son nom. Deux homonymes sans identifiant restent indiscernables, c'est
     une limite des données, pas du calcul, et mieux vaut le savoir que de le
     masquer.
 
@@ -231,7 +231,7 @@ def institutions_impact(corpus, n: Optional[int] = 20,
     interne : laboratoire, école, département).
 
     Un document compte UNE fois par organisation, même si trois de ses auteurs
-    y sont rattachés — sinon les citations seraient comptées trois fois.
+    y sont rattachés, sinon les citations seraient comptées trois fois.
     """
     from .production import _org_frame
 

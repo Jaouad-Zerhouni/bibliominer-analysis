@@ -3,9 +3,9 @@
 La **carte thématique** (Callon, 1991) place chaque groupe de mots-clés sur
 deux axes :
 
-  - **centralité** — l'intensité des liens du groupe avec les AUTRES groupes.
+  - **centralité**, l'intensité des liens du groupe avec les AUTRES groupes.
     Elle mesure à quel point le thème est relié au reste du domaine.
-  - **densité** — l'intensité des liens INTERNES au groupe. Elle mesure à quel
+  - **densité**, l'intensité des liens INTERNES au groupe. Elle mesure à quel
     point le thème est développé, structuré.
 
 En coupant aux médianes, on obtient quatre quadrants :
@@ -93,14 +93,14 @@ def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
         densité    = 100 × Σ e_ij / w   (liens internes, w = nombre de termes)
 
     où **e_ij est l'indice d'équivalence** c_ij² / (c_i · c_j), compris entre
-    0 et 1 — pas la co-occurrence brute c_ij. Les constantes 10 et 100 sont
+    0 et 1, pas la co-occurrence brute c_ij. Les constantes 10 et 100 sont
     calibrées pour cet indice. Défaut corrigé : les poids bruts étaient
     utilisés, ce qui favorisait les termes fréquents et pouvait changer un
     thème de quadrant, pas seulement l'échelle des axes.
 
     Les groupes sont détectés par modularité gloutonne sur ce même réseau
     normalisé : c'est un algorithme déterministe, donc deux exécutions donnent
-    la même carte — indispensable pour un résultat qu'on publie.
+    la même carte, indispensable pour un résultat qu'on publie.
     """
     from ..networks import build as nets
     from ..networks.analysis import normalize
@@ -128,7 +128,7 @@ def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
     # les termes retenus (Callon : tous les liens externes comptent). Mesurées
     # sur le réseau seuillé, un petit corpus se cassait en îlots : 13 thèmes
     # sur 15 à centralité 0, médiane 0, et plus aucun thème en « niche » ni
-    # en « émergent » — des quadrants sans signification.
+    # en « émergent », des quadrants sans signification.
     kept = set(G.nodes)
     full = normalize(nets.co_word(corpus, top_n=top_n, min_weight=1, kind=kind),
                      "equivalence")

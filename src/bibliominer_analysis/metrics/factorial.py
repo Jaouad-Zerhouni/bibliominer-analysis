@@ -2,8 +2,8 @@
 
 Les réseaux de co-mots montrent *qui est lié à qui*. L'analyse factorielle
 répond à une autre question : **sur quels axes le domaine se structure-t-il ?**
-Elle projette les termes dans un plan où la distance a un sens — deux termes
-proches apparaissent dans les mêmes documents — puis on y cherche des groupes.
+Elle projette les termes dans un plan où la distance a un sens, deux termes
+proches apparaissent dans les mêmes documents, puis on y cherche des groupes.
 
 Deux méthodes, deux points de vue :
 
@@ -15,7 +15,7 @@ Deux méthodes, deux points de vue :
     dissimilarité. Il ne cherche qu'à préserver les distances deux à deux :
     plus fidèle localement, mais les axes n'ont pas d'interprétation propre.
 
-Tout est calculé en numpy — SVD pour l'AFC, décomposition propre pour le MDS,
+Tout est calculé en numpy, SVD pour l'AFC, décomposition propre pour le MDS,
 k-moyennes pour les groupes. Aucune dépendance supplémentaire, et surtout des
 résultats **déterministes** : un article doit pouvoir être refait à l'identique.
 """
@@ -177,7 +177,7 @@ def _kmeans(X: np.ndarray, k: int, seed: int = SEED, iters: int = 100):
 
 
 def _silhouette(X: np.ndarray, labels: np.ndarray) -> float:
-    """Silhouette moyenne — sert à choisir k, pas à juger la qualité absolue."""
+    """Silhouette moyenne, sert à choisir k, pas à juger la qualité absolue."""
     uniq = np.unique(labels)
     if uniq.size < 2 or uniq.size >= X.shape[0]:
         return -1.0
@@ -284,7 +284,7 @@ def _average_linkage(D: np.ndarray):
     """Classification ascendante hiérarchique, lien moyen (UPGMA).
 
     Renvoie la liste des fusions ``(a, b, distance, taille)``, dans l'ordre où
-    elles se produisent — le format d'une matrice de liaison classique.
+    elles se produisent, le format d'une matrice de liaison classique.
 
     Le lien **moyen** plutôt que le lien simple : ce dernier produit des
     chaînages, où un groupe s'étire de proche en proche sans jamais être
@@ -335,7 +335,7 @@ def topic_dendrogram(corpus, kind: str = "author", top_n: int = 40,
 
     Le dendrogramme montre ce qu'une carte factorielle cache : **à quel niveau**
     deux thèmes se rejoignent. Deux termes peuvent être voisins dans le plan et
-    n'appartenir au même groupe qu'au tout dernier moment — l'arbre le dit, le
+    n'appartenir au même groupe qu'au tout dernier moment, l'arbre le dit, le
     nuage de points non.
 
     Retour ``{"tree": {...}, "clusters": [...], "n_terms": int}``, l'arbre

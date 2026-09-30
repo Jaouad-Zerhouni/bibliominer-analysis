@@ -124,7 +124,7 @@ def parse_authors(authors: Any, full_names: Any = None,
     La POSITION vient du préfixe « n: » posé par le cleaning ; sans lui on
     retombe sur le rang dans la liste. L'appariement des trois colonnes suit
     `_align` : par position, par rang si les longueurs concordent, et jamais
-    par rang quand elles diffèrent — un export abîmé ne doit pas décaler les
+    par rang quand elles diffèrent, un export abîmé ne doit pas décaler les
     identifiants d'un auteur à l'autre.
     """
     names = [strip_index(raw) for raw in split_list(authors)]
@@ -166,8 +166,8 @@ def parse_affiliation(segment: str) -> Dict[str, Optional[str]]:
     les positions.
 
     Format brut Scopus (non nettoyé) : on ne peut rien affirmer sur les
-    segments intermédiaires. On applique la seule convention fiable — le
-    DERNIER segment est le pays, l'avant-dernier la ville — à condition que
+    segments intermédiaires. On applique la seule convention fiable, le
+    DERNIER segment est le pays, l'avant-dernier la ville, à condition que
     ce dernier segment SOIT un pays reconnu (`io.countries.is_country`) ; le
     reste à ``None`` plutôt que de deviner.
     """
@@ -301,7 +301,7 @@ def _raw_positions(parts: List[str], doc_affs) -> list:
     """Export brut : on retient les affiliations du document dont le texte
     figure dans le bloc de l'auteur.
 
-    Une affiliation COURTE peut être un morceau d'une longue — « ENSAM,
+    Une affiliation COURTE peut être un morceau d'une longue, « ENSAM,
     University Moulay Ismail of Meknes » est la fin de « IEST Research Team,
     AIDTM Laboratory, ENSAM, University Moulay Ismail of Meknes ». La
     retenir donnerait à l'auteur un rattachement qu'il n'a pas. On garde

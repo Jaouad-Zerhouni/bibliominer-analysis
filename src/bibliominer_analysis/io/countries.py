@@ -5,9 +5,9 @@ Scopus n'est un pays que s'il est reconnu ici) et par les cartes du monde.
 Aucune dépendance graphique : ce module se charge sans matplotlib.
 
 Sources, dans ``data_ref`` :
-  - ``countries-110m.json`` — le fond de carte de l'interface (world-atlas,
+  - ``countries-110m.json``, le fond de carte de l'interface (world-atlas,
     Natural Earth, licence ISC) ;
-  - ``countries.csv`` — les 249 pays et territoires ISO 3166-1 (+ Kosovo),
+  - ``countries.csv``, les 249 pays et territoires ISO 3166-1 (+ Kosovo),
     avec leur nom sur le fond de carte, ou la position de leur capitale
     quand ils sont trop petits pour y figurer.
 """

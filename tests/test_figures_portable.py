@@ -5,7 +5,7 @@ Deux défauts corrigés :
   - les barres, lignes et nuages exportés en SVG ou PDF portaient la DATE
     d'export : deux exports des mêmes données différaient à chaque fois ;
   - importer le package posait `matplotlib.use("Agg")` et changeait les
-    polices de TOUTE la session — dans un notebook, les `plt.show()` de
+    polices de TOUTE la session, dans un notebook, les `plt.show()` de
     l'utilisateur cessaient de s'afficher.
 """
 

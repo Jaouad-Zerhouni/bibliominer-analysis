@@ -1,12 +1,12 @@
 """Indicateurs de production et d'acteurs.
 
 Chaque fonction prend un `Corpus` et renvoie un DataFrame prêt à être affiché
-ou exporté — jamais une figure. Les colonnes sont nommées de façon stable :
+ou exporté, jamais une figure. Les colonnes sont nommées de façon stable :
 l'interface s'appuie dessus.
 
 Une règle vaut partout : on ne compte JAMAIS deux fois le même document. Une
 institution citée par trois auteurs du même article compte pour un document,
-pas trois — sinon les classements sont faux.
+pas trois, sinon les classements sont faux.
 """
 
 from __future__ import annotations
@@ -158,7 +158,7 @@ def _org_frame(corpus, level: str = "parent") -> pd.DataFrame:
         return pd.DataFrame(columns=["eid", "org", "country", "parent1"])
 
     # On construit colonne par colonne : au niveau « parent », `col` EST
-    # « parent1 », et une sélection par liste la ferait apparaître deux fois —
+    # « parent1 », et une sélection par liste la ferait apparaître deux fois,
     # pandas refuse ensuite de grouper sur une colonne dupliquée.
     out = pd.DataFrame({
         "eid": a["eid"].to_numpy(),
@@ -201,7 +201,7 @@ def institutions_over_time(corpus, n: int = 10, cumulative: bool = True,
 
     Format long : ``institution``, ``year``, ``documents``, ``cumulative``.
     Toutes les années du corpus figurent pour CHAQUE organisation, y compris à
-    zéro — sinon les courbes seraient interrompues là où elle n'a rien publié,
+    zéro, sinon les courbes seraient interrompues là où elle n'a rien publié,
     ce qui se lit comme une absence de donnée plutôt que comme une absence de
     production.
     """
@@ -343,7 +343,7 @@ def top_authors(corpus, n: int = 20) -> pd.DataFrame:
     a["is_first"] = pd.to_numeric(a["position"], errors="coerce").eq(1)
 
     # Clé de regroupement : l'identifiant Scopus s'il existe (fiable), sinon
-    # le nom — deux homonymes sans identifiant restent indiscernables.
+    # le nom, deux homonymes sans identifiant restent indiscernables.
     a["key"] = a["scopus_id"].fillna("name:" + a["name"].map(str))
 
     g = (a.groupby("key")

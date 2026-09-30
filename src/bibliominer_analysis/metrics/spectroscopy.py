@@ -2,7 +2,7 @@
 
 Marx & al. (2014). On ne compte pas les publications du corpus mais les
 **années de publication des travaux qu'il cite**. La courbe brute est
-inintéressante — elle croît toujours, parce qu'il y a mécaniquement plus de
+inintéressante, elle croît toujours, parce qu'il y a mécaniquement plus de
 littérature récente. Ce qui compte est l'**écart à la médiane glissante** :
 
     écart(t) = citations(t) − médiane(citations sur t−2 … t+2)
@@ -35,7 +35,7 @@ def reference_spectroscopy(corpus, year_min: Optional[int] = None,
     ``is_peak``, ``top_reference``.
 
     ``is_peak`` marque les années dont l'écart dépasse la médiane des écarts
-    positifs — un repère de lecture, pas un test statistique.
+    positifs, un repère de lecture, pas un test statistique.
     """
     cols = ["year", "references", "median_5", "deviation", "is_peak", "top_reference"]
     refs = corpus.references
@@ -78,7 +78,7 @@ def reference_spectroscopy(corpus, year_min: Optional[int] = None,
 
     # Comparaison LARGE, et non stricte : un corpus qui n'a qu'un seul pic voit
     # la médiane des écarts positifs valoir exactement ce pic. Avec « > » il ne
-    # serait jamais signalé — c'est-à-dire précisément dans le cas où le repère
+    # serait jamais signalé, c'est-à-dire précisément dans le cas où le repère
     # est le plus utile.
     positive = out.loc[out["deviation"] > 0, "deviation"]
     threshold = float(positive.median()) if not positive.empty else 0.0
@@ -105,7 +105,7 @@ def _top_reference_per_year(refs: pd.DataFrame) -> dict:
     # `first()` saute les valeurs manquantes : on transforme d'abord les
     # chaînes vides en manquantes, et on obtient la première valeur non vide
     # sans fonction Python par groupe. La version à `lambda` en appelait une
-    # par couple (année, référence) — 9 s sur 10 000 références.
+    # par couple (année, référence), 9 s sur 10 000 références.
     for column in ("ref_title", "ref_authors"):
         text = r[column].astype("string").str.strip()
         r[column] = text.mask(text == "")
@@ -124,6 +124,6 @@ def _top_reference_per_year(refs: pd.DataFrame) -> dict:
     for row in best.itertuples():
         label = row.label or "?"
         if row.authors:
-            label = f"{row.authors} — {label}"
+            label = f"{row.authors}: {label}"
         out[int(row.ref_year)] = f"{label[:110]} ({row.n}×)"
     return out

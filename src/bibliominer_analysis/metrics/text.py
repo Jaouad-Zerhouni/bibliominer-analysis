@@ -2,7 +2,7 @@
 
 Les mots-clés sont choisis par les auteurs ou ajoutés par la base. Ils
 décrivent ce que les auteurs *déclarent* étudier. Les titres et surtout les
-résumés disent ce qu'ils écrivent réellement — et les deux divergent souvent :
+résumés disent ce qu'ils écrivent réellement, et les deux divergent souvent :
 un sujet peut traverser tout un corpus sans jamais apparaître comme mot-clé.
 
 On extrait des **n-grammes** (1, 2 ou 3 mots). Les bigrammes sont presque
@@ -97,7 +97,7 @@ def _ngrams(tokens: Sequence[str], size: int) -> List[str]:
 
 
 #: Mention de copyright en fin de résumé Scopus. On coupe le texte à partir de
-#: là — et on remonte sur un « Copyright » qui précéderait le symbole.
+#: là, et on remonte sur un « Copyright » qui précéderait le symbole.
 _COPYRIGHT = re.compile(r"(?:\bcopyright\s*)?[©ⓒ]", re.I)
 
 
@@ -226,7 +226,7 @@ def text_trend(corpus, field: str = "abstract", ngram: int = 2,
 
     Colonnes : ``term``, ``documents``, ``year_q1``, ``year_median``,
     ``year_q3``. Même lecture que `trend_topics`, mais sur le texte plutôt que
-    sur les mots-clés — et c'est souvent là qu'on voit un sujet monter avant
+    sur les mots-clés, et c'est souvent là qu'on voit un sujet monter avant
     qu'il ne devienne un mot-clé déclaré.
     """
     import numpy as np

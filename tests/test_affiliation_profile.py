@@ -1,4 +1,4 @@
-"""Profil d'affiliation : une seule affiliation, deux, davantage — et les
+"""Profil d'affiliation : une seule affiliation, deux, davantage, et les
 auteurs à plusieurs rattachements."""
 import pandas as pd
 import pytest

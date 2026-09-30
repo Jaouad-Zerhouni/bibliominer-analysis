@@ -2,7 +2,7 @@
 
 Le principe est le même dans les trois cas : deux entités sont **liées**
 quand elles apparaissent ensemble dans le même document. Seule change
-l'entité — une référence citée, un mot-clé, un auteur.
+l'entité, une référence citée, un mot-clé, un auteur.
 
     document 1 : [A, B, C]  ->  liens A-B, A-C, B-C
     document 2 : [A, B]     ->  lien  A-B  (poids 2 au total)
@@ -16,7 +16,7 @@ Deux garde-fous, sans lesquels ces réseaux deviennent inutilisables :
     nuage de liens uniques sans structure.
 
 Les fonctions renvoient un dictionnaire `{"nodes": [...], "edges": [...]}`,
-directement affichable — le package ne dessine pas, il fournit la structure.
+directement affichable, le package ne dessine pas, il fournit la structure.
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ def _to_graph(counts: Counter, pairs: Counter,
     # Ordre COMPLET, ex æquo départagés par l'identifiant : `counts` est
     # souvent rempli depuis un ensemble, dont Python change l'ordre à chaque
     # exécution. L'ordre des nœuds décide de l'ordre de dessin et de ceux qui
-    # reçoivent une étiquette — la figure changeait d'un lancement à l'autre.
+    # reçoivent une étiquette, la figure changeait d'un lancement à l'autre.
     nodes.sort(key=lambda n: (-n["occurrences"], str(n["id"])))
     edges.sort(key=lambda e: (-e["weight"], str(e["source"]), str(e["target"])))
 
@@ -83,7 +83,7 @@ def _ref_key(row) -> Optional[str]:
     """Identité d'une référence citée : son DOI, sinon son titre normalisé.
 
     Le DOI est fiable ; le titre ne l'est qu'après normalisation (casse,
-    ponctuation, espaces). Une référence sans ni l'un ni l'autre est écartée —
+    ponctuation, espaces). Une référence sans ni l'un ni l'autre est écartée,
     on ne peut pas la rapprocher d'une autre sans risquer de fusionner des
     travaux différents.
     """
@@ -119,8 +119,8 @@ def co_citation(corpus, top_n: int = 50, min_weight: int = 2) -> Dict[str, Any]:
 
     # Une même référence est écrite différemment d'un article citant à
     # l'autre (« Minku L.L. » ici, « Mahmood Y. » là). L'étiquette prend
-    # l'écriture la PLUS FRÉQUENTE — à égalité, la première dans l'ordre
-    # alphabétique (`mode` trie) — jamais la première rencontrée, qui
+    # l'écriture la PLUS FRÉQUENTE, à égalité, la première dans l'ordre
+    # alphabétique (`mode` trie), jamais la première rencontrée, qui
     # dépendait de l'ordre des lignes de l'export.
     labels: Dict[str, str] = {}
     for key, g in r[r["key"].isin(keep)].groupby("key"):
@@ -130,7 +130,7 @@ def co_citation(corpus, top_n: int = 50, min_weight: int = 2) -> Dict[str, Any]:
         name = title.iat[0] if not title.empty else key
         first = authors.iat[0].split(",")[0].strip() if not authors.empty else ""
         y = int(year.iat[0]) if not year.empty else None
-        labels[key] = "%s%s — %s" % (first + " " if first else "",
+        labels[key] = "%s%s · %s" % (first + " " if first else "",
                                      "(%d)" % y if y else "", name[:70])
 
     groups = r[r["key"].isin(keep)].groupby("eid")["key"].apply(list).to_dict()
@@ -144,7 +144,7 @@ def co_citation(corpus, top_n: int = 50, min_weight: int = 2) -> Dict[str, Any]:
 
 def co_word(corpus, top_n: int = 50, min_weight: int = 2,
             kind: str = "author") -> Dict[str, Any]:
-    """Réseau de co-occurrence des mots-clés — la **structure thématique**."""
+    """Réseau de co-occurrence des mots-clés, la **structure thématique**."""
     k = corpus.keywords
     if kind != "all":
         k = k[k["kind"] == kind]
@@ -203,7 +203,7 @@ def co_institution(corpus, top_n: int = 50, min_weight: int = 1,
 
     `level` vaut « parent » (établissements) ou « subparent » (unités
     internes). Au niveau unité, le réseau montre quels laboratoires
-    travaillent ensemble — une information que le niveau établissement masque
+    travaillent ensemble, une information que le niveau établissement masque
     complètement quand deux équipes d'une même université collaborent.
 
     Les chercheurs sans rattachement sont écartés : « Independent researcher »
@@ -249,8 +249,8 @@ def bibliographic_coupling(corpus, top_n: int = 50,
                            min_weight: int = 2) -> Dict[str, Any]:
     """Couplage bibliographique : deux DOCUMENTS partageant des références.
 
-    C'est le miroir de la co-citation. La co-citation regarde en arrière —
-    quels travaux anciens sont cités ensemble — et évolue avec le temps. Le
+    C'est le miroir de la co-citation. La co-citation regarde en arrière,
+    quels travaux anciens sont cités ensemble, et évolue avec le temps. Le
     couplage regarde le présent : deux articles qui puisent aux mêmes sources
     traitent probablement du même sujet, et ce lien est **figé** dès leur
     publication.
@@ -346,7 +346,7 @@ def co_citation_authors(corpus, top_n: int = 50,
 
 
 # ---------------------------------------------------------------------------
-# Pays — pour la carte
+# Pays, pour la carte
 # ---------------------------------------------------------------------------
 
 def country_map(corpus) -> pd.DataFrame:
@@ -400,8 +400,8 @@ def co_city(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any]:
 
     Le réseau des pays montre l'ouverture internationale ; celui-ci montre
     quelque chose que le pays écrase complètement : la structure INTERNE d'un
-    pays. Un corpus à 90 % marocain peut cacher un réseau Rabat–Meknès–Oujda
-    dense, ou trois équipes qui s'ignorent — même pays, lecture opposée.
+    pays. Un corpus à 90 % marocain peut cacher un réseau Rabat-Meknès-Oujda
+    dense, ou trois équipes qui s'ignorent, même pays, lecture opposée.
 
     Chaque lien porte un ``scope`` : « national » quand les deux villes
     partagent le pays, « international » sinon. Sans cette distinction, une

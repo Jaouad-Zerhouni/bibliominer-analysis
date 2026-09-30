@@ -2,19 +2,19 @@
 
 Le nettoyage résout chaque affiliation jusqu'à la ville. Ne s'arrêter au pays,
 c'est perdre l'essentiel : un corpus « marocain » à 90 % peut être un réseau
-Rabat–Meknès–Oujda très structuré, ou trois équipes isolées qui ne se parlent
+Rabat-Meknès-Oujda très structuré, ou trois équipes isolées qui ne se parlent
 jamais. Le pays ne distingue pas ces deux situations ; la ville, si.
 
 D'où l'indicateur central de ce module, **l'échelle de collaboration**, qui
 raffine le partage binaire habituel (national / international) en trois
 niveaux :
 
-  - **locale** — tous les signataires dans la même ville. La collaboration de
+  - **locale**, tous les signataires dans la même ville. La collaboration de
     couloir, celle qui ne coûte rien.
-  - **nationale** — plusieurs villes, un seul pays. Elle demande un effort réel
+  - **nationale**, plusieurs villes, un seul pays. Elle demande un effort réel
     d'organisation, et reste invisible dans un décompte SCP/MCP, qui la range
     avec la collaboration locale.
-  - **internationale** — plusieurs pays.
+  - **internationale**, plusieurs pays.
 
 Le niveau national est précisément celui que la bibliométrie usuelle perd.
 """
@@ -245,13 +245,13 @@ def city_hierarchy(corpus, n: Optional[int] = 40) -> pd.DataFrame:
     ``top_institution``, ``share_of_country``, ``institution_affiliations``.
 
     ``share_of_country`` dit si une ville porte l'essentiel de la production de
-    son pays ou n'en est qu'une composante — la même lecture que la hiérarchie
+    son pays ou n'en est qu'une composante, la même lecture que la hiérarchie
     établissement → unités, transposée à la géographie.
 
     ``institution_affiliations`` liste TOUTES les institutions de la ville avec
     leur nombre d'affiliations, de la plus fréquente à la moins fréquente :
     « Mohammed V University (26); National School of Mineral Industry (12) ».
-    Le seul leader cachait les autres — une école de 12 documents disparaissait
+    Le seul leader cachait les autres, une école de 12 documents disparaissait
     derrière l'université de sa ville. ``top_institution`` en est le premier
     élément.
     """

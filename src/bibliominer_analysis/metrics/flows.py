@@ -1,6 +1,6 @@
 """Flux entre trois dimensions du corpus (diagramme de Sankey).
 
-Relier trois dimensions — typiquement auteurs → mots-clés → sources — montre
+Relier trois dimensions, typiquement auteurs → mots-clés → sources, montre
 « qui travaille sur quoi et publie où », ce qu'aucun classement isolé ne dit.
 
 Le calcul est une double co-occurrence : deux valeurs sont reliées quand elles
@@ -95,7 +95,7 @@ def three_fields(corpus, left: str = "authors", middle: str = "keywords",
     valeur présente dans deux colonnes serait dessinée au mauvais endroit.
 
     Les libellés des colonnes sont préfixés quand deux colonnes portent la même
-    dimension — sinon un nœud apparaîtrait des deux côtés et le diagramme
+    dimension, sinon un nœud apparaîtrait des deux côtés et le diagramme
     boucler ait sur lui-même.
     """
     empty = pd.DataFrame(columns=["source", "target", "value", "depth"])

@@ -109,7 +109,7 @@ def test_titre_trop_court_refuse_comme_cle():
 
 
 def test_referentiel_absent_ne_casse_pas(tmp_path):
-    """Sans le fichier, l'analyse se degrade — elle ne s'interrompt pas."""
+    """Sans le fichier, l'analyse se degrade, elle ne s'interrompt pas."""
     missing = tmp_path / "absent.csv"
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, "Some Journal Name Here")]))
     out = c.scimago_sources(path=missing)

@@ -8,7 +8,7 @@ et « ISBSG » à la suivante, deux auteurs à égalité échangeaient leur plac
 dans le diagramme à trois champs.
 
 Règle unique, partout : le plus fréquent d'abord, puis l'ordre alphabétique.
-Arbitraire, mais toujours le même — c'est ce qu'exige un résultat publié.
+Arbitraire, mais toujours le même, c'est ce qu'exige un résultat publié.
 """
 
 from __future__ import annotations

@@ -4,8 +4,8 @@ et quels auteurs en portent plusieurs.
 Trois questions qu'un lecteur pose devant un corpus, et auxquelles le nombre
 de signataires ne répond pas :
 
-  - combien d'articles ne portent QU'UNE seule affiliation — une équipe
-    seule — contre deux, trois, davantage ;
+  - combien d'articles ne portent QU'UNE seule affiliation, une équipe
+    seule, contre deux, trois, davantage ;
   - combien d'articles sont signés par un auteur SEUL ;
   - quels auteurs sont rattachés à plusieurs institutions, sur un même
     article (double rattachement déclaré) ou d'un article à l'autre
@@ -26,7 +26,7 @@ from .._stable import top_by_count
 
 
 def _author_key(authors: pd.DataFrame) -> pd.Series:
-    """L'identité d'un auteur : son identifiant Scopus, sinon son nom — la
+    """L'identité d'un auteur : son identifiant Scopus, sinon son nom, la
     MÊME clé que `top_authors` et `n_authors`."""
     return authors["scopus_id"].fillna("name:" + authors["name"].map(str))
 
@@ -93,7 +93,7 @@ def authors_by_affiliation_count(corpus, n: Optional[int] = 20) -> pd.DataFrame:
     ``max_in_one_document``, ``affiliations``.
 
     ``institutions`` compte les institutions distinctes sur TOUT le corpus ;
-    ``max_in_one_document`` le maximum porté sur un SEUL article — c'est
+    ``max_in_one_document`` le maximum porté sur un SEUL article, c'est
     celui-là qui est un double rattachement déclaré, l'autre pouvant n'être
     qu'un changement d'institution au fil des années.
     """

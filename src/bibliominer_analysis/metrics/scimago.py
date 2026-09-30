@@ -7,16 +7,16 @@ bien plus que le seul quartile.
 
 L'appariement se fait en deux temps, du plus sûr au moins sûr :
 
-  1. **par ISSN** — un identifiant, donc sans ambiguïté. SCImago en liste
+  1. **par ISSN**, un identifiant, donc sans ambiguïté. SCImago en liste
      souvent plusieurs par revue (imprimé et électronique) : on les indexe tous.
-  2. **par titre normalisé** — quand l'ISSN manque ou ne correspond à rien.
+  2. **par titre normalisé**, quand l'ISSN manque ou ne correspond à rien.
      Moins sûr, donc la méthode retenue est TOUJOURS renvoyée dans la colonne
      ``matched_by`` : un lecteur doit pouvoir écarter les rapprochements
      faibles lui-même.
 
 Ce qui n'est pas trouvé reste **vide**, jamais deviné. Une revue absente de
 SCImago (actes de conférence non indexés, revue trop récente) n'a pas de
-quartile — écrire « Q4 » par défaut serait une invention.
+quartile, écrire « Q4 » par défaut serait une invention.
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ _COLUMNS = {
     "Areas": "areas",
 }
 
-#: Colonnes numériques — SCImago écrit les décimales à la VIRGULE.
+#: Colonnes numériques, SCImago écrit les décimales à la VIRGULE.
 _NUMERIC = {
     "SJR": "sjr",
     "H index": "source_h_index",
@@ -84,7 +84,7 @@ def default_path() -> Optional[Path]:
 
 
 def normalize_issn(raw: Any) -> str:
-    """ISSN réduit à ses huit caractères — mêmes règles que le cleaning."""
+    """ISSN réduit à ses huit caractères, mêmes règles que le cleaning."""
     if raw is None:
         return ""
     s = re.sub(r"[^0-9Xx]", "", str(raw)).upper()
@@ -211,7 +211,7 @@ def enrich_sources(corpus, path: Optional[Any] = None) -> pd.DataFrame:
 
     Une revue non trouvée garde ses colonnes SCImago **vides**. C'est le cas
     normal pour les actes de conférence, que SCImago n'indexe que
-    partiellement — et le dire vaut mieux que de le masquer.
+    partiellement, et le dire vaut mieux que de le masquer.
     """
     docs = corpus.documents
     if docs.empty or "source" not in docs.columns:
@@ -315,7 +315,7 @@ def quartile_over_time(corpus, path: Optional[Any] = None) -> pd.DataFrame:
     **Réserve à énoncer avec la figure** : le quartile vient d'UNE édition de
     SCImago (celle du fichier chargé) et s'applique à toutes les années. Une
     revue Q1 aujourd'hui pouvait être Q2 lors de la publication. La courbe
-    montre donc dans quelles revues — classées selon leur rang ACTUEL — le
+    montre donc dans quelles revues, classées selon leur rang ACTUEL, le
     corpus a publié chaque année, pas le quartile qu'elles avaient à l'époque.
     """
     cols = ["year", "quartile", "documents", "share"]
@@ -349,7 +349,7 @@ def quartile_over_time(corpus, path: Optional[Any] = None) -> pd.DataFrame:
 
 
 def scimago_coverage(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
-    """Ce que l'appariement a réussi à faire — et ce qu'il a manqué.
+    """Ce que l'appariement a réussi à faire, et ce qu'il a manqué.
 
     Un tableau enrichi sans ce compte se lit comme s'il couvrait tout le
     corpus. Il ne le couvre jamais entièrement.
@@ -377,7 +377,7 @@ def scimago_coverage(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Interdisciplinarite — possible seulement grace au referentiel
+# Interdisciplinarite, possible seulement grace au referentiel
 # ---------------------------------------------------------------------------
 
 def _split_areas(cell: Any) -> List[str]:
@@ -476,8 +476,8 @@ def interdisciplinarity(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
       domaines differents. Directement interpretable.
     - **Shannon** : entropie de la distribution.
     - **Regularite** : Shannon rapporte a son maximum. C'est la mesure a
-      comparer entre corpus, parce qu'elle ne depend pas du NOMBRE de domaines
-      — l'entropie brute, elle, monte mecaniquement avec.
+      comparer entre corpus, parce qu'elle ne depend pas du NOMBRE de domaines,
+      l'entropie brute, elle, monte mecaniquement avec.
     """
     areas = subject_areas(corpus, path)
     base = {"areas": 0, "shannon": None, "simpson": None, "evenness": None,
@@ -511,7 +511,7 @@ def journal_open_access(corpus, path: Optional[Any] = None) -> pd.DataFrame:
     """Documents selon l'acces de leur REVUE (propriete du support).
 
     A distinguer de `access.access_status`, qui porte sur l'ARTICLE. Un article
-    ouvert dans une revue sur abonnement existe — c'est l'hybride.
+    ouvert dans une revue sur abonnement existe, c'est l'hybride.
 
     « Inconnu » n'est pas « payant » : une revue absente du referentiel n'a pas
     de statut connu.

@@ -11,7 +11,7 @@ Un article peut avoir 800 citations mondiales et 0 locale : il est important
 ailleurs, pas ici. L'inverse existe aussi, et signale un travail fondateur pour
 la communauté précise qu'on analyse. Sans LC on ne peut construire ni
 l'historiographe, ni les classements « local cited », ni le réseau de citation
-directe — d'où ce module en socle.
+directe, d'où ce module en socle.
 
 Le rapprochement référence → document se fait en deux temps :
 
@@ -179,7 +179,7 @@ def most_local_cited_documents(corpus, n: Optional[int] = 20) -> pd.DataFrame:
 
 
 def _labels(d: pd.DataFrame) -> pd.Series:
-    """« HOSNI M., 2019 » — l'étiquette courte usuelle en bibliométrie."""
+    """« HOSNI M., 2019 », l'étiquette courte usuelle en bibliométrie."""
     author = d["first_author"].fillna("ANONYMOUS").map(str).str.upper()
     year = d["year"].astype("Int64").map(str).replace("<NA>", "n.d.")
     base = author + ", " + year
@@ -245,8 +245,8 @@ def historiograph(corpus, n: int = 25) -> dict:
 
     L'historiographe de Garfield : on garde les `n` documents les plus cités
     localement et on ne trace que les citations qui les relient entre eux. Lu
-    de gauche à droite (le temps), il montre la filiation des idées — quel
-    travail s'appuie sur quel autre — ce qu'aucun classement ne donne.
+    de gauche à droite (le temps), il montre la filiation des idées, quel
+    travail s'appuie sur quel autre, ce qu'aucun classement ne donne.
 
     Retour : ``{"nodes": [...], "edges": [...], "n_nodes", "n_edges"}``.
     Chaque nœud porte ``id``, ``label``, ``year``, ``local_citations``,

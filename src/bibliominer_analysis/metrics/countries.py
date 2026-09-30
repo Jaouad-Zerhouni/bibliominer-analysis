@@ -4,8 +4,8 @@ Le tableau « Corresponding Author's Countries » est un classique des articles
 bibliométriques. Il répartit les documents selon le pays de l'auteur
 **principal**, puis distingue :
 
-  - **SCP** (*single country publications*) — tous les signataires du même pays ;
-  - **MCP** (*multiple country publications*) — au moins deux pays.
+  - **SCP** (*single country publications*), tous les signataires du même pays ;
+  - **MCP** (*multiple country publications*), au moins deux pays.
 
 Le rapport MCP/total mesure l'ouverture internationale d'un pays, ce que le
 simple nombre de documents ne dit pas : un pays peut beaucoup publier en vase
@@ -13,7 +13,7 @@ clos.
 
 **Réserve importante** : les exports ne portent pas toujours l'adresse de
 correspondance. On prend alors le **premier auteur** comme représentant du
-document — c'est la convention de repli usuelle, mais ce n'est pas
+document, c'est la convention de repli usuelle, mais ce n'est pas
 rigoureusement l'auteur correspondant, et il faut le dire plutôt que de laisser
 croire à une précision qu'on n'a pas.
 """
@@ -53,7 +53,7 @@ def corresponding_author_countries(corpus, n: Optional[int] = 20) -> pd.DataFram
 
     # Repli : aucun rattachement pour le premier auteur (fréquent quand le
     # nettoyage n'a pas pu relier auteur et affiliation). On prend alors la
-    # première affiliation du document — mieux qu'écarter le document.
+    # première affiliation du document, mieux qu'écarter le document.
     missing = set(aff["eid"]) - set(lead["eid"])
     if missing:
         fallback = (aff[aff["eid"].isin(missing)]

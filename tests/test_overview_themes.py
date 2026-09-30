@@ -48,7 +48,7 @@ def test_main_information(corpus):
 
 def test_age_moyen_relatif_au_corpus(corpus):
     """L'âge se compte depuis l'année la plus RÉCENTE du corpus, pas depuis
-    aujourd'hui — sinon la valeur changerait chaque année."""
+    aujourd'hui, sinon la valeur changerait chaque année."""
     m = corpus.main_information()
     # années 2020..2023, la plus récente = 2023 -> âges 3,2,1,0 -> moyenne 1.5
     assert m["document_average_age"] == 1.5

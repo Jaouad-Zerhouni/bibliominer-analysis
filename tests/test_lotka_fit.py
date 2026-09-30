@@ -55,7 +55,7 @@ def test_mle_resiste_a_une_queue_qui_trompe_les_moindres_carres():
 
     Les moindres carres sur log-log donnent le meme poids a chaque NIVEAU de
     productivite. Quand la queue en compte beaucoup, tous a un seul auteur, la
-    pente s'aplatit jusqu'a passer sous 1 — et la loi n'a alors meme plus de
+    pente s'aplatit jusqu'a passer sous 1, et la loi n'a alors meme plus de
     constante de normalisation.
     """
     productivities = [1] * 18 + [2] * 10 + [3, 3, 4, 4, 6, 7, 7, 7, 8, 10, 11, 12, 25, 50]

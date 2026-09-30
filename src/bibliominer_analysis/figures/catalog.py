@@ -2,7 +2,7 @@
 
 L'interface montre une soixantaine de graphiques. Le paquet savait calculer
 toutes leurs données et DESSINER barres, lignes, nuages, réseaux et cartes,
-mais c'était à l'utilisateur de refaire l'assemblage — quelle méthode, quelle
+mais c'était à l'utilisateur de refaire l'assemblage, quelle méthode, quelle
 colonne, quel axe. Ici, chaque figure de l'écran a une entrée :
 
     >>> corpus.figure_catalog()                       # la liste, par page
@@ -91,7 +91,7 @@ class Entry:
     title: str
     page: str
     build: Callable[..., Built]
-    #: options de l'écran — les défauts de `figure`
+    #: options de l'écran, les défauts de `figure`
     options: Dict[str, Any] = dataclasses.field(default_factory=dict)
     #: la méthode du `Corpus` qui porte les données, pour le README
     source: str = ""
@@ -336,7 +336,7 @@ _add("collaboration-map", "International collaboration map", "Countries",
      lambda c, top_n, min_weight: _world(_country_values(c, "documents"), "Documents",
                                          links=_collaboration_links(c, top_n, min_weight)),
      "country_map(), co_country(top_n, min_weight)", top_n=60, min_weight=1)
-_add("scp-mcp", "First author's country — SCP / MCP", "Countries",
+_add("scp-mcp", "First author's country: SCP / MCP", "Countries",
      lambda c, n: hbar(c.corresponding_author_countries(n), "country", ["scp", "mcp"],
                        value_label="Documents"),
      "corresponding_author_countries(n)", n=20)
@@ -373,10 +373,10 @@ _add("cai-by-period", "Co-authorship index (CAI) by period", "Indicators",
      lambda c, block_years: lines(c.cai(block_years), "period",
                                   ["cai_single", "cai_two", "cai_three", "cai_multi"], "CAI"),
      "cai(block_years)", block_years=5)
-_add("lotka", "Lotka — author productivity", "Laws",
+_add("lotka", "Lotka: author productivity", "Laws",
      lambda c: mixed(c.lotka()["table"], "documents_written", ["share_observed"],
                      ["share_fitted", "share_lotka"], "Share of authors"), "lotka()")
-_add("bradford", "Bradford — cumulative documents by source rank", "Laws",
+_add("bradford", "Bradford: cumulative documents by source rank", "Laws",
      lambda c: lines(c.bradford()["table"], "rank", ["cumulative"]), "bradford()")
 
 
@@ -395,7 +395,7 @@ _add("bradford-zones", "Bradford zones", "Laws", _bradford_zones, "bradford()")
 _add("bradford-core-journals", "Bradford core journals (zone 1)", "Laws",
      lambda c: hbar(c.bradford()["table"].query("zone == 1"), "source", "documents"),
      "bradford()")
-_add("zipf", "Zipf — term frequency (log-log)", "Laws",
+_add("zipf", "Zipf: term frequency (log-log)", "Laws",
      lambda c, n: points({"Observed": c.zipf(n)["table"].rename(columns={"frequency": "f"}),
                           "Predicted": c.zipf(n)["table"].drop(columns=["frequency"])
                                                         .rename(columns={"predicted": "f"})},
@@ -482,22 +482,22 @@ _add("three-fields", "Three-field plot", "Three fields",
 # --- Networks -----------------------------------------------------------------------
 for _unit, _label, _mw in (("authors", "authors", 1), ("institutions", "institutions", 1),
                            ("countries", "countries", 1)):
-    _add(f"collaboration-{_label}", f"Collaboration — {_label}", "Networks",
+    _add(f"collaboration-{_label}", f"Collaboration: {_label}", "Networks",
          lambda c, top_n, min_weight, unit=_unit, label=_label: _network(
-             lambda: c.network(unit, top_n, min_weight), f"Collaboration — {label}"),
+             lambda: c.network(unit, top_n, min_weight), f"Collaboration: {label}"),
          f"network('{_unit}', top_n, min_weight)", top_n=50, min_weight=_mw)
 for _unit, _label in (("references", "references"), ("coupling", "coupling"),
                       ("cited-authors", "cited authors")):
     _slug = _label.replace(" ", "-")
-    _add(f"co-citation-{_slug}", f"Co-citation — {_label}", "Networks",
+    _add(f"co-citation-{_slug}", f"Co-citation: {_label}", "Networks",
          lambda c, top_n, min_weight, unit=_unit, label=_label: _network(
-             lambda: c.network(unit, top_n, min_weight), f"Co-citation — {label}"),
+             lambda: c.network(unit, top_n, min_weight), f"Co-citation: {label}"),
          f"network('{_unit}', top_n, min_weight)", top_n=50, min_weight=2)
 
 _LAB_UNITS = ("authors", "keywords", "institutions", "countries", "references",
               "cited-authors", "coupling")
 for _unit in _LAB_UNITS:
-    _add(f"network-{_unit}", f"Network lab — {_unit.replace('-', ' ')}", "Network lab",
+    _add(f"network-{_unit}", f"Network lab: {_unit.replace('-', ' ')}", "Network lab",
          lambda c, top_n, min_weight, normalization, resolution, unit=_unit: _network(
              lambda: c.network(unit, top_n, min_weight, normalization, resolution=resolution),
              f"{unit.replace('-', ' ').capitalize()} network"),
@@ -516,7 +516,7 @@ def _density(c, unit, top_n, min_weight) -> Optional[Renderer]:
 
 
 for _unit in _LAB_UNITS:
-    _add(f"density-{_unit}", f"Density map — {_unit.replace('-', ' ')}", "Network lab",
+    _add(f"density-{_unit}", f"Density map: {_unit.replace('-', ' ')}", "Network lab",
          lambda c, top_n, min_weight, unit=_unit: _density(c, unit, top_n, min_weight),
          f"density_map('{_unit}', top_n, min_weight)", top_n=50, min_weight=1)
 

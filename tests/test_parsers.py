@@ -1,6 +1,6 @@
 """Tests des parseurs : c'est ici que se joue la fidélité au format.
 
-Les cas ne sont pas inventés — ils viennent d'exports réels, y compris les
+Les cas ne sont pas inventés, ils viennent d'exports réels, y compris les
 cas dégradés (ancien format non indexé, affiliation brute, référence non
 réconciliée), parce que l'utilisateur a des fichiers dans les deux états.
 """

@@ -1,7 +1,7 @@
 """Le rapport : figures et tableaux d'une étude, rangés dans un seul ZIP.
 
-C'est le même rapport que le panier « Add to report » de l'interface — l'API
-appelle cette classe —, et un utilisateur du paquet le construit en Python :
+C'est le même rapport que le panier « Add to report » de l'interface, l'API
+appelle cette classe, et un utilisateur du paquet le construit en Python :
 
     >>> from bibliominer_analysis import Corpus, Report
     >>> corpus = Corpus.from_csv("cleaned.csv").filter(years=(2023, 2025))
@@ -173,7 +173,7 @@ class Report:
 
     def add_corpus_figure(self, corpus: Any, name: str, **options: Any) -> "Report":
         """Une figure du catalogue de l'interface, rangée dans SA section et
-        sous SON titre — l'équivalent du bouton « Add to report » :
+        sous SON titre, l'équivalent du bouton « Add to report » :
 
             >>> report.add_corpus_figure(corpus, "top-authors", n=10)
         """
@@ -211,7 +211,7 @@ class Report:
             if top != folder:
                 folder = top
                 lines += ["", f"{folder}/"]
-            lines.append(f"  {path.split('/', 1)[1]:<48} {title}" + (f" — {note}" if note else ""))
+            lines.append(f"  {path.split('/', 1)[1]:<48} {title}" + (f" ({note})" if note else ""))
         return "\n".join(lines) + "\n"
 
     def to_bytes(self) -> bytes:

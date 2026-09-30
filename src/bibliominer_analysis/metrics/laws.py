@@ -3,16 +3,16 @@
 Ces trois lois décrivent des concentrations très inégales, chacune sur un
 objet différent :
 
-  - **Lotka (1926)** — la productivité des AUTEURS. Le nombre d'auteurs ayant
+  - **Lotka (1926)**, la productivité des AUTEURS. Le nombre d'auteurs ayant
     publié *x* articles décroît en 1/x^n. Beaucoup publient une fois, très peu
     publient beaucoup.
 
-  - **Bradford (1934)** — la dispersion des SOURCES. En classant les revues par
+  - **Bradford (1934)**, la dispersion des SOURCES. En classant les revues par
     productivité décroissante et en formant trois zones contenant chacune un
     tiers des articles, le nombre de revues croît géométriquement d'une zone à
     l'autre. La première zone est le « noyau » du domaine.
 
-  - **Zipf (1949)** — la fréquence des MOTS. La fréquence d'un terme est
+  - **Zipf (1949)**, la fréquence des MOTS. La fréquence d'un terme est
     inversement proportionnelle à son rang, élevé à une puissance *s*.
 
 Chaque fonction renvoie à la fois les données OBSERVÉES et l'ajustement
@@ -31,7 +31,7 @@ import pandas as pd
 def _fit_power_law(x: np.ndarray, y: np.ndarray) -> Dict[str, float]:
     """Ajuste y = C · x^(-b) par moindres carrés sur les logarithmes.
 
-    Renvoie l'exposant, la constante et le R² — ce dernier est indispensable :
+    Renvoie l'exposant, la constante et le R², ce dernier est indispensable :
     il dit si la loi DÉCRIT vraiment le corpus. Un exposant sans R² est un
     chiffre sans garantie.
     """
@@ -52,7 +52,7 @@ def _fit_power_law(x: np.ndarray, y: np.ndarray) -> Dict[str, float]:
 
 
 def _zeta(a: float, terms: int = 2000) -> float:
-    """ζ(a) = Σ 1/n^a — la constante qui fait de C/n^a une VRAIE distribution.
+    """ζ(a) = Σ 1/n^a, la constante qui fait de C/n^a une VRAIE distribution.
 
     Sans elle, « C » n'est qu'une ordonnée à l'origine en unités de comptage :
     elle ne peut pas se comparer à une part observée, qui est une probabilité.
@@ -80,7 +80,7 @@ _MLE_LOG_GRID = np.log(_MLE_GRID)
 
 
 def _zeta_log_ratio(a: float) -> float:
-    """Σ(ln n · n^-a) / ζ(a) — l'espérance de ln(x) sous la loi de puissance.
+    """Σ(ln n · n^-a) / ζ(a), l'espérance de ln(x) sous la loi de puissance.
 
     C'est la quantité qu'il faut égaler à la moyenne observée de ln(x) pour
     résoudre l'équation de vraisemblance.
@@ -94,13 +94,13 @@ def _lotka_mle(values: np.ndarray, lo: float = 1.01, hi: float = 6.0,
     """Exposant de Lotka par maximum de vraisemblance (loi zêta discrète).
 
     **Pourquoi pas les moindres carrés sur log-log.** C'est la méthode qu'on
-    trouve partout, et elle est mauvaise ici — Clauset, Shalizi & Newman (2009)
+    trouve partout, et elle est mauvaise ici, Clauset, Shalizi & Newman (2009)
     l'ont montré. Elle donne le même poids à chaque NIVEAU de productivité :
     sur un corpus réel, la queue compte beaucoup de niveaux ne contenant qu'un
     seul auteur, et ces points isolés dominent la régression au point d'aplatir
     la pente. Mesuré sur le corpus d'essai : 0,755 par moindres carrés contre
     1,754 par vraisemblance. Le premier est inférieur à 1, donc la loi n'y a
-    même pas de constante de normalisation — l'ajustement était inutilisable.
+    même pas de constante de normalisation, l'ajustement était inutilisable.
 
     Le maximum de vraisemblance pondère par AUTEUR, ce qui est la bonne unité
     d'observation. On résout par dichotomie l'équation E[ln x] = moyenne
@@ -121,7 +121,7 @@ def _lotka_mle(values: np.ndarray, lo: float = 1.01, hi: float = 6.0,
 
 
 # ---------------------------------------------------------------------------
-# Lotka — productivité des auteurs
+# Lotka, productivité des auteurs
 # ---------------------------------------------------------------------------
 
 def lotka(corpus) -> Dict[str, object]:
@@ -130,16 +130,16 @@ def lotka(corpus) -> Dict[str, object]:
     Renvoie ``{"table": DataFrame, "fit": {...}}``.
 
     Une ligne se lit : « ``n_authors`` AUTEURS ont publié ``documents_written``
-    documents CHACUN ». Ce n'est pas un décompte d'articles à auteur unique —
+    documents CHACUN ». Ce n'est pas un décompte d'articles à auteur unique,
     la formulation inverse, à laquelle le tableau se prête, est le contresens
     classique sur cette loi.
 
     La table donne, pour chaque nombre de documents *x*, trois colonnes :
 
-      - ``share_observed`` — la part réelle des auteurs ;
-      - ``share_fitted``   — la loi AJUSTÉE ``y = C/x^a``, l'exposant estimé
+      - ``share_observed``, la part réelle des auteurs ;
+      - ``share_fitted``, la loi AJUSTÉE ``y = C/x^a``, l'exposant estimé
         par maximum de vraisemblance et ``C = 1/ζ(a)`` ;
-      - ``share_lotka``    — Lotka STRICT, exposant 2, soit ``(1/x²)/ζ(2)``.
+      - ``share_lotka``, Lotka STRICT, exposant 2, soit ``(1/x²)/ζ(2)``.
 
     Les deux dernières répondent à des questions distinctes : la production
     suit-elle *une* loi de puissance, et suit-elle *celle de Lotka* ? La
@@ -166,14 +166,14 @@ def lotka(corpus) -> Dict[str, object]:
     observed = y / total_authors
 
     # Lotka STRICT : l'exposant vaut 2 par hypothèse. C'est la référence
-    # historique, celle à laquelle on compare — pas un ajustement.
+    # historique, celle à laquelle on compare, pas un ajustement.
     zeta2 = np.pi ** 2 / 6.0
     share_lotka = (1.0 / x ** 2) / zeta2
 
     # Lotka GÉNÉRALISÉ : y_n = C / n^a, l'exposant estimé sur le corpus et
     # C = 1/ζ(a) qui en fait une distribution de probabilité. C'est cette
     # courbe qui dit si la production suit UNE loi de puissance ; la version
-    # stricte dit seulement si elle suit CELLE de Lotka — question différente
+    # stricte dit seulement si elle suit CELLE de Lotka, question différente
     # et bien plus exigeante.
     ols = _fit_power_law(x, y)
     exponent = _lotka_mle(per_author.to_numpy(dtype=float))
@@ -233,12 +233,12 @@ def kolmogorov_smirnov(observed: np.ndarray, theoretical: np.ndarray,
     """Test de Kolmogorov-Smirnov entre la distribution observée et Lotka.
 
     Un exposant ajusté et un R² disent que la loi *ressemble* aux données. Ils
-    ne disent PAS si l'écart restant est compatible avec le hasard — c'est la
+    ne disent PAS si l'écart restant est compatible avec le hasard, c'est la
     question à laquelle ce test répond, et c'est celle que pose un relecteur.
 
     On compare les fonctions de répartition cumulées : ``D`` est leur écart
     maximal. La valeur critique à 5 % est ``1,36/√N`` (Pao, 1985), où **N est
-    le nombre d'OBSERVATIONS — les auteurs**, pas le nombre de niveaux de
+    le nombre d'OBSERVATIONS, les auteurs**, pas le nombre de niveaux de
     productivité. `observed` et `theoretical` sont des parts par niveau ;
     `sample_size` porte N. Sans lui, on retombe sur le nombre de valeurs
     passées, ce qui n'a de sens que si chaque valeur est une observation.
@@ -287,7 +287,7 @@ def kolmogorov_smirnov(observed: np.ndarray, theoretical: np.ndarray,
 
 
 # ---------------------------------------------------------------------------
-# Bradford — dispersion des sources
+# Bradford, dispersion des sources
 # ---------------------------------------------------------------------------
 
 def bradford(corpus, zones: int = 3) -> Dict[str, object]:
@@ -318,8 +318,8 @@ def bradford(corpus, zones: int = 3) -> Dict[str, object]:
 
     # Affectation des zones. Subtilité : une source appartient à la zone
     # qu'elle est en train de REMPLIR, pas à celle qu'elle fait déborder.
-    # Sinon une revue très productive — dépassant à elle seule le premier
-    # tiers — se retrouverait en zone 2, alors qu'elle EST le noyau.
+    # Sinon une revue très productive, dépassant à elle seule le premier
+    # tiers, se retrouverait en zone 2, alors qu'elle EST le noyau.
     target = total / zones
     zone, acc, assigned = 1, 0, []
     for docs in counts["documents"].tolist():
@@ -352,7 +352,7 @@ def bradford(corpus, zones: int = 3) -> Dict[str, object]:
 
 
 # ---------------------------------------------------------------------------
-# Zipf — fréquence des mots
+# Zipf, fréquence des mots
 # ---------------------------------------------------------------------------
 
 def zipf(corpus, n: Optional[int] = 100, kind: str = "author") -> Dict[str, object]:

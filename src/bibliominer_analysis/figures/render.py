@@ -1,11 +1,11 @@
-"""Rendu matplotlib — barres, lignes, nuages de points simples.
+"""Rendu matplotlib, barres, lignes, nuages de points simples.
 
 Portée VOLONTAIREMENT limitée pour l'instant : ce sont les trois formes les
 plus utilisées de l'application (barres/lignes : plus de cinquante graphiques
 à elles deux) et les plus fidèlement reproductibles telles quelles. Les
-formes plus riches — réseaux à disposition de forces, carte géographique,
+formes plus riches, réseaux à disposition de forces, carte géographique,
 sankey, nuage de points à bulles multi-dimensionnelles (taille ET couleur
-portant chacune une variable) — ne sont PAS couvertes : les reproduire
+portant chacune une variable), ne sont PAS couvertes : les reproduire
 fidèlement demande un rendu dédié par forme, pas un mécanisme générique.
 Un nuage de points dont les données ne sont qu'une liste de paires (x, y)
 EST couvert ; un nuage de points à bulles ne l'est pas et lève `FigureError`
@@ -72,7 +72,7 @@ class FigureSpec:
     y_label: str = ""
     orientation: str = "vertical"  # "vertical" | "horizontal" -- barres seul.
     mode: str = "light"  # "light" | "dark"
-    #: axes logarithmiques — Zipf (rang/fréquence) et Lotka se LISENT en
+    #: axes logarithmiques, Zipf (rang/fréquence) et Lotka se LISENT en
     #: log-log ; en échelle linéaire, la queue écrase tout le graphique.
     x_log: bool = False
     y_log: bool = False
@@ -104,7 +104,7 @@ def _render(spec: FigureSpec, fmt: str) -> bytes:
     # ajout (légende, rotation d'étiquette), `tight_layout` ne le fait
     # qu'une fois et coupe régulièrement un nom d'axe long.
     # Une `Figure` avec son canevas Agg, jamais `pyplot` : aucune fenêtre,
-    # aucun moteur d'affichage global à changer — le rendu marche sur un
+    # aucun moteur d'affichage global à changer, le rendu marche sur un
     # serveur sans écran comme dans un notebook, sans rien y dérégler.
     fig = Figure(figsize=(spec.width_in, spec.height_in), dpi=spec.dpi,
                  constrained_layout=True)
@@ -147,7 +147,7 @@ def _render(spec: FigureSpec, fmt: str) -> bytes:
 
 
 def _apply_chrome(ax, spec: FigureSpec, c: Dict[str, str]) -> None:
-    """La grille et les axes — communs aux trois formes.
+    """La grille et les axes, communs aux trois formes.
 
     Pas de titre sur la figure elle-même : `spec.title` ne sert qu'à nommer
     le fichier téléchargé (voir `figures.py::_slug`), jamais à écrire sur
@@ -176,7 +176,7 @@ def _apply_chrome(ax, spec: FigureSpec, c: Dict[str, str]) -> None:
         ax.spines[side].set_linewidth(0.8)
 
     # Le filet suit l'axe des VALEURS, pour aider à lire une hauteur/longueur
-    # de barre — sur des barres horizontales, c'est l'axe X qui porte les
+    # de barre, sur des barres horizontales, c'est l'axe X qui porte les
     # valeurs, Y n'étant plus qu'une liste de catégories.
     grid_axis = "x" if (spec.kind == "bar" and spec.orientation == "horizontal") else "y"
     ax.grid(axis=grid_axis, color=c["grid"], linewidth=0.8, zorder=0)
@@ -243,7 +243,7 @@ def _draw_bars(ax, spec: FigureSpec, colors: List[str]) -> None:
         if s.values is None or len(s.values) != len(cats):
             raise FigureError(
                 f"'{s.name}': {len(s.values or [])} value(s) for "
-                f"{len(cats)} categorie(s) — the two must match."
+                f"{len(cats)} categorie(s), the two must match."
             )
         offset = (i - (n - 1) / 2) * width
         pos = [p + offset for p in positions]
@@ -271,7 +271,7 @@ def _draw_lines(ax, spec: FigureSpec, colors: List[str]) -> None:
         if s.values is None or len(s.values) != len(cats):
             raise FigureError(
                 f"'{s.name}': {len(s.values or [])} value(s) for "
-                f"{len(cats)} categorie(s) — the two must match."
+                f"{len(cats)} categorie(s), the two must match."
             )
         color = colors[i % len(colors)]
         # Un marqueur par point se lit jusqu'à une quarantaine de points ; au-
@@ -307,7 +307,7 @@ def _draw_mixed(ax, spec: FigureSpec, colors: List[str]) -> None:
         if s.values is None or len(s.values) != len(cats):
             raise FigureError(
                 f"'{s.name}': {len(s.values or [])} value(s) for "
-                f"{len(cats)} categorie(s) — the two must match."
+                f"{len(cats)} categorie(s), the two must match."
             )
         offset = (i - (len(bar_series) - 1) / 2) * width
         pos = [p + offset for p in x]
@@ -319,7 +319,7 @@ def _draw_mixed(ax, spec: FigureSpec, colors: List[str]) -> None:
         if s.values is None or len(s.values) != len(cats):
             raise FigureError(
                 f"'{s.name}': {len(s.values or [])} value(s) for "
-                f"{len(cats)} categorie(s) — the two must match."
+                f"{len(cats)} categorie(s), the two must match."
             )
         # zorder au-dessus des barres : la tendance reste lisible par-dessus
         # les colonnes, comme à l'écran.
@@ -372,7 +372,7 @@ def _draw_scatter(ax, spec: FigureSpec, colors: List[str]) -> None:
     for i, s in enumerate(spec.series):
         if not s.points:
             raise FigureError(
-                f"'{s.name}': a scatter plot needs (x, y) pairs — this "
+                f"'{s.name}': a scatter plot needs (x, y) pairs, this "
                 "series has none."
             )
         xs = [p[0] for p in s.points]
