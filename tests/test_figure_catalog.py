@@ -107,3 +107,28 @@ def test_figure_spec_seulement_pour_les_figures_simples(corpus):
 def test_haute_resolution_par_defaut(corpus):
     """300 dpi par défaut : la même figure est plus grande qu'à 100 dpi."""
     assert len(corpus.figure("documents-per-year")) > len(corpus.figure("documents-per-year", dpi=100))
+
+
+def test_a_catalog_figure_takes_the_style_of_the_export_dialog(corpus):
+    """Ce que la boîte d'export de l'interface règle, Python le règle aussi."""
+    svg = corpus.figure("documents-per-year", fmt="svg",
+                        style={"kind": "pie", "show_title": True,
+                               "subtitle": "Years 2016-2024", "value_labels": True})
+    assert b"Documents per year" in svg and b"Years 2016-2024" in svg
+
+
+def test_a_style_key_that_is_not_a_style_is_refused(corpus):
+    with pytest.raises(TypeError, match="style"):
+        corpus.figure("documents-per-year", style={"series": []})
+
+
+def test_the_report_files_a_styled_corpus_figure_under_its_period(corpus):
+    import io
+    import zipfile
+
+    from bibliominer_analysis import Report
+    recent = corpus.filter(years=(2016, 2019))
+    report = Report().add_corpus_figure(recent, "top-authors", period="2016-2019",
+                                        style={"show_title": True, "palette": "gradient"})
+    names = zipfile.ZipFile(io.BytesIO(report.to_bytes())).namelist()
+    assert "2-actors/figures/top-authors_2016-2019.png" in names

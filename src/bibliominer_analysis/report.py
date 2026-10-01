@@ -15,12 +15,25 @@ appelle cette classe, et un utilisateur du paquet le construit en Python :
 
 Ce qu'il contient ::
 
-    README.txt                    l'index : chaque fichier, son titre, les filtres
-    all_tables.xlsx               tous les tableaux, une feuille chacun
-    1-corpus/figures/<nom>.png    300 dpi, qualité impression
-    1-corpus/figures/<nom>.svg    vectoriel : s'agrandit sans perte
-    1-corpus/tables/<nom>.xlsx    un classeur par tableau
+    README.txt                      l'index : chaque fichier, son titre, les filtres
+    all_tables.xlsx                 tous les tableaux, une feuille chacun
+    1-corpus/figures/<nom>.png      300 dpi, qualité impression
+    1-corpus/figures/<nom>.svg      vectoriel : s'agrandit sans perte
+    1-corpus/corpus_tables.xlsx     les tableaux de la section, une feuille
+                                    chacun, et une feuille « Contents »
     2-actors/…  3-impact/…  4-concepts/…  5-networks/…
+
+UN classeur par section, pas un fichier par tableau : une étude compte une
+centaine de tableaux, et vingt fichiers Excel dans un dossier ne se
+parcourent pas. Son nom porte la section (``actors_tables.xlsx``) : Excel
+refuse d'ouvrir ensemble deux classeurs du même nom. La feuille « Contents »
+donne le titre ENTIER de chaque feuille, sa période et ses filtres : un nom
+de feuille est coupé à 31 caractères.
+
+Une entrée calculée sur une PÉRIODE (``period="2010-2013"``) la porte dans le
+nom de son fichier (``top-authors_2010-2013.png``) ou de sa feuille. Deux
+classements des auteurs sur deux périodes donnent deux fichiers, deux
+feuilles, jamais un seul écrasé.
 
 Une section par groupe de l'interface (Corpus, Actors, Impact, Concepts,
 Networks), dans l'ordre du menu ; une section inconnue vient ensuite.
@@ -39,7 +52,7 @@ from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Seque
 import pandas as pd
 
 from . import __version__
-from ._xlsx import workbook_bytes
+from ._xlsx import sheet_name, workbook_bytes
 from .figures.render import FigureSpec, render_figure
 
 __all__ = ["Report", "SECTIONS"]
@@ -85,6 +98,8 @@ class _Table:
     name: str
     frame: pd.DataFrame
     note: str = ""
+    title: str = ""
+    period: str = ""
 
 
 @dataclasses.dataclass
@@ -93,6 +108,19 @@ class _Figure:
     name: str
     files: Dict[str, bytes]
     note: str = ""
+    title: str = ""
+    period: str = ""
+
+
+def _book(section: str) -> str:
+    """Le classeur des tableaux d'une section : ``actors_tables.xlsx``."""
+    return f"{_slug(section).replace('-', '_')}_tables.xlsx"
+
+
+def _stem(item: Union[_Table, _Figure]) -> str:
+    """Le nom de fichier d'une entrée : son nom, puis sa période."""
+    stem = _slug(item.name)
+    return f"{stem}_{_slug(item.period)}" if item.period.strip() else stem
 
 
 class Report:
@@ -122,16 +150,20 @@ class Report:
     # -- ajouter --------------------------------------------------------------
 
     def add_table(self, section: str, name: str, table: TableLike,
-                  note: str = "") -> "Report":
+                  note: str = "", *, title: str = "", period: str = "") -> "Report":
         """Un tableau (DataFrame, liste de lignes ou dictionnaire) : un
-        classeur Excel dans ``<section>/tables/``, et une feuille de
-        ``all_tables.xlsx``."""
-        self._items.append(_Table(section, name, _frame(table), note))
+        feuille du classeur de sa section (``<section>_tables.xlsx``), et une feuille de
+        ``all_tables.xlsx``.
+
+        ``title``  le titre écrit dans le README (à défaut, ``name``) ;
+        ``period`` la période du tableau, ajoutée au nom du fichier."""
+        self._items.append(_Table(section, name, _frame(table), note, title, period))
         return self
 
     def add_indicators(self, section: str, name: str,
                        values: Union[Mapping[str, Any], TableLike],
-                       definitions: Optional[Mapping[str, str]] = None) -> "Report":
+                       definitions: Optional[Mapping[str, str]] = None,
+                       *, period: str = "") -> "Report":
         """Des indicateurs (ceux des tuiles de l'interface) : un tableau
         ``indicator | value | definition``. Un dictionnaire imbriqué ou une
         liste n'est pas un indicateur : ces valeurs-là sont écartées."""
@@ -143,17 +175,18 @@ class Report:
                     if not isinstance(value, (Mapping, list, tuple, pd.DataFrame))]
             if not any(row["definition"] for row in rows):
                 rows = [{"indicator": r["indicator"], "value": r["value"]} for r in rows]
-            return self.add_table(section, name, rows)
-        return self.add_table(section, name, values)
+            return self.add_table(section, name, rows, period=period)
+        return self.add_table(section, name, values, period=period)
 
     def add_figure(self, section: str, name: str, figure: FigureLike,
-                   note: str = "") -> "Report":
+                   note: str = "", *, title: str = "", period: str = "") -> "Report":
         """Une figure, dans chacun des formats du rapport.
 
         ``figure`` peut être une `FigureSpec` (rendue ici, à ``dpi``), une
         fonction ``fmt -> octets`` (``lambda fmt: render_network(g, fmt=fmt)``),
         un dictionnaire ``{"png": …, "svg": …}`` déjà rendu, ou les octets
-        d'une seule image.
+        d'une seule image. ``title`` : le titre du README (à défaut, ``name``) ;
+        ``period`` : la période de la figure, ajoutée au nom du fichier.
         """
         files: Dict[str, bytes] = {}
         if isinstance(figure, FigureSpec):
@@ -168,20 +201,27 @@ class Report:
             files = {_format_of(data): data}
         if not files:
             raise ValueError(f"'{name}': no image to file")
-        self._items.append(_Figure(section, name, files, note))
+        self._items.append(_Figure(section, name, files, note, title, period))
         return self
 
-    def add_corpus_figure(self, corpus: Any, name: str, **options: Any) -> "Report":
+    def add_corpus_figure(self, corpus: Any, name: str, *, period: str = "",
+                          style: Optional[Mapping[str, Any]] = None,
+                          **options: Any) -> "Report":
         """Une figure du catalogue de l'interface, rangée dans SA section et
         sous SON titre, l'équivalent du bouton « Add to report » :
 
             >>> report.add_corpus_figure(corpus, "top-authors", n=10)
+            >>> recent = corpus.filter(years=(2010, 2013))
+            >>> report.add_corpus_figure(recent, "top-authors", period="2010-2013",
+            ...                          style={"show_title": True, "palette": "gradient"})
         """
         from .figures.catalog import entry, figure_bytes
         e = entry(name)
-        return self.add_figure(e.section, e.title,
+        return self.add_figure(e.section, e.name,
                                lambda fmt: figure_bytes(corpus, e.name, fmt=fmt,
-                                                        dpi=self.dpi, **options))
+                                                        dpi=self.dpi,
+                                                        style=dict(style or {}), **options),
+                               title=e.title, period=period)
 
     # -- écrire ---------------------------------------------------------------
 
@@ -203,7 +243,9 @@ class Report:
         lines += ["",
                   f"Figures: PNG at {self.dpi} dpi (print quality) and SVG (vector: "
                   "scales without loss, editable in Inkscape or Illustrator).",
-                  "Tables: Excel (.xlsx). all_tables.xlsx holds every table, one sheet each.",
+                  "Tables: Excel (.xlsx), one workbook per folder (its first sheet, "
+                  "Contents, lists the tables); all_tables.xlsx holds every table, one "
+                  "sheet each.",
                   ""]
         folder = None
         for path, title, note in index:
@@ -233,25 +275,44 @@ class Report:
             return candidate
 
         sheets = []
+        # Les tableaux d'une section : un classeur, une feuille chacun.
+        section_sheets: Dict[str, List[tuple]] = {}
+        section_taken: Dict[str, set] = {}
         # Dans l'ordre du menu, et dans l'ordre d'ajout à l'intérieur d'une
         # section (tri stable).
         rank = {section: int(folder.split("-", 1)[0]) for section, folder in folders.items()}
         for item in sorted(self._items, key=lambda i: rank[i.section]):
             base = f"{folders[item.section]}"
+            shown = item.title or item.name
+            # La période dans l'index aussi : deux « Top authors » sur deux
+            # périodes ne se distinguent pas autrement dans le README.
+            listed = f"{shown}, {item.period}" if item.period else shown
             if isinstance(item, _Table):
-                path = unique(f"{base}/tables/{_slug(item.name)}.xlsx")
-                entries.append((path, workbook_bytes([(item.name, item.frame)])))
-                sheets.append((f"{item.section} - {item.name}", item.frame))
-                index.append((path, item.name, item.note))
+                label = f"{shown} ({item.period})" if item.period else shown
+                taken = section_taken.setdefault(item.section, {"contents"})
+                sheet = sheet_name(f"{shown} {item.period}".strip(), taken)
+                section_sheets.setdefault(item.section, []).append(
+                    (sheet, shown, item.period, item.note, item.frame))
+                sheets.append((f"{item.section} - {label}", item.frame))
+                index.append((f"{base}/{_book(item.section)} > {sheet}", listed, item.note))
             else:
-                stem = unique(f"{base}/figures/{_slug(item.name)}.fig")[:-4]
+                stem = unique(f"{base}/figures/{_stem(item)}.fig")[:-4]
                 for ext, data in item.files.items():
                     path = f"{stem}.{ext}"
                     used.add(path)
                     entries.append((path, data))
                 exts = ", ".join(sorted(item.files))
                 index.append((f"{stem}.{{{exts}}}" if len(item.files) > 1
-                              else f"{stem}.{next(iter(item.files))}", item.name, item.note))
+                              else f"{stem}.{next(iter(item.files))}", listed, item.note))
+
+        for section, rows in section_sheets.items():
+            contents = pd.DataFrame([
+                {"sheet": sheet, "table": title, "period": period, "filters": note,
+                 "rows": len(frame)}
+                for sheet, title, period, note, frame in rows])
+            entries.append((f"{folders[section]}/{_book(section)}",
+                            workbook_bytes([("Contents", contents)]
+                                           + [(sheet, frame) for sheet, *_, frame in rows])))
 
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:

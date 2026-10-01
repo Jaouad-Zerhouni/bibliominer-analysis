@@ -43,8 +43,10 @@ def test_structure_du_zip():
     assert names[:2] == ["README.txt", "all_tables.xlsx"]
     assert "1-corpus/figures/annual-production.png" in names
     assert "1-corpus/figures/annual-production.svg" in names
-    assert "2-actors/tables/top-10-authors.xlsx" in names
-    assert "3-impact/tables/collaboration.xlsx" in names
+    # Un classeur par section, pas un fichier par tableau.
+    assert "2-actors/actors_tables.xlsx" in names
+    assert "3-impact/impact_tables.xlsx" in names
+    assert not any("/tables/" in n for n in names)
     assert "5-networks/figures/map.svg" in names
 
 
@@ -57,10 +59,11 @@ def test_figure_rendue_a_300_dpi():
 
 def test_tableaux_excel_et_indicateurs():
     z = zipfile.ZipFile(io.BytesIO(_report().to_bytes()))
-    assert _cells(z.read("2-actors/tables/top-10-authors.xlsx")) == [
+    # Feuille 1 : le sommaire ; les tableaux suivent, dans l'ordre d'ajout.
+    assert _cells(z.read("2-actors/actors_tables.xlsx"), sheet=2) == [
         "author", "documents", "Idri A.", "12", "Hosni M.", "9"]
     # un indicateur imbriqué n'est pas un indicateur : écarté
-    assert _cells(z.read("3-impact/tables/collaboration.xlsx")) == [
+    assert _cells(z.read("3-impact/impact_tables.xlsx"), sheet=2) == [
         "indicator", "value", "definition", "CAGR", "12.5", "Compound annual growth rate"]
 
 

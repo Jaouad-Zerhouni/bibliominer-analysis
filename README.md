@@ -68,13 +68,26 @@ vector and stays sharp at any size. Network maps keep every disc apart and
 lay the separate groups out in rows, so a map with twenty teams stays
 readable.
 
+`style` dresses a bar, line or scatter figure as the interface's export
+dialog does: the form (`bar`, `lollipop`, `line`, `area`, `pie`, `donut`), a
+title and subtitle written on the figure, the colours (`gradient` by value,
+`category` for one colour per bar, `series`), and the values on the bars:
+
+```python
+recent.figure("top-authors", n=10, path="top_authors.png",
+              style={"show_title": True, "subtitle": "Years 2023-2025",
+                     "palette": "gradient", "value_labels": True})
+recent.figure("document-types", path="types.svg", style={"kind": "donut"})
+```
+
 **Reports.** The interface's *Add to report* basket is `Report`:
 
 ```python
 from bibliominer_analysis import Report
 
 report = Report(filters={"years": "2023-2025"})
-report.add_corpus_figure(recent, "top-authors", n=10)       # filed under Actors
+report.add_corpus_figure(recent, "top-authors", n=10,       # filed under Actors
+                         period="2023-2025")                 # top-authors_2023-2025.png
 report.add_table("Actors", "Top 10 authors", recent.authors_impact(10))
 report.add_indicators("Impact", "Collaboration", recent.collaboration_indicators())
 report.save("report.zip")
@@ -85,10 +98,12 @@ report.zip
   README.txt                   each file, its title, and the filters it was computed under
   all_tables.xlsx              every table, one sheet each
   1-corpus/figures/*.png|svg   2-actors/…   3-impact/…   4-concepts/…   5-networks/…
-  1-corpus/tables/*.xlsx
+  1-corpus/corpus_tables.xlsx  the section's tables, one sheet each, after a Contents sheet
 ```
 
-Excel files are written by the package itself: no extra dependency.
+An entry computed over a period carries it in its file or sheet name
+(`period=`), so the same figure over two periods gives two files. Excel files are written by
+the package itself: no extra dependency.
 
 ### Interface page → Python call
 

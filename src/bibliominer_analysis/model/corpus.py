@@ -769,7 +769,8 @@ class Corpus:
         return figure_spec(self, name, **options)
 
     def figure(self, name: str, fmt: Optional[str] = None, path: Optional[Any] = None,
-               dpi: int = 300, **options: Any) -> bytes:
+               dpi: int = 300, style: Optional[Dict[str, Any]] = None,
+               **options: Any) -> bytes:
         """Une figure de l'interface, en image (PNG, SVG, PDF ou JPG).
 
         ``name`` : celui de `figure_catalog()` (``top-authors``,
@@ -780,7 +781,13 @@ class Corpus:
             ...     "top-authors", n=10, path="top_authors.svg")
 
         Avec ``path``, l'image est aussi écrite ; son extension choisit le
-        format. PNG à 300 dpi par défaut, SVG vectoriel.
+        format. PNG à 300 dpi par défaut, SVG vectoriel. ``style`` habille la
+        figure comme la boîte d'export de l'interface :
+
+            >>> corpus.figure("documents-per-year", path="production.png",
+            ...               style={"kind": "pie", "show_title": True,
+            ...                      "subtitle": "Years 2010-2013"})
         """
         from ..figures.catalog import figure_bytes
-        return figure_bytes(self, name, fmt=fmt, path=path, dpi=dpi, **options)
+        return figure_bytes(self, name, fmt=fmt, path=path, dpi=dpi, style=style,
+                            **options)

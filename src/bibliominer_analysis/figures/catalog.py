@@ -568,16 +568,40 @@ def figure_spec(corpus, name: str, **options) -> FigureSpec:
     return dataclasses.replace(built, title=e.title)
 
 
+#: Ce que ``style`` peut changer : l'habillage, jamais les données.
+STYLE_FIELDS = ("kind", "orientation", "title", "show_title", "subtitle", "palette",
+                "color", "value_labels", "x_label", "y_label", "width_in", "height_in",
+                "mode")
+
+
+def _styled(spec: FigureSpec, style: Optional[Dict[str, Any]]) -> FigureSpec:
+    """La figure habillée comme dans la boîte d'export de l'interface :
+    forme (``kind="pie"``), titre écrit dessus, sous-titre, couleurs."""
+    if not style:
+        return spec
+    unknown = set(style) - set(STYLE_FIELDS)
+    if unknown:
+        raise TypeError(f"unknown style key(s) {sorted(unknown)}; accepted: "
+                        + ", ".join(STYLE_FIELDS))
+    return dataclasses.replace(spec, **style)
+
+
 def figure_bytes(corpus, name: str, fmt: Optional[str] = None,
                  path: Union[str, Path, None] = None, dpi: int = 300,
-                 **options) -> bytes:
+                 style: Optional[Dict[str, Any]] = None, **options) -> bytes:
     """L'image d'une figure ; écrite dans ``path`` si on le donne (le format
-    se déduit alors de l'extension)."""
+    se déduit alors de l'extension). ``style`` : l'habillage de la boîte
+    d'export, ``{"kind": "pie", "show_title": True, "subtitle": "Years
+    2010-2013", "palette": "gradient", "value_labels": True}``."""
     fmt = (fmt or (Path(path).suffix.lstrip(".") if path else "") or "png").lower()
     fmt = "jpg" if fmt == "jpeg" else fmt
     e, built = _build(corpus, name, options)
     if isinstance(built, FigureSpec):
-        data = render_figure(dataclasses.replace(built, title=e.title, dpi=dpi), fmt=fmt)
+        spec = _styled(dataclasses.replace(built, title=e.title, dpi=dpi), style)
+        data = render_figure(spec, fmt=fmt)
+    elif style:
+        raise TypeError(f"{e.name} is drawn by a dedicated renderer (network, map…): "
+                        "its style cannot be changed")
     else:
         data = built(fmt, dpi)
     if path is not None:
