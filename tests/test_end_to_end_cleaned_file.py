@@ -12,7 +12,10 @@ de réseau qui pointent vers des nœuds existants, une disposition déterministe
 
 Les fichiers réels ne sont pas versionnés (ce sont les corpus de
 l'utilisateur) : le test lit leurs chemins dans ``BIBLIOMINER_CLEANED_CSV``
-(séparés par ``os.pathsep``) et se met en attente sans eux.
+(séparés par ``os.pathsep``). Sans eux, il tourne sur un corpus FICTIF au
+même format (``data/synthetic_cleaned.csv``, voir ``make_synthetic_corpus``) :
+la CI le sautait faute de fichier, et ne vérifiait jamais une analyse
+complète.
 """
 
 from __future__ import annotations
@@ -32,10 +35,9 @@ from bibliominer_analysis.figures import render_figure
 from bibliominer_analysis.figures.network import render_network
 from bibliominer_analysis.figures.render import FigureSpec, Series
 
-PATHS = [p for p in os.environ.get("BIBLIOMINER_CLEANED_CSV", "").split(os.pathsep) if p]
-
-pytestmark = pytest.mark.skipif(
-    not PATHS, reason="BIBLIOMINER_CLEANED_CSV ne pointe vers aucun fichier nettoyé")
+SYNTHETIC = os.path.join(os.path.dirname(__file__), "data", "synthetic_cleaned.csv")
+PATHS = ([p for p in os.environ.get("BIBLIOMINER_CLEANED_CSV", "").split(os.pathsep) if p]
+         or [SYNTHETIC])
 
 #: Au-delà, un appel est signalé comme trop lent pour une interface.
 SLOW_SECONDS = 20.0

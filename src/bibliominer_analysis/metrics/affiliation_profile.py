@@ -22,7 +22,6 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
-from .._stable import top_by_count
 
 
 def _author_key(authors: pd.DataFrame) -> pd.Series:

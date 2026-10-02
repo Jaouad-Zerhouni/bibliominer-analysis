@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import pandas as pd
 

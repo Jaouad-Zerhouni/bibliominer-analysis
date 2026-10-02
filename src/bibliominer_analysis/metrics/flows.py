@@ -18,7 +18,7 @@ from __future__ import annotations
 from .._stable import top_by_count
 
 from collections import Counter
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Set
 
 import pandas as pd
 

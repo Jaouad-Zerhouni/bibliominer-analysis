@@ -18,7 +18,7 @@ import json
 import unicodedata
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 _ATLAS = Path(__file__).resolve().parent.parent / "data_ref" / "countries-110m.json"
 #: Les pays et territoires ISO 3166-1 (+ Kosovo) : noms officiel et courant,

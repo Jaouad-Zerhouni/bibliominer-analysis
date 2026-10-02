@@ -55,7 +55,7 @@ from . import __version__
 from ._xlsx import sheet_name, workbook_bytes
 from .figures.render import FigureSpec, render_figure
 
-__all__ = ["Report", "SECTIONS"]
+__all__ = ["Report", "SECTIONS", "table_workbook"]
 
 #: Les groupes du menu de l'interface, dans leur ordre : un dossier chacun.
 SECTIONS = ("Corpus", "Actors", "Impact", "Concepts", "Networks")
@@ -82,6 +82,14 @@ def _frame(table: TableLike) -> pd.DataFrame:
     if isinstance(table, Mapping):
         return pd.DataFrame([dict(table)])
     return pd.DataFrame(list(table))
+
+
+def table_workbook(table: TableLike, name: str = "Table") -> bytes:
+    """Un tableau seul, en classeur Excel d'une feuille.
+
+    L'export « Excel » d'un tableau de l'interface : écrit par le paquet,
+    comme les classeurs du rapport, sans dépendance de plus."""
+    return workbook_bytes([(name or "Table", _frame(table))])
 
 
 def _format_of(data: bytes) -> str:

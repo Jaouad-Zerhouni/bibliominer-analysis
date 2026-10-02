@@ -7,7 +7,6 @@ depuis six ans, et c'est précisément l'écart qui est informatif.
 
 from __future__ import annotations
 
-from typing import Optional
 
 import numpy as np
 import pandas as pd

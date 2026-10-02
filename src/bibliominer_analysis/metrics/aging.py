@@ -20,7 +20,7 @@ sinon des points de vue temporels incompatibles.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd

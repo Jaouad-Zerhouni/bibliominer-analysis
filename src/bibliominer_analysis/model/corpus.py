@@ -18,7 +18,6 @@ from typing import Any, Dict, Iterable, Optional, Sequence, Union
 import pandas as pd
 
 from ..io import reader as R
-from ..io import schema as S
 from ..metrics import access as acc
 from ..metrics import aging as ag
 from ..metrics import cities as cit

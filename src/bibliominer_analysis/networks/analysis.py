@@ -183,7 +183,6 @@ def annotate(graph: Dict[str, Any], communities: bool = True,
     import networkx as nx
 
     G = _to_networkx(graph)
-    n = G.number_of_nodes()
 
     degree = nx.degree_centrality(G)
     clustering = nx.clustering(G, weight="weight")
