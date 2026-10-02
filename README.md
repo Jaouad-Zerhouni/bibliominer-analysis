@@ -3,19 +3,42 @@
 Bibliometric analysis of a Scopus corpus, as a **library**: notebook, script,
 CI pipeline, no interface required.
 
-It is the computation layer behind [Bibliominer](https://github.com/Jaouad-Zerhouni/bibliominer).
-The web application consumes it rather than reimplementing it: one source of
-truth, one place to test.
+It is the computation layer behind Bibliominer, a bibliometrics tool made of
+two web applications: one cleans a Scopus export, the other analyses it. The
+analysis application calls this package for every number and figure it shows,
+so a script gets exactly what the screen shows.
 
 ```bash
 pip install bibliominer-analysis
 ```
 
+## Quick start
+
+```python
+from bibliominer_analysis import Corpus, Report
+
+corpus = Corpus.from_csv("corpus_cleaned.csv")
+print(corpus.summary())                            # documents, years, sources, authors…
+top = corpus.authors_impact(n=10)                  # a pandas DataFrame
+corpus.figure("documents-per-year", path="production.png")   # 300 dpi PNG
+
+report = Report()
+report.add_table("Actors", "Top 10 authors", top)
+report.add_corpus_figure(corpus, "top-authors", n=10)
+report.save("report.zip")                          # figures, Excel tables, README
+```
+
 ## What it takes as input
 
-A **cleaned** Scopus export (CSV). Cleaning, recovering DOIs, naming source
-titles, resolving affiliations, reconciling references, is the job of the
-companion package `bibliominer-cleaning`. This one starts where that one stops.
+A **cleaned** Scopus export (CSV). Cleaning means recovering missing DOIs,
+naming empty source titles, resolving affiliations down to the city and
+reconciling the references, and it is done in the Bibliominer cleaning
+application, where every correction is reviewed by its user. This package
+starts where cleaning stops.
+
+A raw Scopus CSV also loads, with the `Title` column as the only requirement:
+every indicator then works on what the export contains, so affiliations stop
+at the institution name and references stay free text.
 
 ## What it computes
 
@@ -30,8 +53,10 @@ companion package `bibliominer-cleaning`. This one starts where that one stops.
 
 ## Everything the interface shows, in Python
 
-The web interface calls this package for every number it displays, so a
-notebook gets the same tables, the same figures and the same options.
+"The interface" below is the Bibliominer analysis web application. It calls
+this package for every number it displays, so a notebook gets the same
+tables, the same figures and the same options. You do not need the
+application to use the package.
 
 **Filters.** The filter bar of the interface is `Corpus.filter`, which returns
 a new corpus, every method then works on it:
@@ -165,7 +190,7 @@ Nothing is written to disk unless you write it.
 
 Two runs on the same data produce the **same file, byte for byte**. Node
 positions come from a deterministic MDS on shortest paths, refined with a
-fixed seed, not from a free force simulation, a force layout is stochastic,
+fixed seed, not from a free force simulation. A force layout is stochastic,
 and a figure published in an article cannot change between runs. The timestamp matplotlib normally writes
 into the file is stripped for the same reason.
 
@@ -208,6 +233,18 @@ not covered by the MIT licence: SCImago allows its use for non-commercial
 purposes as long as it is cited, *SCImago (n.d.). SJR - SCImago Journal &
 Country Rank [Portal]. Retrieved from https://www.scimagojr.com*. The terms
 travel with the file, in `data_ref/scimagojr_2025.NOTICE`.
+
+## How to cite
+
+If you use this package in a publication, please cite it:
+
+> Hosni, M., Zerhouni, J., Medarhri, I., Menaoui, R., & Carrillo de Gea, J. M.
+> (2026). *bibliominer-analysis: bibliometric analysis of a cleaned Scopus
+> corpus* (Version 0.1.0) [Computer software].
+> https://github.com/Jaouad-Zerhouni/bibliominer-analysis
+
+The repository's `CITATION.cff` gives the same reference in BibTeX and APA
+through GitHub's *Cite this repository* button.
 
 ## License
 

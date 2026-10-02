@@ -69,9 +69,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Jaouad-Zerhouni/bibliominer"
-Source = "https://github.com/Jaouad-Zerhouni/bibliominer"
-Issues = "https://github.com/Jaouad-Zerhouni/bibliominer/issues"
+Homepage = "https://github.com/Jaouad-Zerhouni/bibliominer-analysis"
+Source = "https://github.com/Jaouad-Zerhouni/bibliominer-analysis"
+Issues = "https://github.com/Jaouad-Zerhouni/bibliominer-analysis/issues"
 
 [tool.hatch.version]
 path = "src/bibliominer_analysis/__init__.py"
@@ -83,6 +83,11 @@ packages = ["src/bibliominer_analysis"]
 # consorts les IGNORENT : le paquet est entièrement annoté, et personne n'en
 # profiterait.
 artifacts = ["src/bibliominer_analysis/py.typed"]
+
+[tool.hatch.build.targets.sdist]
+# L'archive source sert à reconstruire le paquet et à lancer ses tests : la
+# CI du dépôt public n'a rien à y faire.
+exclude = [".github"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

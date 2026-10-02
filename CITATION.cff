@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this package in a publication, please cite it as below."
+title: "bibliominer-analysis: bibliometric analysis of a cleaned Scopus corpus"
+type: software
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/Jaouad-Zerhouni/bibliominer-analysis"
+keywords:
+  - bibliometrics
+  - scientometrics
+  - scopus
+  - co-citation
+  - science-mapping
+authors:
+  - family-names: Hosni
+    given-names: Mohamed
+    email: m.hosni@umi.ac.ma
+    affiliation: "École Nationale Supérieure d'Arts et Métiers (ENSAM), Moulay Ismail University, Meknès, Morocco"
+  - family-names: Zerhouni
+    given-names: Jaouad
+    email: j.zerhouni@edu.umi.ac.ma
+    affiliation: "École Nationale Supérieure d'Arts et Métiers (ENSAM), Moulay Ismail University, Meknès, Morocco"
+  - family-names: Medarhri
+    given-names: Ibtissam
+    affiliation: "École Nationale Supérieure des Mines de Rabat (ENSMR), Rabat, Morocco"
+  - family-names: Menaoui
+    given-names: Rachid
+    affiliation: "École Nationale Supérieure des Mines de Rabat (ENSMR), Rabat, Morocco"
+  - family-names: Carrillo de Gea
+    given-names: Juan Manuel
+    affiliation: "Faculty of Computer Science, Universidad de Murcia, Murcia, Spain"

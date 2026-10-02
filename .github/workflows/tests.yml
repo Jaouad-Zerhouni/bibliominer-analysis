@@ -1,0 +1,57 @@
+# Le paquet, installé comme par un utilisateur, sur les trois systèmes.
+#
+# On construit la wheel, on l'INSTALLE, puis on lance les tests depuis un
+# dossier hors du dépôt : c'est le paquet installé qui est testé, jamais le
+# code source posé à côté. Un fichier de données oublié dans la wheel, un
+# chemin propre à Windows ou une casse de nom de fichier fausse sous Linux ne
+# peuvent pas passer.
+
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  installed-package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        # 3.9 installe pandas 2 ; 3.12 et au-delà, pandas 3.
+        python: ["3.9", "3.12", "3.13", "3.14"]
+        pandas: [""]
+        include:
+          # pandas 2 sur un Python récent : les deux versions de pandas
+          # doivent rester couvertes, pas seulement la plus récente.
+          - os: ubuntu-latest
+            python: "3.13"
+            pandas: "pandas<3"
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Build the wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel --outdir dist .
+
+      - name: Install the wheel, not the source tree
+        shell: bash
+        run: |
+          python -m pip install dist/*.whl pytest pyarrow ${{ matrix.pandas && format('"{0}"', matrix.pandas) || '' }}
+          python -c "import pandas; print('pandas', pandas.__version__)"
+
+      - name: Test the installed package
+        shell: bash
+        run: |
+          cp -r tests "$RUNNER_TEMP/analysis_tests"
+          cd "$RUNNER_TEMP"
+          python -c "import bibliominer_analysis"
+          python -m pytest -q -p no:cacheprovider --import-mode=importlib analysis_tests
