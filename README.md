@@ -36,9 +36,18 @@ reconciling the references, and it is done in the Bibliominer cleaning
 application, where every correction is reviewed by its user. This package
 starts where cleaning stops.
 
-A raw Scopus CSV also loads, with the `Title` column as the only requirement:
-every indicator then works on what the export contains, so affiliations stop
-at the institution name and references stay free text.
+A raw Scopus export is **refused**: `Corpus.from_csv` raises
+`NotCleanedError` and says which line is not in the cleaned format. On a raw
+export the numbers would be wrong without any warning (one author counted
+under two spellings, no cities, co-citation on free text), so the package
+does not compute them. The cleaned file is recognised by its numbered
+authors, which only the cleaning export writes:
+
+```
+Authors            1:Idri A.; 2:Hosni M.; 3:Abran A.
+Author full names  1:Idri, Ali (6602789810); 2:Hosni, Mohamed (57189341317); …
+Author(s) ID       1:6602789810; 2:57189341317; 3:7004233119
+```
 
 ## What it computes
 

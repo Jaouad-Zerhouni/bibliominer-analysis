@@ -5,5 +5,6 @@ __version__ = "0.1.0"
 
 from .model.corpus import Corpus  # noqa: E402
 from .report import Report  # noqa: E402
+from .io.reader import NotCleanedError  # noqa: E402
 
-__all__ = ["Corpus", "Report", "__version__"]
+__all__ = ["Corpus", "NotCleanedError", "Report", "__version__"]

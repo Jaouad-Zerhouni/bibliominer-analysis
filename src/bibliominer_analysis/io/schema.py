@@ -4,14 +4,11 @@ Tout ce qui décrit la FORME du fichier d'entrée vit ici, et nulle part
 ailleurs : le jour où le cleaning change une convention, on modifie ce
 fichier et les parseurs suivent.
 
-Le package accepte DEUX niveaux de fichier :
-
-  - « bibliominer » : sortie du nettoyage Bibliominer (auteurs indexés,
-    affiliations étiquetées, références réconciliées) ;
-  - « scopus brut » : un export Scopus non nettoyé.
-
-Les parseurs détectent le niveau tout seuls et se replient sans se plaindre :
-un corpus brut donne simplement des tables moins riches.
+Un FICHIER doit être la sortie du nettoyage Bibliominer (auteurs indexés,
+affiliations étiquetées, références réconciliées) : `Corpus.from_csv` refuse
+un export Scopus brut (`reader.check_cleaned`). Les parseurs gardent leurs
+replis pour une cellule isolée qui ne suit pas la convention, et pour les
+tableaux assemblés en mémoire (`Corpus.from_dataframe`).
 """
 
 from __future__ import annotations

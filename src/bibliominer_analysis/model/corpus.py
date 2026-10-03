@@ -69,12 +69,21 @@ class Corpus:
 
     @classmethod
     def from_csv(cls, path: PathLike) -> "Corpus":
-        """Lit un CSV nettoyé par Bibliominer (ou un export Scopus brut)."""
+        """Lit le CSV exporté par le nettoyage Bibliominer.
+
+        Un export Scopus qui n'est pas passé par le nettoyage est refusé
+        (`NotCleanedError`, voir `reader.check_cleaned`) : l'analyse en
+        tirerait des chiffres faux sans le dire.
+        """
         df = R.read_csv(path)
+        R.check_cleaned(df)
         return cls(R.build_tables(df), source_path=path)
 
     @classmethod
     def from_dataframe(cls, df: pd.DataFrame) -> "Corpus":
+        """Un corpus depuis un tableau construit en mémoire, SANS le contrôle
+        de `from_csv` : c'est l'outil des tests et des usages avancés, qui
+        assemblent eux-mêmes leurs colonnes. Pour un fichier, `from_csv`."""
         return cls(R.build_tables(df))
 
     @classmethod

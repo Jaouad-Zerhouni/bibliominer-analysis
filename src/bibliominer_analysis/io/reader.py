@@ -14,6 +14,7 @@ indicateurs ne sont ensuite que des regroupements sur ces tables.
 from __future__ import annotations
 
 import hashlib
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -37,6 +38,69 @@ def read_csv(path: PathLike) -> pd.DataFrame:
     """
     return pd.read_csv(path, dtype=str, keep_default_na=False,
                        na_values=[""], encoding="utf-8-sig", low_memory=False)
+
+
+class NotCleanedError(ValueError):
+    """Le fichier n'est pas celui qu'exporte le nettoyage Bibliominer."""
+
+
+_INDEX = re.compile(S.AUTHOR_INDEX_PATTERN)
+
+
+def _numbered_in_order(cell: str) -> bool:
+    """« 1:A.; 2:B.; 3:C. » oui ; « A.; B. » ou « 1:A.; 3:B. » non."""
+    parts = [p for p in (x.strip() for x in cell.split(S.LIST_SEP)) if p]
+    for expected, part in enumerate(parts, 1):
+        m = _INDEX.match(part)
+        if not m or int(m.group(1)) != expected:
+            return False
+    return bool(parts)
+
+
+def check_cleaned(df: pd.DataFrame) -> None:
+    """Refuse un fichier qui n'est pas passé par le nettoyage Bibliominer.
+
+    L'analyse s'appuie sur ce que le nettoyage garantit : auteurs alignés
+    d'une colonne à l'autre, affiliations étiquetées jusqu'à la ville,
+    références réconciliées. Sur un export Scopus brut, elle tournait quand
+    même et donnait des chiffres faux sans le dire (un auteur compté sous
+    deux graphies, des villes absentes, une co-citation sur du texte libre).
+
+    La signature du fichier nettoyé : son export final, et lui seul, numérote
+    les auteurs dans l'ordre, dans les trois colonnes d'auteurs
+    (« 1:Idri A.; 2:Hosni M. »). Chaque cellule non vide doit l'être en
+    entier, comme l'écrit l'export ; une seule ligne qui ne l'est pas, et le
+    fichier n'est pas (ou plus) celui que le nettoyage a produit.
+    """
+    columns = [c for c in (S.COL_AUTHORS, S.COL_AUTHOR_FULL, S.COL_AUTHOR_IDS)
+               if c in df.columns]
+    filled = bad = 0
+    example = ""
+    for col in columns:
+        for row, value in df[col].items():
+            cell = P._cell(value)
+            if not cell:
+                continue
+            filled += 1
+            if not _numbered_in_order(cell):
+                bad += 1
+                if not example:
+                    shown = cell if len(cell) <= 60 else cell[:57] + "..."
+                    # +2 : la ligne d'en-tête, et une numérotation qui part de 1.
+                    line = row + 2 if isinstance(row, int) else row
+                    example = ' For example, line %s, column "%s": "%s".' % (line, col, shown)
+    if S.COL_AUTHORS in columns and filled and not bad:
+        return
+    if bad:
+        found = "%d author cell(s) out of %d are not numbered.%s" % (bad, filled, example)
+    else:
+        found = 'The file has no "%s" column filled in.' % S.COL_AUTHORS
+    raise NotCleanedError(
+        "This file has not been cleaned with Bibliominer. The analysis reads "
+        "the file exported by the Bibliominer cleaning application, where "
+        'authors are numbered in order ("1:Idri A.; 2:Hosni M."). %s '
+        "Clean the Scopus export first, then import the file the cleaning "
+        "exports." % found)
 
 
 def _doc_id(row: Dict[str, Any], fallback: int) -> str:
