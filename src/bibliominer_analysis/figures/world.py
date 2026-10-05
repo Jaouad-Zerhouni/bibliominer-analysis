@@ -22,6 +22,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 from ..io.countries import (ATLAS_ALIASES, _atlas, _key, atlas_name, centroids,  # noqa: F401
                             is_country, position)
+from .palette import RENDER_RC, no_timestamp
 
 #: Couleur des pays au-delà des huit teintes de la palette.
 _OTHER = "#9aa0a6"
@@ -221,6 +222,10 @@ def render_world_map(values: Dict[str, float], value_label: str = "Documents",
     else:
         _collaboration(ax, countries, list(links), value_label)
     buf = io.BytesIO()
-    fig.savefig(buf, format=fmt, bbox_inches="tight", facecolor="white")
+    # Graine des identifiants SVG, comme les autres figures (`RENDER_RC`) :
+    # sans elle, deux exports de la même carte différaient d'octets.
+    with matplotlib.rc_context({"svg.hashsalt": RENDER_RC["svg.hashsalt"]}):
+        fig.savefig(buf, format=fmt, bbox_inches="tight", facecolor="white",
+                    **no_timestamp(fmt))
     plt.close(fig)
     return buf.getvalue()

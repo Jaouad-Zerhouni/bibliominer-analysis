@@ -133,3 +133,15 @@ NO_TIMESTAMP = {
     "svg": {"Date": None},
     "pdf": {"CreationDate": None},
 }
+
+
+def no_timestamp(fmt: str) -> dict:
+    """Les arguments de `savefig` qui retirent la date, rien pour JPEG.
+
+    `metadata=None` ne se passe PAS : matplotlib 3.6 (le minimum déclaré)
+    refuse tout argument `metadata` pour un JPEG, `None` compris, et
+    l'export JPG échouait. Les versions récentes l'ignorent, d'où une panne
+    que seule l'installation aux versions minimales révélait.
+    """
+    meta = NO_TIMESTAMP.get(fmt)
+    return {"metadata": meta} if meta else {}

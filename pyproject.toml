@@ -19,9 +19,9 @@ license = { file = "LICENSE" }
 authors = [
     { name = "Mohamed Hosni", email = "m.hosni@umi.ac.ma" },
     { name = "Jaouad Zerhouni", email = "j.zerhouni@edu.umi.ac.ma" },
-    { name = "Ibtissam Medarhri" },
-    { name = "Rachid Menaoui" },
-    { name = "Juan Manuel Carrillo de Gea" },
+    { name = "Ibtissam Medarhri", email = "medarhri@enim.ac.ma" },
+    { name = "Rachid Menaoui", email = "r.menaoui@umi.ac.ma" },
+    { name = "Juan Manuel Carrillo de Gea", email = "jmcdg1@um.es" },
 ]
 keywords = [
     "bibliometrics", "scientometrics", "scopus", "co-citation",

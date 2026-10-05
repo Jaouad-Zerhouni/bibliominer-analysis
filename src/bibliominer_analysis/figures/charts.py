@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
 
-from .palette import categorical, short_text
+from .palette import RENDER_RC, categorical, no_timestamp, short_text
 
 _INK = "#3b3f45"
 
@@ -31,8 +31,14 @@ def _figure(width: float, height: float, dpi: int):
 
 
 def _bytes(plt, fig, fmt: str) -> bytes:
+    """Les octets de la figure, identiques d'un export à l'autre : ni date
+    (`no_timestamp`), ni identifiants SVG tirés au hasard (graine fixe, celle
+    de `RENDER_RC`). Sans la graine, le dendrogramme, les cartes de densité,
+    le treemap et les Sankey changeaient à chaque export SVG."""
     buf = io.BytesIO()
-    fig.savefig(buf, format=fmt, bbox_inches="tight", facecolor="white")
+    with plt.rc_context({"svg.hashsalt": RENDER_RC["svg.hashsalt"]}):
+        fig.savefig(buf, format=fmt, bbox_inches="tight", facecolor="white",
+                    **no_timestamp(fmt))
     plt.close(fig)
     return buf.getvalue()
 

@@ -22,10 +22,13 @@ authors:
     affiliation: "École Nationale Supérieure d'Arts et Métiers (ENSAM), Moulay Ismail University, Meknès, Morocco"
   - family-names: Medarhri
     given-names: Ibtissam
+    email: medarhri@enim.ac.ma
     affiliation: "École Nationale Supérieure des Mines de Rabat (ENSMR), Rabat, Morocco"
   - family-names: Menaoui
     given-names: Rachid
-    affiliation: "École Nationale Supérieure des Mines de Rabat (ENSMR), Rabat, Morocco"
+    email: r.menaoui@umi.ac.ma
+    affiliation: "École Nationale Supérieure d'Arts et Métiers (ENSAM), Moulay Ismail University, Meknès, Morocco"
   - family-names: Carrillo de Gea
     given-names: Juan Manuel
+    email: jmcdg1@um.es
     affiliation: "Faculty of Computer Science, Universidad de Murcia, Murcia, Spain"

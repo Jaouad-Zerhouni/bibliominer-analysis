@@ -30,7 +30,7 @@ import matplotlib
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
-from .palette import NO_TIMESTAMP, RENDER_RC, categorical, chrome
+from .palette import RENDER_RC, categorical, chrome, no_timestamp
 
 _SUPPORTED_KINDS = {"bar", "line", "scatter", "area", "lollipop", "pie", "donut"}
 #: Formes qui n'ont qu'une série et pas d'axes : des PARTS d'un tout.
@@ -183,7 +183,7 @@ def _save(fig, fmt: str) -> bytes:
     fig.savefig(
         buf, format=_MPL_FORMAT.get(fmt, fmt), facecolor=fig.get_facecolor(),
         bbox_inches=None,  # `constrained_layout` gère déjà les marges.
-        metadata=NO_TIMESTAMP.get(fmt),
+        **no_timestamp(fmt),
     )
     return buf.getvalue()
 

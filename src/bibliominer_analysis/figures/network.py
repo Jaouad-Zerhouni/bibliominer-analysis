@@ -37,7 +37,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
 from ..networks.analysis import layout as compute_layout
-from .palette import NO_TIMESTAMP, RENDER_RC, categorical, chrome
+from .palette import RENDER_RC, categorical, chrome, no_timestamp
 
 __all__ = ["render_network", "NetworkFigureError"]
 
@@ -347,5 +347,5 @@ def render_network(
     buffer = io.BytesIO()
     fig.savefig(buffer, format=_MPL_FORMAT.get(fmt, fmt),
                 facecolor=fig.get_facecolor(), bbox_inches="tight",
-                metadata=NO_TIMESTAMP.get(fmt))
+                **no_timestamp(fmt))
     return buffer.getvalue()
