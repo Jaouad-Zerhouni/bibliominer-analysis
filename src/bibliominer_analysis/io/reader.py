@@ -1,14 +1,14 @@
-"""Lecture d'un CSV nettoyé -> six tables « tidy ».
+"""Reading a cleaned CSV -> six "tidy" tables.
 
-C'est la seule étape coûteuse du package : elle se fait UNE fois, et tous les
-indicateurs ne sont ensuite que des regroupements sur ces tables.
+It is the only costly step of the package: it is done ONCE, and every
+indicator is then only a grouping over these tables.
 
-    documents            une ligne par document
-    authors              une ligne par (document, auteur)          + position
-    affiliations         une ligne par (document, affiliation)
-    author_affiliations  une ligne par (document, auteur, affiliation)
-    keywords             une ligne par (document, mot-clé)
-    references           une ligne par (document, référence citée)
+    documents            one row per document
+    authors              one row per (document, author)            + position
+    affiliations         one row per (document, affiliation)
+    author_affiliations  one row per (document, author, affiliation)
+    keywords             one row per (document, keyword)
+    references           one row per (document, cited reference)
 """
 
 from __future__ import annotations
@@ -30,25 +30,25 @@ TABLE_NAMES = ("documents", "authors", "affiliations",
 
 
 def read_csv(path: PathLike) -> pd.DataFrame:
-    """Lit un export Scopus/Bibliominer sans jamais convertir les types.
+    """Reads a Scopus/Bibliominer export without ever converting types.
 
-    Tout est lu en texte : un identifiant Scopus de 11 chiffres deviendrait
-    sinon un flottant, et « 0123 » perdrait son zéro. Les conversions se font
-    plus loin, colonne par colonne, là où on sait ce qu'on manipule.
+    Everything is read as text: an 11-digit Scopus identifier would
+    otherwise become a float, and "0123" would lose its zero. Conversions are
+    done later, column by column, where we know what we are handling.
     """
     return pd.read_csv(path, dtype=str, keep_default_na=False,
                        na_values=[""], encoding="utf-8-sig", low_memory=False)
 
 
 class NotCleanedError(ValueError):
-    """Le fichier n'est pas celui qu'exporte le nettoyage Bibliominer."""
+    """The file is not the one exported by the Bibliominer cleaning."""
 
 
 _INDEX = re.compile(S.AUTHOR_INDEX_PATTERN)
 
 
 def _numbered_in_order(cell: str) -> bool:
-    """« 1:A.; 2:B.; 3:C. » oui ; « A.; B. » ou « 1:A.; 3:B. » non."""
+    """"1:A.; 2:B.; 3:C." yes; "A.; B." or "1:A.; 3:B." no."""
     parts = [p for p in (x.strip() for x in cell.split(S.LIST_SEP)) if p]
     for expected, part in enumerate(parts, 1):
         m = _INDEX.match(part)
@@ -58,19 +58,19 @@ def _numbered_in_order(cell: str) -> bool:
 
 
 def check_cleaned(df: pd.DataFrame) -> None:
-    """Refuse un fichier qui n'est pas passé par le nettoyage Bibliominer.
+    """Refuses a file that did not go through the Bibliominer cleaning.
 
-    L'analyse s'appuie sur ce que le nettoyage garantit : auteurs alignés
-    d'une colonne à l'autre, affiliations étiquetées jusqu'à la ville,
-    références réconciliées. Sur un export Scopus brut, elle tournait quand
-    même et donnait des chiffres faux sans le dire (un auteur compté sous
-    deux graphies, des villes absentes, une co-citation sur du texte libre).
+    The analysis relies on what the cleaning guarantees: authors aligned from
+    one column to the next, affiliations labelled down to the city,
+    reconciled references. On a raw Scopus export it still ran and gave wrong
+    numbers without saying so (an author counted under two spellings, missing
+    cities, co-citation on free text).
 
-    La signature du fichier nettoyé : son export final, et lui seul, numérote
-    les auteurs dans l'ordre, dans les trois colonnes d'auteurs
-    (« 1:Idri A.; 2:Hosni M. »). Chaque cellule non vide doit l'être en
-    entier, comme l'écrit l'export ; une seule ligne qui ne l'est pas, et le
-    fichier n'est pas (ou plus) celui que le nettoyage a produit.
+    The signature of the cleaned file: its final export, and only that,
+    numbers the authors in order, in the three author columns
+    ("1:Idri A.; 2:Hosni M."). Every non-empty cell must be numbered in full,
+    as the export writes it; a single line that is not, and the file is not
+    (or no longer) the one the cleaning produced.
     """
     columns = [c for c in (S.COL_AUTHORS, S.COL_AUTHOR_FULL, S.COL_AUTHOR_IDS)
                if c in df.columns]
@@ -86,7 +86,7 @@ def check_cleaned(df: pd.DataFrame) -> None:
                 bad += 1
                 if not example:
                     shown = cell if len(cell) <= 60 else cell[:57] + "..."
-                    # +2 : la ligne d'en-tête, et une numérotation qui part de 1.
+                    # +2: the header line, and a numbering that starts at 1.
                     line = row + 2 if isinstance(row, int) else row
                     example = ' For example, line %s, column "%s": "%s".' % (line, col, shown)
     if S.COL_AUTHORS in columns and filled and not bad:
@@ -104,8 +104,8 @@ def check_cleaned(df: pd.DataFrame) -> None:
 
 
 def _doc_id(row: Dict[str, Any], fallback: int) -> str:
-    """Identifiant stable d'un document : EID, sinon DOI, sinon empreinte du
-    titre. Nécessaire pour joindre les six tables entre elles."""
+    """Stable identifier of a document: EID, otherwise DOI, otherwise a hash of
+    the title. Needed to join the six tables together."""
     for col in (S.COL_EID, S.COL_DOI):
         v = P._cell(row.get(col))
         if v:
@@ -127,7 +127,7 @@ def _to_int(value: Any) -> Optional[int]:
 
 
 def build_tables(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
-    """DataFrame brut -> les six tables tidy."""
+    """Raw DataFrame -> the six tidy tables."""
     missing = [c for c in S.REQUIRED_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(
@@ -177,11 +177,11 @@ def build_tables(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         for j, a in enumerate(parsed_affs, start=1):
             affs.append(dict(a, eid=eid, aff_pos=j))
 
-        # --- auteur x affiliation ------------------------------------------
-        # « Authors with affiliations » a UN bloc par auteur, dans l'ordre des
-        # auteurs. Un bloc peut porter PLUSIEURS affiliations : une ligne par
-        # (auteur, affiliation), chacune pointant l'affiliation identique du
-        # document, jamais « la n-ième », qui n'a aucun rapport avec l'auteur.
+        # --- author x affiliation ------------------------------------------
+        # "Authors with affiliations" has ONE block per author, in author order. A
+        # block can carry SEVERAL affiliations: one row per (author, affiliation),
+        # each pointing to the identical affiliation of the document, never "the
+        # n-th one", which has nothing to do with the author.
         awa = P.split_list(row.get(S.COL_AUTHORS_AFF))
         if awa and parsed_authors:
             for rank, item in enumerate(awa, start=1):
@@ -195,13 +195,13 @@ def build_tables(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
                         "raw": text or None,
                     })
 
-        # --- mots-clés ------------------------------------------------------
+        # --- keywords -------------------------------------------------------
         for kw in P.parse_keywords(row.get(S.COL_AUTHOR_KW)):
             kws.append({"eid": eid, "keyword": kw, "kind": "author"})
         for kw in P.parse_keywords(row.get(S.COL_INDEX_KW)):
             kws.append({"eid": eid, "keyword": kw, "kind": "index"})
 
-        # --- références -----------------------------------------------------
+        # --- references -----------------------------------------------------
         for r in P.parse_references(row.get(S.COL_REFERENCES)):
             refs.append(dict(r, eid=eid))
 
@@ -216,8 +216,8 @@ def build_tables(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
     return {name: _ensure_columns(name, t) for name, t in tables.items()}
 
 
-#: Colonnes garanties de chaque table, même sur un corpus vide : le code aval
-#: ne doit jamais avoir à tester l'existence d'une colonne.
+#: Guaranteed columns of each table, even on an empty corpus: downstream code
+#: must never have to test whether a column exists.
 _EXPECTED = {
     "documents": ["eid", "title", "year", "source", "source_abbr", "doc_type",
                   "language", "cited_by", "doi", "link", "abstract",
@@ -240,14 +240,14 @@ def _ensure_columns(name: str, table: pd.DataFrame) -> pd.DataFrame:
 
 
 def _most_used(values: pd.Series) -> str:
-    """La graphie la plus employée ; à égalité, la première dans l'ordre
-    alphabétique (résultat identique d'une exécution à l'autre)."""
+    """The most used spelling; on a tie, the first in alphabetical order (same
+    result from one run to the next)."""
     counts = values.value_counts()
     return sorted(counts[counts == counts.max()].index)[0]
 
 
 def _loose_key(text: str) -> str:
-    """Clé de comparaison : minuscules, sans accents, lettres et chiffres seuls."""
+    """Comparison key: lower case, no accents, letters and digits only."""
     import unicodedata
     s = unicodedata.normalize("NFKD", text)
     s = "".join(ch for ch in s if not unicodedata.combining(ch)).lower()
@@ -255,21 +255,20 @@ def _loose_key(text: str) -> str:
 
 
 def unify_spellings(tables: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
-    """Une seule graphie par auteur et par mot-clé, pour TOUTES les analyses.
+    """A single spelling per author and per keyword, for ALL the analyses.
 
-    Scopus écrit le même auteur de plusieurs façons d'un article à l'autre
-    (« Fernández-Alemán J.L. », « Fernandez-Aleman J.L. », « Fernández Alemán
-    J.L. ») sous un même identifiant ; et les auteurs écrivent « Machine
-    learning » ou « Machine Learning ». Les classements regroupaient déjà par
-    identifiant ou sans la casse, mais l'évolution des auteurs, la dynamique
-    des mots-clés et le diagramme à trois champs regroupaient par texte brut :
-    un même auteur, un même mot, y apparaissaient deux fois, chacun avec une
-    partie de ses documents.
+    Scopus writes the same author in several ways from one article to the
+    next ("Fernández-Alemán J.L.", "Fernandez-Aleman J.L.", "Fernández Alemán
+    J.L.") under the same identifier; and authors write "Machine learning" or
+    "Machine Learning". The rankings already grouped by identifier or ignoring
+    case, but the authors' evolution, the keyword dynamics and the three-field
+    plot grouped by raw text: the same author, the same word, appeared twice
+    there, each with part of its documents.
 
-    Chaque identifiant Scopus prend donc son nom le plus employé, et chaque
-    mot-clé (même type, même texte sans la casse) sa graphie la plus
-    employée. Un auteur sans identifiant garde son nom tel quel : deux
-    homonymes restent indiscernables.
+    Every Scopus identifier therefore takes its most used name, and every
+    keyword (same type, same text ignoring case) its most used spelling. An
+    author without an identifier keeps their name as is: two namesakes stay
+    indistinguishable.
     """
     out = dict(tables)
 
@@ -283,17 +282,16 @@ def unify_spellings(tables: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
             a.loc[known, "name"] = a.loc[known, "scopus_id"].map(best)
             out["authors"] = a
 
-    # Organisations : même nom à la casse, aux accents et à la ponctuation
-    # près (« Faculty of Sciences Oujda - FSO » / « Faculty of Sciences
-    # Oujda-FSO ») = une seule graphie. Jamais de traduction ni de
-    # rapprochement de noms différents : c'est le travail du nettoyage.
+    # Organisations: the same name up to case, accents and punctuation
+    # ("Faculty of Sciences Oujda - FSO" / "Faculty of Sciences Oujda-FSO") =
+    # a single spelling. Never a translation, nor a matching of different
+    # names: that is the cleaning's work.
     f = out.get("affiliations")
     if f is not None and not f.empty:
         f = f.copy()
         for col in ("subparent", "parent1", "parent2"):
-            # Des NOMS seulement : une colonne booléenne ou numérique (un
-            # indicateur) n'a pas de graphie, la convertir en texte la
-            # détruirait.
+            # NAMES only: a boolean or numeric column (an indicator) has no spelling,
+            # converting it to text would destroy it.
             if col not in f.columns or pd.api.types.is_bool_dtype(f[col])                     or pd.api.types.is_numeric_dtype(f[col]):
                 continue
             known = f[col].notna() & (f[col].map(str).str.strip() != "")

@@ -1,4 +1,4 @@
-"""Fouille de texte, dendrogramme, test K-S, citation directe, densité."""
+"""Text mining, dendrogram, K-S test, direct citation, density."""
 
 import numpy as np
 import pandas as pd
@@ -37,7 +37,7 @@ def test_bigrammes_extraits_du_resume():
 
 
 def test_ngramme_ne_commence_ni_ne_finit_par_un_mot_vide():
-    """« of the model » et « the model of » ne sont pas des termes."""
+    """"of the model" and "the model of" are not terms."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, abstract="the accuracy of the model is high"),
         _doc(2, abstract="the accuracy of the model is stable"),
@@ -49,7 +49,7 @@ def test_ngramme_ne_commence_ni_ne_finit_par_un_mot_vide():
 
 
 def test_copyright_retire_avant_comptage():
-    """Sans cela « springer nature » monte dans les tout premiers termes."""
+    """Without it, "springer nature" climbs into the very first terms."""
     tail = " © The Author(s), under exclusive licence to Springer Nature 2024."
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, abstract="Flood prediction with random forests." + tail),
@@ -68,7 +68,7 @@ def test_strip_copyright_conserve_le_texte_utile():
 
 
 def test_terme_compte_une_fois_par_document():
-    """Un résumé répétitif ne doit pas peser plus qu'un autre document."""
+    """A repetitive abstract must not weigh more than another document."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, abstract="deep learning deep learning deep learning"),
         _doc(2, abstract="deep learning applied once"),
@@ -85,7 +85,7 @@ def test_reseau_de_texte_est_un_graphe_standard():
     ]))
     g = tx.text_co_occurrence(c, "abstract", ngram=2, min_weight=2, min_documents=2)
     assert set(g) >= {"nodes", "edges", "n_nodes", "n_edges"}
-    # Compatible avec les mesures de reseau du paquet.
+    # Compatible with the package's network measures.
     assert netan.graph_summary(g)["nodes"] == g["n_nodes"]
 
 
@@ -120,7 +120,7 @@ def test_lien_moyen_fusionne_les_plus_proches_d_abord():
     assert merges[-1][2] > merges[0][2]
 
 
-# ------------------------------------------------------------ test de K-S ----
+# ------------------------------------------------------------ K-S test ----
 
 def test_ks_accepte_une_distribution_identique():
     p = np.array([0.6, 0.2, 0.1, 0.1])
@@ -170,7 +170,7 @@ def test_reseau_de_citation_est_oriente(citing):
 
 
 def test_auto_citation_d_entite_ecartee():
-    """Deux documents de LA MÊME revue : rien à montrer au niveau revue."""
+    """Two documents from THE SAME journal: nothing to show at journal level."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, title=LONG_A, doi="10.1000/aaa", source="J1"),
         _doc(2, title="Another paper with a decently long title", source="J1",
@@ -185,7 +185,7 @@ def test_citation_par_auteur(citing):
     assert {e["target"] for e in g["edges"]} == {"A."}
 
 
-# --------------------------------------------------- disposition, densité ----
+# ------------------------------------------------- layout, density ----
 
 def _ring_graph():
     ids = list("ABCDE")
@@ -215,7 +215,7 @@ def test_densite_normalisee_entre_zero_et_un():
 
 
 def test_resolution_change_le_nombre_de_groupes():
-    """Sans effet, le réglage serait un bouton décoratif."""
+    """Without an effect, the setting would be a decorative button."""
     rows = []
     for i in range(6):
         rows.append(_doc(i, kws="alpha;beta;gamma"))

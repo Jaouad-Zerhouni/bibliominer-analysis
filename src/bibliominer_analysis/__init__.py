@@ -1,6 +1,6 @@
-"""Analyse bibliométrique d'un corpus Scopus nettoyé par Bibliominer."""
+"""Bibliometric analysis of a Scopus corpus cleaned with Bibliominer."""
 
-# Avant les imports : `report` recopie la version dans le README du rapport.
+# Before the imports: `report` copies the version into the report's README.
 __version__ = "0.1.0"
 
 from .model.corpus import Corpus  # noqa: E402

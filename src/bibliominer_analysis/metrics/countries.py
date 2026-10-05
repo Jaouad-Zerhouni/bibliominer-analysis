@@ -1,21 +1,22 @@
-"""Pays : production du premier auteur, SCP/MCP.
+"""Countries: first-author production, SCP/MCP.
 
-Le tableau « Corresponding Author's Countries » est un classique des articles
-bibliométriques. Il répartit les documents selon le pays de l'auteur
-**principal**, puis distingue :
+The "Corresponding Author's Countries" table is a classic of bibliometric
+articles. It distributes documents by the country of the **main** author,
+then distinguishes:
 
-  - **SCP** (*single country publications*), tous les signataires du même pays ;
-  - **MCP** (*multiple country publications*), au moins deux pays.
+  - **SCP** (*single country publications*): all authors from the same
+    country;
+  - **MCP** (*multiple country publications*): at least two countries.
 
-Le rapport MCP/total mesure l'ouverture internationale d'un pays, ce que le
-simple nombre de documents ne dit pas : un pays peut beaucoup publier en vase
-clos.
+The MCP/total ratio measures a country's international openness, which
+the plain number of documents does not say: a country can publish a lot
+in isolation.
 
-**Réserve importante** : les exports ne portent pas toujours l'adresse de
-correspondance. On prend alors le **premier auteur** comme représentant du
-document, c'est la convention de repli usuelle, mais ce n'est pas
-rigoureusement l'auteur correspondant, et il faut le dire plutôt que de laisser
-croire à une précision qu'on n'a pas.
+**Important caveat**: exports do not always carry the correspondence
+address. The **first author** is then taken as the document's
+representative. That is the usual fallback convention, but it is not
+strictly the corresponding author, and it must be said rather than
+suggesting a precision we do not have.
 """
 
 from __future__ import annotations
@@ -26,9 +27,9 @@ import pandas as pd
 
 
 def corresponding_author_countries(corpus, n: Optional[int] = 20) -> pd.DataFrame:
-    """Documents par pays du premier auteur, avec SCP et MCP.
+    """Documents by country of the first author, with SCP and MCP.
 
-    Colonnes : ``country``, ``documents``, ``scp``, ``mcp``, ``mcp_ratio``,
+    Columns: ``country``, ``documents``, ``scp``, ``mcp``, ``mcp_ratio``,
     ``citations``, ``citations_per_document``.
     """
     cols = ["country", "documents", "scp", "mcp", "mcp_ratio", "citations",
@@ -38,8 +39,8 @@ def corresponding_author_countries(corpus, n: Optional[int] = 20) -> pd.DataFram
     if aff.empty:
         return pd.DataFrame(columns=cols)
 
-    # Combien de pays distincts signent chaque document : c'est ce qui décide
-    # SCP contre MCP, indépendamment de qui est premier auteur.
+    # How many distinct countries sign each document: that decides SCP versus
+    # MCP, regardless of who is first author.
     per_doc = aff.groupby("eid")["country"].nunique()
 
     link = corpus.author_affiliations
@@ -51,9 +52,9 @@ def corresponding_author_countries(corpus, n: Optional[int] = 20) -> pd.DataFram
                                 on=["eid", "aff_pos"], how="inner")
                          [["eid", "country"]].drop_duplicates("eid"))
 
-    # Repli : aucun rattachement pour le premier auteur (fréquent quand le
-    # nettoyage n'a pas pu relier auteur et affiliation). On prend alors la
-    # première affiliation du document, mieux qu'écarter le document.
+    # Fallback: no affiliation for the first author (frequent when the cleaning
+    # could not link author and affiliation). The first affiliation of the
+    # document is then used, better than leaving the document out.
     missing = set(aff["eid"]) - set(lead["eid"])
     if missing:
         fallback = (aff[aff["eid"].isin(missing)]
@@ -88,12 +89,12 @@ def corresponding_author_countries(corpus, n: Optional[int] = 20) -> pd.DataFram
 
 
 def countries_impact(corpus, n=20, min_documents=1):
-    """Indices d'impact par pays : h, g, m, citations.
+    """Impact indices by country: h, g, m, citations.
 
-    Le pendant, pour les pays, de ce que `impact.py` fait pour les auteurs et
-    les organisations. Un document co-signé par deux pays compte UNE fois pour
-    chacun : c'est le comptage entier, et la somme dépasse donc volontairement
-    le nombre de documents.
+    The counterpart, for countries, of what `impact.py` does for authors and
+    organisations. A document co-signed by two countries counts ONCE for each:
+    that is full counting, so the sum deliberately exceeds the number of
+    documents.
     """
     from .impact import g_index, h_index, m_index
 

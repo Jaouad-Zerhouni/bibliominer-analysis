@@ -1,19 +1,18 @@
-"""Un corpus FICTIF au format d'un fichier nettoyé par Bibliominer.
+"""A FICTITIOUS corpus in the format of a file cleaned by Bibliominer.
 
-Les vrais corpus sont des données d'utilisateurs : ils ne sont pas dans le
-dépôt, et sans eux les tests de bout en bout étaient sautés par la CI. Ce
-corpus les remplace là où aucun vrai fichier n'est donné : mêmes colonnes,
-mêmes conventions (auteurs indexés « 1:Nom », affiliations étiquetées,
-références réconciliées « refN | DOI | année | auteurs | titre »), et assez de
-structure pour que chaque analyse ait quelque chose à calculer.
+Real corpora are users' data: they are not in the repository, and without
+them the end-to-end tests were skipped by the CI. This corpus replaces
+them wherever no real file is given: same columns, same conventions
+(authors indexed "1:Name", labelled affiliations, references reconciled
+"refN | DOI | year | authors | title"), and enough structure for every
+analysis to have something to compute.
 
-Tout est inventé et DÉTERMINISTE (graine fixe) : auteurs tirés de syllabes,
-institutions imaginaires dans de vraies villes (il faut des pays pour les
-cartes), DOI sous le préfixe de test de Crossref (10.5555). Seules les revues
-sont réelles, prises dans la table SCImago du paquet, pour que les quartiles
-aient des correspondances.
+Everything is invented and DETERMINISTIC (fixed seed): authors built from
+syllables, imaginary institutions in real cities (maps need countries),
+DOIs under Crossref's test prefix (10.5555). Only the journals are real,
+taken from the package's SCImago table, so that quartiles have matches.
 
-    python make_synthetic_corpus.py            # réécrit synthetic_cleaned.csv
+    python make_synthetic_corpus.py            # rewrites synthetic_cleaned.csv
     python make_synthetic_corpus.py 10000 big.csv
 """
 from __future__ import annotations
@@ -31,7 +30,7 @@ SYLLABLES = ["ar", "bel", "cor", "dan", "el", "fen", "gar", "hol", "is", "jor", 
 GIVEN = ["Ana", "Bruno", "Clara", "Dimitri", "Elif", "Farid", "Greta", "Hugo", "Ines", "Jonas",
          "Karim", "Lena", "Malik", "Nora", "Omar", "Paula", "Rami", "Sara", "Tomas", "Yasmin"]
 
-# (ville, région, pays) : de vraies villes, pour les cartes et les pays.
+# (city, region, country): real cities, for the maps and the countries.
 PLACES = [("Rabat", "Rabat-Sale-Kenitra", "Morocco"), ("Meknes", "Fes-Meknes", "Morocco"),
           ("Murcia", "Murcia", "Spain"), ("Madrid", "Madrid", "Spain"),
           ("Paris", "Ile-de-France", "France"), ("Montreal", "Quebec", "Canada"),
@@ -55,7 +54,8 @@ def _name(rng: random.Random) -> str:
 
 
 def _journals(n: int) -> list:
-    """De vraies revues (nom, ISSN) de la table SCImago livrée avec le paquet."""
+    """Real journals (name, ISSN) from the SCImago table shipped with the
+    package."""
     table = HERE.parents[1] / "src" / "bibliominer_analysis" / "data_ref" / "scimagojr_2025.csv"
     out = []
     with table.open(encoding="utf-8") as f:
@@ -94,8 +94,8 @@ def build(n_docs: int = 180, seed: int = SEED) -> list:
         docs.append({"i": i, "year": year, "team": team, "topics": topics, "doi": doi,
                      "journal": rng.choice(journals), "eid": f"2-s2.0-{85000000000 + i}"})
 
-    # Des références partagées (co-citation), et des citations internes
-    # (citations locales) : un article cite des articles plus anciens du corpus.
+    # Shared references (co-citation), and internal citations (local
+    # citations): an article cites older articles of the corpus.
     pool = [{"doi": f"10.5555/reference.{k:04d}", "year": rng.randint(1995, 2020),
              "authors": f"{_name(rng)} {rng.choice(GIVEN)[0]}., {_name(rng)} {rng.choice(GIVEN)[0]}.",
              "title": f"On {rng.choice(TOPICS)} and {rng.choice(TOPICS)}"} for k in range(120)]

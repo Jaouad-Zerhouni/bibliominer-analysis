@@ -1,16 +1,16 @@
-"""Flux entre trois dimensions du corpus (diagramme de Sankey).
+"""Flows between three dimensions of the corpus (Sankey diagram).
 
-Relier trois dimensions, typiquement auteurs → mots-clés → sources, montre
-« qui travaille sur quoi et publie où », ce qu'aucun classement isolé ne dit.
+Linking three dimensions, typically authors -> keywords -> sources, shows
+"who works on what and publishes where", which no single ranking says.
 
-Le calcul est une double co-occurrence : deux valeurs sont reliées quand elles
-apparaissent dans le MÊME document, et l'épaisseur du lien est le nombre de
-documents partagés.
+The computation is a double co-occurrence: two values are linked when they
+appear in the SAME document, and the width of the link is the number of
+shared documents.
 
-Un garde-fou compte plus que tous les autres : on ne retient que les valeurs
-les plus fréquentes de chaque colonne. Sans ce filtre, un corpus de 3 000
-documents produit des milliers de rubans d'épaisseur 1, illisibles et longs à
-calculer.
+One safeguard matters more than all the others: only the most frequent
+values of each column are kept. Without this filter, a corpus of 3,000
+documents produces thousands of ribbons of width 1, unreadable and slow to
+compute.
 """
 
 from __future__ import annotations
@@ -22,12 +22,12 @@ from typing import Dict, List, Set
 
 import pandas as pd
 
-#: Dimensions disponibles et la façon d'en extraire les valeurs par document.
+#: Available dimensions and how to extract their values per document.
 FIELDS = ("authors", "keywords", "sources", "countries", "institutions")
 
 
 def _values_by_doc(corpus, field: str) -> Dict[str, Set[str]]:
-    """{eid -> valeurs} pour la dimension demandée."""
+    """{eid -> values} for the requested dimension."""
     if field == "authors":
         a = corpus.authors
         a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
@@ -70,7 +70,7 @@ def _top_values(by_doc: Dict[str, Set[str]], n: int) -> Set[str]:
 def _links(left: Dict[str, Set[str]], right: Dict[str, Set[str]],
            keep_left: Set[str], keep_right: Set[str],
            depth: int) -> List[Dict[str, object]]:
-    """Liens entre deux colonnes, pondérés par documents partagés."""
+    """Links between two columns, weighted by shared documents."""
     pairs: Counter = Counter()
     for eid, lvals in left.items():
         rvals = right.get(eid)
@@ -86,17 +86,17 @@ def _links(left: Dict[str, Set[str]], right: Dict[str, Set[str]],
 def three_fields(corpus, left: str = "authors", middle: str = "keywords",
                  right: str = "sources", n: int = 10,
                  min_weight: int = 1) -> pd.DataFrame:
-    """Liens d'un diagramme à trois champs.
+    """Links of a three-field plot.
 
-    Colonnes : ``source``, ``target``, ``value``, ``depth``.
+    Columns: ``source``, ``target``, ``value``, ``depth``.
 
-    ``depth`` est la position de la colonne d'origine (0 pour la gauche, 1 pour
-    le milieu) : le rendu s'en sert pour aligner les nœuds, sans quoi une
-    valeur présente dans deux colonnes serait dessinée au mauvais endroit.
+    ``depth`` is the position of the source column (0 for the left one, 1 for
+    the middle one): the rendering uses it to align the nodes, otherwise a
+    value present in two columns would be drawn in the wrong place.
 
-    Les libellés des colonnes sont préfixés quand deux colonnes portent la même
-    dimension, sinon un nœud apparaîtrait des deux côtés et le diagramme
-    boucler ait sur lui-même.
+    Column labels are prefixed when two columns carry the same dimension;
+    otherwise a node would appear on both sides and the diagram would loop on
+    itself.
     """
     empty = pd.DataFrame(columns=["source", "target", "value", "depth"])
     fields = [left, middle, right]
@@ -109,7 +109,7 @@ def three_fields(corpus, left: str = "authors", middle: str = "keywords",
     if any(not c for c in cols):
         return empty
 
-    # Préfixe de désambiguïsation : seulement si la dimension se répète.
+    # Disambiguation prefix: only if the dimension repeats.
     prefixes = ["", "", ""]
     for i, f in enumerate(fields):
         if fields.count(f) > 1:

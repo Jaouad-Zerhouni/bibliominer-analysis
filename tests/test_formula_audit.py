@@ -1,8 +1,8 @@
-"""Corrections issues de l'audit des formules, septembre 2026.
+"""Fixes from the formula audit, September 2026.
 
-Chaque test porte une valeur calculée À LA MAIN depuis la définition publiée,
-et chacun échouait sur le code d'avant l'audit : c'est ce qui prouve que le
-défaut est corrigé, et pas seulement que le code tourne.
+Each test carries a value computed BY HAND from the published definition,
+and each one failed on the code from before the audit: that is what
+proves the defect is fixed, not merely that the code runs.
 """
 
 import math
@@ -37,12 +37,12 @@ def _corpus(rows):
     return Corpus.from_dataframe(pd.DataFrame(rows))
 
 
-# --- Lotka : test de Kolmogorov-Smirnov (Pao, 1985) -----------------------
+# --- Lotka: Kolmogorov-Smirnov test (Pao, 1985) ----------------------------
 
 def test_ks_valeur_critique_sur_le_nombre_d_auteurs():
-    """1,36/√N avec N = 1 000 auteurs, pas N = 4 niveaux de productivité.
+    """1.36/√N with N = 1,000 authors, not N = 4 productivity levels.
 
-    Avec l'ancien N = 4, la valeur critique valait 0,68 et D = 0,1 passait.
+    With the old N = 4, the critical value was 0.68 and D = 0.1 passed.
     """
     obs = np.array([0.70, 0.15, 0.10, 0.05])
     theo = np.array([0.60, 0.20, 0.12, 0.08])
@@ -53,12 +53,12 @@ def test_ks_valeur_critique_sur_le_nombre_d_auteurs():
 
 
 def test_lotka_ks_couvre_les_niveaux_sans_auteur():
-    """A a 3 documents, B, C, D, E en ont 1 ; personne n'en a 2.
+    """A has 3 documents, B, C, D, E have 1; nobody has 2.
 
-    Parts observées sur 1..3 : 0,8 / 0 / 0,2. Lotka strict (1/x²)/ζ(2) :
-    0,6079 / 0,1520 / 0,0675. Répartitions : 0,8 / 0,8 / 1,0 contre
-    0,6079 / 0,7599 / 0,8275 -> D = 0,1921. En sautant le niveau 2, l'ancien
-    calcul comparait 1,0 à 0,6755 et trouvait D = 0,3245.
+    Observed shares over 1..3: 0.8 / 0 / 0.2. Strict Lotka (1/x²)/ζ(2):
+    0.6079 / 0.1520 / 0.0675. Cumulative: 0.8 / 0.8 / 1.0 against
+    0.6079 / 0.7599 / 0.8275 -> D = 0.1921. By skipping level 2, the old
+    computation compared 1.0 with 0.6755 and found D = 0.3245.
     """
     c = _corpus([_doc(1, authors="1:A.; 2:B."), _doc(2, authors="1:A.; 2:C."),
                  _doc(3, authors="1:A.; 2:D.; 3:E.")])
@@ -70,10 +70,10 @@ def test_lotka_ks_couvre_les_niveaux_sans_auteur():
 # --- MCC (Savanur & Srikanth, 2010) ----------------------------------------
 
 def test_mcc_a_est_le_nombre_total_d_auteurs():
-    """3 articles, chacun à 2 auteurs tous différents : 6 auteurs.
+    """3 articles, each with 2 authors, all different: 6 authors.
 
-    CC = 1 − (3 × 1/2)/3 = 0,5. MCC = 0,5 × 6/5 = 0,6. Avec A = maximum par
-    article (2), l'ancien calcul donnait 1,0 : « collaboration maximale ».
+    CC = 1 - (3 × 1/2)/3 = 0.5. MCC = 0.5 × 6/5 = 0.6. With A = maximum per
+    article (2), the old computation gave 1.0: "maximum collaboration".
     """
     c = _corpus([_doc(1, authors="1:A.; 2:B."), _doc(2, authors="1:C.; 2:D."),
                  _doc(3, authors="1:E.; 2:F.")])
@@ -85,10 +85,10 @@ def test_mcc_a_est_le_nombre_total_d_auteurs():
 # --- Bradford ---------------------------------------------------------------
 
 def test_bradford_une_revue_qui_remplit_deux_zones():
-    """J1 : 8 documents sur 10 remplit les zones 1 ET 2 (seuils 3,33 et 6,67).
+    """J1: 8 documents out of 10 fills zones 1 AND 2 (thresholds 3.33 and 6.67).
 
-    Les deux revues suivantes sont donc en zone 3. L'ancien `if` n'avançait que
-    d'une zone, et mettait J2 en zone 2.
+    The next two journals are therefore in zone 3. The old `if` only moved
+    forward one zone, and put J2 in zone 2.
     """
     rows = [_doc(i, source="J1") for i in range(1, 9)]
     rows += [_doc(9, source="J2"), _doc(10, source="J3")]
@@ -97,14 +97,14 @@ def test_bradford_une_revue_qui_remplit_deux_zones():
     assert zones == {"J1": 1, "J2": 3, "J3": 3}
 
 
-# --- Centralité de vecteur propre -------------------------------------------
+# --- Eigenvector centrality -------------------------------------------------
 
 def test_vecteur_propre_d_une_etoile():
-    """Étoile à 3 branches : λ = √3, vecteur (√3, 1, 1, 1)/√6.
+    """A 3-branch star: λ = √3, vector (√3, 1, 1, 1)/√6.
 
-    Centre = 0,7071, feuilles = 0,4082. Graphe biparti : l'ancienne itération
-    oscillait sans converger et s'arrêtait sur 0,5 pour les quatre nœuds,
-    centre et feuilles indiscernables.
+    Centre = 0.7071, leaves = 0.4082. Bipartite graph: the old iteration
+    oscillated without converging and stopped at 0.5 for all four nodes,
+    centre and leaves indistinguishable.
     """
     A = np.zeros((4, 4))
     for leaf in (1, 2, 3):
@@ -129,14 +129,14 @@ def test_modularite_du_resume_suit_les_communautes_affichees():
     assert na.graph_summary(graph)["modularity"] == pytest.approx(round(expected, 3))
 
 
-# --- Carte thématique de Callon ---------------------------------------------
+# --- Callon's thematic map --------------------------------------------------
 
 def test_densite_de_callon_sur_l_indice_d_equivalence():
-    """{a, b} co-occurrent dans 2 documents : e = 2²/(2·2) = 1, densité = 100·1/2 = 50.
-    {c, d} dans 3 documents : e = 3²/(3·3) = 1, densité = 50 aussi.
+    """{a, b} co-occurring in 2 documents: e = 2²/(2·2) = 1, density = 100·1/2 = 50.
+    {c, d} in 3 documents: e = 3²/(3·3) = 1, density = 50 too.
 
-    Sur les comptages bruts, l'ancien calcul donnait 100 et 150 : le thème le
-    plus fréquent paraissait plus « développé » à structure identique.
+    On raw counts, the old computation gave 100 and 150: the more frequent
+    theme looked more "developed" with an identical structure.
     """
     rows = [_doc(i, kws="a;b") for i in (1, 2)] + [_doc(i, kws="c;d") for i in (3, 4, 5)]
     clusters = th.thematic_map(_corpus(rows), min_weight=2)["clusters"]
@@ -146,15 +146,15 @@ def test_densite_de_callon_sur_l_indice_d_equivalence():
 # --- Croissance ------------------------------------------------------------
 
 def test_quantile_pour_une_confiance_non_tabulee():
-    """0,975 bilatéral -> z = 2,2414 ; l'ancien arrondi à 0,97 donnait 2,1705."""
+    """0.975 two-sided -> z = 2.2414; the old rounding to 0.97 gave 2.1705."""
     assert gr._z_score(0.975) == pytest.approx(2.2414, abs=5e-4)
 
 
 def test_temps_de_doublement_sur_le_rgr_exact():
-    """1 500 documents puis 1 : RGR = ln(1501/1500) = 0,000666.
+    """1,500 documents, then 1: RGR = ln(1501/1500) = 0.000666.
 
-    Dt = ln 2 / RGR = 1 040,1 ans. Calculé sur le RGR arrondi à 0,0007,
-    l'ancien résultat était 990,2.
+    Dt = ln 2 / RGR = 1,040.1 years. Computed on the RGR rounded to 0.0007,
+    the old result was 990.2.
     """
     rows = [_doc(i, year=2020) for i in range(1, 1501)] + [_doc(1501, year=2021)]
     table = gr.rgr_doubling_time(_corpus(rows))
@@ -171,12 +171,12 @@ def test_derniere_annee_partielle_signalee():
     assert fit["last_year_partial"] is True
 
 
-# --- Appariement des colonnes d'auteurs -------------------------------------
+# --- Matching the author columns --------------------------------------------
 
 def test_un_identifiant_manquant_ne_decale_pas_les_suivants():
-    """Roe n'a pas d'identifiant : la colonne en compte deux pour trois auteurs.
+    """Roe has no identifier: the column holds two for three authors.
 
-    Par rang, l'ancien code donnait l'identifiant de Poe à Roe, et aucun à Poe.
+    By rank, the old code gave Poe's identifier to Roe, and none to Poe.
     """
     a = P.parse_authors("Doe J.; Roe A.; Poe B.", "", "111111; 333333")
     assert [x["scopus_id"] for x in a] == [None, None, None]
@@ -197,9 +197,10 @@ def test_l_identifiant_entre_parentheses_prime_sur_la_colonne():
 # --- Auto-citation ----------------------------------------------------------
 
 def test_deux_homonymes_ne_s_auto_citent_pas():
-    """Deux « Smith J. » d'identifiants différents : l'un cite l'autre.
+    """Two "Smith J." with different identifiers: one cites the other.
 
-    Ce n'est PAS une auto-citation. Par le nom, l'ancien calcul la comptait.
+    It is NOT a self-citation. Going by the name, the old computation counted
+    it.
     """
     cited = _doc(1, authors="1:Smith J.", ids="1:111111", doi="10.1000/found",
                  title="The foundational paper that everybody cites here")

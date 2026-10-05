@@ -1,4 +1,4 @@
-"""Modèle de données : le Corpus et ses six tables."""
+"""Data model: the Corpus and its six tables."""
 
 from .corpus import Corpus
 

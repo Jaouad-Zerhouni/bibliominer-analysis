@@ -1,14 +1,14 @@
-"""Les résultats TELS QUE l'interface les montre.
+"""Results EXACTLY AS the interface shows them.
 
-Les briques existaient toutes dans le paquet (réseaux, normalisation,
-centralités, citations locales…), mais c'était l'API web, ou même le
-navigateur, qui les assemblait : la liste des documents, la balance des
-citations, le réseau complet du « Network lab ». Un utilisateur du paquet
-devait deviner l'assemblage, et pouvait obtenir autre chose que l'écran.
+The building blocks all existed in the package (networks, normalisation,
+centralities, local citations...), but it was the web API, or even the
+browser, that assembled them: the document list, the citation balance,
+the complete "Network lab" network. A package user had to guess the
+assembly, and could get something other than the screen.
 
-Ici, chaque fonction est CE que l'interface affiche, pour les mêmes options ;
-l'API ne fait plus que les appeler. Accessibles par le `Corpus`
-(`corpus.document_list()`, `corpus.network("keywords")`…).
+Here, each function IS what the interface displays, for the same options;
+the API only calls them. Available through the `Corpus`
+(`corpus.document_list()`, `corpus.network("keywords")`...).
 """
 
 from __future__ import annotations
@@ -19,12 +19,12 @@ import pandas as pd
 
 from .networks.analysis import normalize
 
-#: Les réseaux du « Network lab » : unité de l'écran -> méthode du Corpus.
+#: The "Network lab" networks: screen unit -> Corpus method.
 NETWORK_UNITS = ("authors", "keywords", "institutions", "countries", "cities",
                  "references", "cited-authors", "coupling")
 
-#: La superposition par année moyenne n'a de sens que pour ces unités (et
-#: pour le couplage, porté par les documents).
+#: Overlay by mean year only makes sense for these units (and for coupling,
+#: carried by the documents).
 _OVERLAY = {"authors": "authors", "keywords": "keywords",
             "institutions": "institutions", "countries": "countries",
             "coupling": "documents"}
@@ -38,9 +38,9 @@ def _first_authors(corpus) -> pd.DataFrame:
 
 
 def document_list(corpus, n: Optional[int] = 100, sort: str = "citations") -> pd.DataFrame:
-    """Les documents eux-mêmes : titre, premier auteur, année, source, type,
-    citations globales et locales, DOI. `sort` : ``citations`` (décroissant),
-    ``year`` (le plus récent d'abord) ou ``title``."""
+    """The documents themselves: title, first author, year, source, type, global
+    and local citations, DOI. `sort`: ``citations`` (descending), ``year``
+    (most recent first) or ``title``."""
     if sort not in ("citations", "year", "title"):
         raise ValueError("sort must be 'citations', 'year' or 'title'")
     d = corpus.documents[["eid", "title", "year", "source", "doc_type",
@@ -60,9 +60,9 @@ def document_list(corpus, n: Optional[int] = 100, sort: str = "citations") -> pd
 
 
 def most_normalized_documents(corpus, n: Optional[int] = 25) -> pd.DataFrame:
-    """Les documents classés par citations NORMALISÉES, rapportées à la
-    moyenne des documents de la même année. La seule mesure qui permette de
-    classer ensemble un article de 2016 et un de 2024."""
+    """Documents ranked by NORMALISED citations, relative to the mean of the
+    documents of the same year. The only measure that can rank an article
+    from 2016 and one from 2024 together."""
     d = corpus.documents[["eid", "title", "year", "source"]].copy()
     d["year"] = pd.to_numeric(d["year"], errors="coerce").astype("Int64")
     d = d.merge(corpus.normalized_citations(), on="eid", how="left")
@@ -99,10 +99,10 @@ def network(corpus, unit: str = "authors", top_n: int = 50, min_weight: int = 1,
             normalization: str = "none", overlay: bool = False,
             kind: str = "author", level: str = "parent",
             resolution: float = 1.0) -> Dict[str, Any]:
-    """Le réseau du « Network lab » : liens normalisés, communautés,
-    centralités, superposition par année moyenne (`overlay`) et résumé
-    (densité, transitivité, modularité…). `resolution` : granularité des
-    communautés (au-dessus de 1, des groupes plus nombreux)."""
+    """The "Network lab" network: normalised links, communities, centralities,
+    overlay by mean year (`overlay`) and summary (density, transitivity,
+    modularity...). `resolution`: granularity of the communities (above 1,
+    more clusters)."""
     graph = normalize(_unit_graph(corpus, unit, top_n, min_weight, kind, level),
                       normalization)
     overlay_unit = _OVERLAY.get(unit) if overlay else None
@@ -115,9 +115,8 @@ def network(corpus, unit: str = "authors", top_n: int = 50, min_weight: int = 1,
 def density_map(corpus, unit: str = "keywords", top_n: int = 50,
                 min_weight: int = 1, size: int = 48, kind: str = "author",
                 level: str = "parent") -> Dict[str, Any]:
-    """La carte de densité d'un réseau (vue « density » de VOSviewer) : la
-    grille, et chaque nœud à sa position, déterministe, la même d'une
-    ouverture à l'autre."""
+    """The density map of a network: the grid, and every node at its position,
+    deterministic, the same from one opening to the next."""
     graph = _unit_graph(corpus, unit, top_n, min_weight, kind, level)
     coords = corpus.network_layout(graph)
     return {
@@ -136,8 +135,8 @@ def term_network(corpus, field: str = "abstract", ngram: int = 2, top_n: int = 4
                  min_weight: int = 2, min_documents: int = 2,
                  normalization: str = "none",
                  stopwords: Optional[Iterable[str]] = None) -> Dict[str, Any]:
-    """Le réseau de co-occurrence des termes du texte, mesuré (communautés,
-    centralités, résumé), celui de la page Text mining."""
+    """The co-occurrence network of the text terms, measured (communities,
+    centralities, summary), the one of the Text mining page."""
     graph = corpus.text_co_occurrence(field, ngram, top_n, min_weight,
                                       min_documents, stopwords)
     graph = corpus.network_metrics(normalize(graph, normalization))
@@ -147,8 +146,8 @@ def term_network(corpus, field: str = "abstract", ngram: int = 2, top_n: int = 4
 
 def citation_graph(corpus, unit: str = "sources", top_n: int = 40,
                    min_weight: int = 1, level: str = "parent") -> Dict[str, Any]:
-    """Le réseau de citation directe, mesuré, celui de la page Citation
-    network."""
+    """The direct citation network, measured, the one of the Citation network
+    page."""
     graph = corpus.network_metrics(corpus.citation_network(unit, top_n, min_weight, level))
     graph["summary"] = corpus.network_summary(graph)
     return graph
@@ -156,9 +155,9 @@ def citation_graph(corpus, unit: str = "sources", top_n: int = 40,
 
 def citation_balance(corpus, unit: str = "sources", top_n: int = 40,
                      min_weight: int = 1, level: str = "parent") -> pd.DataFrame:
-    """Citations reçues moins citations émises, par entité du réseau de
-    citation. Positif : l'entité est une SOURCE d'idées pour le corpus ;
-    négatif : elle en consomme plus qu'elle n'en fournit."""
+    """Citations received minus citations given, per entity of the citation
+    network. Positive: the entity is a SOURCE of ideas for the corpus;
+    negative: it consumes more than it provides."""
     graph = corpus.citation_network(unit, top_n, min_weight, level)
     rows = {n["id"]: {"label": n["label"], "received": 0, "emitted": 0}
             for n in graph["nodes"]}

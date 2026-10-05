@@ -1,19 +1,20 @@
-"""Spectroscopie des années de référence (RPYS).
+"""Reference Publication Year Spectroscopy (RPYS).
 
-Marx & al. (2014). On ne compte pas les publications du corpus mais les
-**années de publication des travaux qu'il cite**. La courbe brute est
-inintéressante, elle croît toujours, parce qu'il y a mécaniquement plus de
-littérature récente. Ce qui compte est l'**écart à la médiane glissante** :
+Marx et al. (2014). What is counted is not the publications of the corpus
+but the **publication years of the works it cites**. The raw curve is of
+little interest: it always grows, because there is mechanically more
+recent literature. What matters is the **deviation from the rolling
+median**:
 
-    écart(t) = citations(t) − médiane(citations sur t−2 … t+2)
+    deviation(t) = citations(t) - median(citations over t-2 ... t+2)
 
-Un pic positif signale une année où le corpus cite bien plus que la tendance :
-presque toujours un travail fondateur publié cette année-là. C'est la seule
-méthode qui fait remonter les racines historiques d'un domaine sans qu'on ait
-à les connaître d'avance.
+A positive peak signals a year that the corpus cites far more than the
+trend: almost always a founding work published that year. It is the only
+method that brings up the historical roots of a field without having to
+know them in advance.
 
-On prend la **médiane** et non la moyenne : un unique pic écraserait sa propre
-référence si on moyennait, et s'effacerait donc lui-même.
+The **median** is used, not the mean: a single peak would crush its own
+reference if it were averaged, and would therefore erase itself.
 """
 
 from __future__ import annotations
@@ -23,19 +24,19 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-#: Demi-largeur de la fenêtre glissante (5 ans au total : t−2 … t+2).
+#: Half-width of the rolling window (5 years in total: t-2 ... t+2).
 HALF_WINDOW = 2
 
 
 def reference_spectroscopy(corpus, year_min: Optional[int] = None,
                            year_max: Optional[int] = None) -> pd.DataFrame:
-    """Distribution des années de référence et écart à la médiane glissante.
+    """Distribution of reference years and deviation from the rolling median.
 
-    Colonnes : ``year``, ``references``, ``median_5``, ``deviation``,
+    Columns: ``year``, ``references``, ``median_5``, ``deviation``,
     ``is_peak``, ``top_reference``.
 
-    ``is_peak`` marque les années dont l'écart dépasse la médiane des écarts
-    positifs, un repère de lecture, pas un test statistique.
+    ``is_peak`` marks the years whose deviation exceeds the median of the
+    positive deviations: a reading aid, not a statistical test.
     """
     cols = ["year", "references", "median_5", "deviation", "is_peak", "top_reference"]
     refs = corpus.references
@@ -46,8 +47,8 @@ def reference_spectroscopy(corpus, year_min: Optional[int] = None,
     r["ref_year"] = pd.to_numeric(r["ref_year"], errors="coerce")
     r = r.dropna(subset=["ref_year"])
     r["ref_year"] = r["ref_year"].astype(int)
-    # Des années aberrantes existent dans les exports (0, 2098). On borne au
-    # raisonnable plutôt que de laisser un point isolé aplatir tout le reste.
+    # Absurd years exist in exports (0, 2098). They are bounded to a reasonable
+    # range rather than letting an isolated point flatten everything else.
     last = int(pd.to_numeric(corpus.documents["year"],
                              errors="coerce").max() or r["ref_year"].max())
     r = r[(r["ref_year"] >= 1800) & (r["ref_year"] <= last)]
@@ -76,16 +77,15 @@ def reference_spectroscopy(corpus, year_min: Optional[int] = None,
         "deviation": np.round(values - medians, 1),
     })
 
-    # Comparaison LARGE, et non stricte : un corpus qui n'a qu'un seul pic voit
-    # la médiane des écarts positifs valoir exactement ce pic. Avec « > » il ne
-    # serait jamais signalé, c'est-à-dire précisément dans le cas où le repère
-    # est le plus utile.
+    # NON-strict comparison: a corpus with a single peak sees the median of the
+    # positive deviations equal exactly that peak. With ">" it would never be
+    # flagged, precisely in the case where the marker is most useful.
     positive = out.loc[out["deviation"] > 0, "deviation"]
     threshold = float(positive.median()) if not positive.empty else 0.0
     out["is_peak"] = (out["deviation"] > 0) & (out["deviation"] >= threshold)
 
-    # Pour chaque année de pic, la référence la plus citée de cette année-là :
-    # c'est elle qu'on veut nommer quand on commente le graphique.
+    # For each peak year, the most cited reference of that year: it is the one
+    # to name when commenting on the chart.
     top = _top_reference_per_year(r)
     out["top_reference"] = out["year"].map(top)
     out.loc[~out["is_peak"], "top_reference"] = None
@@ -93,7 +93,7 @@ def reference_spectroscopy(corpus, year_min: Optional[int] = None,
 
 
 def _top_reference_per_year(refs: pd.DataFrame) -> dict:
-    """Référence la plus fréquemment citée, année par année."""
+    """Most frequently cited reference, year by year."""
     r = refs.copy()
     key = r["ref_doi"].map(str).str.strip().str.lower()
     fallback = r["ref_title"].map(str).str.strip().str.lower()
@@ -102,10 +102,10 @@ def _top_reference_per_year(refs: pd.DataFrame) -> dict:
     if r.empty:
         return {}
 
-    # `first()` saute les valeurs manquantes : on transforme d'abord les
-    # chaînes vides en manquantes, et on obtient la première valeur non vide
-    # sans fonction Python par groupe. La version à `lambda` en appelait une
-    # par couple (année, référence), 9 s sur 10 000 références.
+    # `first()` skips missing values: empty strings are turned into missing
+    # values first, which gives the first non-empty value without a Python
+    # function per group. The `lambda` version called one per (year, reference)
+    # pair, 9 s on 10,000 references.
     for column in ("ref_title", "ref_authors"):
         text = r[column].astype("string").str.strip()
         r[column] = text.mask(text == "")

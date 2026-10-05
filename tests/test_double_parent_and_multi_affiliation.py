@@ -1,11 +1,11 @@
-"""Double rattachement (« parent 2 ») et auteur à plusieurs affiliations.
+"""Double affiliation ("parent 2") and an author with several affiliations.
 
-Deux défauts constatés sur des fichiers nettoyés réels :
-  - « parent 2 » était lu puis ignoré partout : le second organisme d'une
-    affiliation n'apparaissait dans aucun classement ;
-  - le lien auteur -> affiliation se faisait au RANG (auteur 3 -> affiliation
-    3) : dès qu'un auteur en avait deux, ses voisins héritaient d'une
-    affiliation qui n'était pas la leur, et sa seconde disparaissait.
+Two defects found on real cleaned files:
+  - "parent 2" was read and then ignored everywhere: the second
+    organisation of an affiliation appeared in no ranking;
+  - the author -> affiliation link was made by RANK (author 3 ->
+    affiliation 3): as soon as an author had two, the neighbours inherited
+    an affiliation that was not theirs, and the second one disappeared.
 """
 import pandas as pd
 
@@ -29,7 +29,7 @@ def _doc(i, affs, awa="", authors="1:Doe J.", **extra):
     return row
 
 
-# --- auteur à plusieurs affiliations -----------------------------------------
+# --- author with several affiliations ----------------------------------------
 
 def _hosni_paper():
     return _doc(
@@ -47,7 +47,7 @@ def test_an_author_with_two_affiliations_keeps_both():
 
 
 def test_the_next_authors_keep_their_own_affiliation():
-    """Au rang, Idri (3e auteur) recevait ENSAM Meknès, l'affiliation n°3."""
+    """By rank, Idri (3rd author) received ENSAM Meknès, affiliation no. 3."""
     c = Corpus.from_dataframe(pd.DataFrame([_hosni_paper()]))
     link = c.author_affiliations.merge(c.affiliations, on=["eid", "aff_pos"])
     cities = dict(zip(link["position"].astype(int).astype(str) + link["city"],
@@ -57,8 +57,8 @@ def test_the_next_authors_keep_their_own_affiliation():
 
 
 def test_a_second_affiliation_starting_with_parent_1_is_split():
-    """Sans « subparent », la seconde affiliation commence par « parent 1 »,
-    qui REMONTE dans l'ordre des libellés après « country »."""
+    """Without "subparent", the second affiliation starts with "parent 1", which
+    GOES BACK in the label order after "country"."""
     cairo = "parent 1: African Disaster Mitigation Research Center, city: Cairo, country: Egypt"
     blocks = P.author_affiliation_positions(
         f"Chourak M., {ENSIAS}, {cairo}", P.parse_affiliations(f"{ENSIAS}; {cairo}"))
@@ -112,10 +112,10 @@ def test_a_parent_2_equal_to_parent_1_counts_once():
 
 
 def test_a_short_affiliation_inside_a_longer_one_is_not_a_second_rattachement():
-    """Constaté sur un vrai article : « ENSAM, University Moulay Ismail of
-    Meknes » est la FIN de « IEST Research Team, AIDTM Laboratory, ENSAM,
-    University Moulay Ismail of Meknes ». Le premier auteur se voyait donner
-    trois affiliations au lieu de deux."""
+    """Found on a real article: "ENSAM, University Moulay Ismail of Meknes" is
+    the END of "IEST Research Team, AIDTM Laboratory, ENSAM, University Moulay
+    Ismail of Meknes". The first author was given three affiliations instead
+    of two."""
     long_aff = ("IEST Research Team, AIDTM Laboratory, ENSAM, "
                 "University Moulay Ismail of Meknes, Meknes, Morocco")
     short_aff = "ENSAM, University Moulay Ismail of Meknes, Meknes, Morocco"
@@ -125,6 +125,6 @@ def test_a_short_affiliation_inside_a_longer_one_is_not_a_second_rattachement():
     zerhouni = P.author_affiliation_positions(f"Zerhouni J., {long_aff}, {rabat}", affs)
     assert [pos for pos, _ in zerhouni] == [1, 2]
 
-    # L'auteur qui porte VRAIMENT l'affiliation courte la garde.
+    # The author who REALLY carries the short affiliation keeps it.
     bakkas = P.author_affiliation_positions(f"Bakkas M., {short_aff}", affs)
     assert [pos for pos, _ in bakkas] == [3]

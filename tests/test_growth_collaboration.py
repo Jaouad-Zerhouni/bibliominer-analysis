@@ -1,7 +1,7 @@
-"""Croissance et collaboration.
+"""Growth and collaboration.
 
-Toutes les valeurs attendues sont calculées À LA MAIN depuis les formules
-publiées. Un test d'indicateur qui reprend la sortie du code ne teste rien.
+All expected values are computed BY HAND from the published formulas. An
+indicator test that reuses the code's output tests nothing.
 """
 
 import math
@@ -22,7 +22,7 @@ def _doc(i, year, authors):
 
 
 def _corpus(specs):
-    """specs : liste de (année, nb_auteurs)."""
+    """specs: list of (year, number of authors)."""
     rows = []
     for i, (year, n_auth) in enumerate(specs, start=1):
         names = "; ".join("%d:A%d." % (k, k) for k in range(1, n_auth + 1))
@@ -53,26 +53,26 @@ def test_agr_annee_par_annee():
     """2 docs en 2020, 3 en 2021 -> +50 % ; 3 -> 6 -> +100 %."""
     c = _corpus([(2020, 1)] * 2 + [(2021, 1)] * 3 + [(2022, 1)] * 6)
     a = c.agr().set_index("year")
-    assert pd.isna(a.loc[2020, "agr"])        # pas d'année précédente
+    assert pd.isna(a.loc[2020, "agr"])        # no previous year
     assert a.loc[2021, "agr"] == 50.0
     assert a.loc[2022, "agr"] == 100.0
     assert list(a["cumulative"]) == [2, 5, 11]
 
 
 def test_agr_annee_vide_sans_division_par_zero():
-    """Une année sans document ne doit pas produire un taux infini."""
+    """A year without documents must not produce an infinite rate."""
     c = _corpus([(2020, 1), (2022, 1)])       # 2021 vide
     a = c.agr().set_index("year")
     assert a.loc[2021, "documents"] == 0
-    assert pd.isna(a.loc[2022, "agr"])        # division par zéro évitée
+    assert pd.isna(a.loc[2022, "agr"])        # division by zero avoided
 
 
 # ---------------------------------------------------------------------------
-# RGR / temps de doublement
+# RGR / doubling time
 # ---------------------------------------------------------------------------
 
 def test_rgr_et_doublement():
-    """Cumuls 1, 2, 4 -> RGR = ln2 chaque année -> doublement en 1 an."""
+    """Cumulative 1, 2, 4 -> RGR = ln2 every year -> doubling in 1 year."""
     c = _corpus([(2020, 1), (2021, 1), (2022, 1), (2022, 1)])
     r = c.rgr_doubling_time().set_index("year")
     assert list(r["cumulative"]) == [1, 2, 4]
@@ -82,7 +82,7 @@ def test_rgr_et_doublement():
 
 
 def test_rgr_decroit_sur_croissance_lineaire():
-    """À production constante, le RGR décroît : c'est le comportement attendu."""
+    """At constant production, RGR decreases: that is the expected behaviour."""
     c = _corpus([(2020 + i, 1) for i in range(5)])
     r = c.rgr_doubling_time()["rgr"].dropna().tolist()
     assert r == sorted(r, reverse=True)
@@ -101,7 +101,7 @@ def test_cochran_population_infinie():
 
 
 def test_cochran_correction_population_finie():
-    """Sur 100 documents : n = 385 / (1 + 384/100) = 79,5 -> 80."""
+    """Over 100 documents: n = 385 / (1 + 384/100) = 79.5 -> 80."""
     c = _corpus([(2020, 1)] * 100)
     r = c.cochran_sample_size()
     assert r["population"] == 100
@@ -127,7 +127,7 @@ def test_cochran_marge_plus_serree_demande_plus():
 # ---------------------------------------------------------------------------
 
 def test_degre_de_collaboration():
-    """3 documents co-signés sur 4 -> C = 0,75."""
+    """3 co-authored documents out of 4 -> C = 0.75."""
     c = _corpus([(2020, 1), (2020, 2), (2020, 3), (2020, 4)])
     r = c.collaboration_indicators()
     assert r["single_authored"] == 1
@@ -136,7 +136,7 @@ def test_degre_de_collaboration():
 
 
 def test_indice_de_collaboration_lawani():
-    """CI = Σ(j·f_j)/N = (1+2+3+4)/4 = 2,5 auteurs par document."""
+    """CI = Σ(j·f_j)/N = (1+2+3+4)/4 = 2.5 authors per document."""
     c = _corpus([(2020, 1), (2020, 2), (2020, 3), (2020, 4)])
     assert c.collaboration_indicators()["collaboration_index"] == 2.5
 
@@ -160,7 +160,7 @@ def test_tout_en_solo():
 
 
 def test_aapp():
-    """3 documents, 2 auteurs distincts -> 1,5 document par auteur."""
+    """3 documents, 2 distinct authors -> 1.5 documents per author."""
     rows = [_doc(1, 2020, "1:A."), _doc(2, 2020, "1:A."), _doc(3, 2020, "1:B.")]
     c = Corpus.from_dataframe(pd.DataFrame(rows))
     r = c.collaboration_indicators()
@@ -181,7 +181,7 @@ def test_authorship_pattern():
 # ---------------------------------------------------------------------------
 
 def test_cai_reference_a_cent():
-    """Deux périodes de composition identique -> CAI = 100 partout."""
+    """Two periods with identical composition -> CAI = 100 everywhere."""
     specs = [(2000, 1), (2000, 2)] + [(2010, 1), (2010, 2)]
     c = _corpus(specs)
     t = c.cai(block_years=5)
@@ -192,11 +192,11 @@ def test_cai_reference_a_cent():
 
 
 def test_cai_sur_representation():
-    """Période 1 : que du solo. Période 2 : que du co-signé."""
+    """Period 1: single authors only. Period 2: co-authored only."""
     specs = [(2000, 1), (2000, 1)] + [(2010, 2), (2010, 2)]
     t = _corpus(specs).cai(block_years=5).set_index("period")
     p1, p2 = t.index[0], t.index[-1]
-    assert t.loc[p1, "cai_single"] == 200.0     # 2× la part attendue
+    assert t.loc[p1, "cai_single"] == 200.0     # 2× the expected share
     assert t.loc[p2, "cai_single"] == 0.0
     assert t.loc[p2, "cai_two"] == 200.0
 
@@ -207,11 +207,11 @@ def test_cai_corpus_vide():
 
 
 # ---------------------------------------------------------------------------
-# Loi de Price
+# Price's law
 # ---------------------------------------------------------------------------
 
 def test_price_law():
-    """9 auteurs -> noyau théorique = √9 = 3."""
+    """9 authors -> theoretical core = √9 = 3."""
     rows = []
     for i in range(9):
         rows.append(_doc(i, 2020, "1:A%d." % i))
@@ -219,7 +219,7 @@ def test_price_law():
     r = c.price_law()
     assert r["authors"] == 9
     assert r["expected_core"] == 3
-    # 9 auteurs à une signature : 3 d'entre eux font 3/9 = 33,3 %
+    # 9 authors with one signature each: 3 of them make 3/9 = 33.3 %
     assert r["observed_share"] == pytest.approx(33.3, abs=0.1)
 
 
@@ -230,7 +230,7 @@ def test_growth_summary_corpus_vide():
 
 
 # ---------------------------------------------------------------------------
-# Tendance par moindres carrés
+# Least-squares trend
 # ---------------------------------------------------------------------------
 
 def test_trend_lineaire_parfait():
@@ -260,7 +260,7 @@ def test_trend_exponentiel():
 
 
 def test_trend_projection_jamais_negative():
-    """Une pente descendante ne doit pas prédire un nombre négatif."""
+    """A downward slope must not predict a negative number."""
     specs = []
     for i, n in enumerate([10, 6, 2]):
         specs += [(2020 + i, 1)] * n
@@ -269,16 +269,16 @@ def test_trend_projection_jamais_negative():
 
 
 def test_trend_exige_trois_annees():
-    """Deux points donnent toujours un R² de 1 : ce n'est pas une tendance."""
+    """Two points always give an R² of 1: that is not a trend."""
     res = _corpus([(2020, 1), (2021, 1)]).trend_forecast()
     assert res["fit"] is None
-    # Le message s'affiche tel quel dans l'interface, qui est en anglais.
+    # The message is shown as is in the interface, which is in English.
     assert "three years" in res["message"].lower()
 
 
 def test_a_year_without_any_document_does_not_break_production():
-    """Constaté : une année SANS document dans la série (2014, 2016, pas
-    2015) faisait tomber `by_year`, erreur 500 sur l'écran Production."""
+    """Found: a year WITHOUT documents in the series (2014, 2016, no 2015)
+    broke `by_year`, an error 500 on the Production screen."""
     import pandas as pd
     from bibliominer_analysis import Corpus
     rows = [{"EID": "e1", "Title": "A", "Year": "2014", "Cited by": "4",

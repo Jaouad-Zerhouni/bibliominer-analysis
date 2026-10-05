@@ -1,10 +1,10 @@
-"""Réseaux bibliométriques.
+"""Bibliometric networks.
 
-Trois familles, chacune déclinée par unité d'analyse :
+Three families, each available per unit of analysis:
 
-  - **collaboration** : auteurs, institutions, pays ;
-  - **co-citation**   : références citées, auteurs cités ;
-  - **co-occurrence** : mots-clés.
+  - **collaboration**: authors, institutions, countries;
+  - **co-citation**:   cited references, cited authors;
+  - **co-occurrence**: keywords.
 """
 
 from .build import (

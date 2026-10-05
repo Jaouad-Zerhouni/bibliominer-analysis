@@ -1,15 +1,15 @@
-"""Mêmes données, même résultat : quel que soit l'ordre des lignes, la graine
-de hachage de Python, ou la version de pandas.
+"""Same data, same result: whatever the order of the rows, Python's hash seed,
+or the pandas version.
 
-Défauts constatés sur de vrais corpus :
-  - la carte thématique nommait un groupe « Software Testing Effort » à une
-    exécution et « ISBSG » à la suivante (ex æquo départagés par l'ordre d'un
-    ``set``, que Python mélange à chaque lancement) ;
-  - le diagramme à trois champs échangeait deux auteurs à égalité ;
-  - trier un export Scopus autrement changeait les références gardées dans le
-    réseau de co-citation, l'étiquette d'une référence, et le « 2018-b » d'un
-    document ;
-  - sous pandas 3, 25 méthodes sur 100 rendaient d'autres résultats.
+Defects found on real corpora:
+  - the thematic map named a cluster "Software Testing Effort" in one run
+    and "ISBSG" in the next (ties broken by the order of a ``set``, which
+    Python shuffles at every launch);
+  - the three-field plot swapped two tied authors;
+  - sorting a Scopus export differently changed the references kept in the
+    co-citation network, the label of a reference, and the "2018-b" of a
+    document;
+  - under pandas 3, 25 methods out of 100 returned different results.
 """
 import os
 import pathlib
@@ -34,8 +34,8 @@ def _doc(i, kws, refs="", authors="1:Doe J.", affs="", cited="0", year=2020):
 
 
 def _corpus_rows():
-    # Deux thèmes dont les termes sont À ÉGALITÉ de fréquence : c'est
-    # précisément le cas où l'ordre du hasard décidait du nom du groupe.
+    # Two themes whose terms are TIED in frequency: precisely the case where the
+    # order of chance decided the name of the cluster.
     rows = []
     for i in range(12):
         theme = ("zeta; alpha; mu" if i % 2 else "omega; beta; nu")
@@ -55,7 +55,7 @@ def test_thematic_map_names_groups_the_same_way_whatever_the_row_order():
     b = Corpus.from_dataframe(pd.DataFrame(rows[::-1])).thematic_map(min_weight=1)
     labels = sorted(a["clusters"]["label"])
     assert labels == sorted(b["clusters"]["label"])
-    assert labels == ["alpha", "beta"]          # à égalité : l'ordre alphabétique
+    assert labels == ["alpha", "beta"]          # tied: alphabetical order
 
 
 _SCRIPT = textwrap.dedent("""
@@ -67,8 +67,8 @@ _SCRIPT = textwrap.dedent("""
            "three_fields": c.three_fields().to_dict("records"),
            "co_word": [(n["id"], n.get("community")) for n in
                        Corpus.attach_layout(c.co_word(min_weight=1))["nodes"]]}
-    # La figure elle-même, octet pour octet : l'ordre des nœuds décide de
-    # l'ordre de dessin et de ceux qui reçoivent une étiquette.
+    # The figure itself, byte for byte: the order of the nodes decides the
+    # drawing order and which nodes receive a label.
     import hashlib
     from bibliominer_analysis.networks.analysis import annotate
     from bibliominer_analysis.figures.network import render_network
@@ -94,9 +94,9 @@ def test_results_do_not_depend_on_the_python_hash_seed(tmp_path):
 
 @pytest.mark.parametrize("root", [SRC])
 def test_no_astype_str_in_the_package(root):
-    """Sous pandas 3, ``astype(str)`` laisse une valeur manquante MANQUANTE au
-    lieu d'écrire « nan » : les filtres « non vide » la laissaient passer.
-    ``map(str)`` rend le même texte sous pandas 2 et 3."""
+    """Under pandas 3, ``astype(str)`` leaves a missing value MISSING instead of
+    writing "nan": the "not empty" filters let it through. ``map(str)`` gives
+    the same text under pandas 2 and 3."""
     offenders = [str(p.relative_to(root)) for p in root.rglob("*.py")
                  if ".astype(str)" in p.read_text(encoding="utf-8")]
     assert offenders == []

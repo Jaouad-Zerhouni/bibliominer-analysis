@@ -1,8 +1,9 @@
-"""Analyse des **revues** : impact, production dans le temps.
+"""Analysis of **journals**: impact, production over time.
 
-Le pendant, côté supports de publication, de ce que `impact.py` fait pour les
-auteurs et les organisations. Bradford (dans `laws.py`) dit *combien* de revues
-concentrent le domaine ; ici on dit *lesquelles*, et avec quel poids.
+The counterpart, for publication venues, of what `impact.py` does for
+authors and organisations. Bradford (in `laws.py`) says *how many*
+journals concentrate the field; here we say *which ones*, and with what
+weight.
 """
 
 from __future__ import annotations
@@ -26,9 +27,9 @@ def _docs_with_citations(corpus) -> pd.DataFrame:
 
 def sources_impact(corpus, n: Optional[int] = 20,
                    min_documents: int = 1) -> pd.DataFrame:
-    """Classement des revues avec h, g, m, citations et première année.
+    """Ranking of journals with h, g, m, citations and first year.
 
-    Colonnes : ``source``, ``documents``, ``citations``, ``h_index``,
+    Columns: ``source``, ``documents``, ``citations``, ``h_index``,
     ``g_index``, ``m_index``, ``first_year``, ``last_year``.
     """
     d = _docs_with_citations(corpus)
@@ -63,7 +64,7 @@ def sources_impact(corpus, n: Optional[int] = 20,
 
 
 def top_sources_ranked(corpus, n: Optional[int] = 20) -> pd.DataFrame:
-    """Revues par nombre de documents, le classement le plus simple."""
+    """Journals by number of documents, the simplest ranking."""
     d = _docs_with_citations(corpus)
     if d.empty:
         return pd.DataFrame(columns=["source", "documents", "citations"])
@@ -76,13 +77,13 @@ def top_sources_ranked(corpus, n: Optional[int] = 20) -> pd.DataFrame:
 
 
 def sources_over_time(corpus, n: int = 8, cumulative: bool = True) -> pd.DataFrame:
-    """Production annuelle des `n` revues principales.
+    """Yearly production of the top `n` journals.
 
-    Colonnes : ``year``, ``source``, ``documents``, ``cumulative``.
+    Columns: ``year``, ``source``, ``documents``, ``cumulative``.
 
-    Chaque revue est présente sur **toutes** les années de l'intervalle, à zéro
-    si besoin : une série interrompue se lirait comme une donnée manquante, et
-    la courbe cumulée serait fausse.
+    Every journal is present for **every** year of the range, at zero if
+    needed: an interrupted series would read as missing data, and the
+    cumulative curve would be wrong.
     """
     d = _docs_with_citations(corpus).dropna(subset=["year"])
     if d.empty:

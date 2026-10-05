@@ -1,8 +1,9 @@
-"""Fiche signalétique du corpus, l'équivalent du « Main Information ».
+"""Main information about the corpus.
 
-C'est le tableau qu'on met en tête d'un article bibliométrique : il décrit le
-corpus avant toute analyse. Chaque valeur y est définie sans ambiguïté, parce
-que la même étiquette recouvre des calculs différents selon les outils.
+It is the table placed at the top of a bibliometric article: it describes
+the corpus before any analysis. Every value is defined without ambiguity,
+because the same label covers different computations from one tool to
+another.
 """
 
 from __future__ import annotations
@@ -14,20 +15,20 @@ import pandas as pd
 
 
 def main_information(corpus) -> Dict[str, Any]:
-    """Indicateurs descriptifs du corpus.
+    """Descriptive indicators of the corpus.
 
-    Quelques définitions, pour qu'on sache ce qu'on lit :
+    A few definitions, so that one knows what one reads:
 
-    - **taux de croissance annuel** : taux composé entre la première et la
-      dernière année complète, ``(N_fin/N_début)^(1/années) − 1``. Il n'a de
-      sens que sur au moins deux années.
-    - **âge moyen des documents** : années écoulées depuis la publication,
-      comptées par rapport à l'année la plus récente DU CORPUS, pas par
-      rapport à aujourd'hui, sinon la valeur changerait tous les ans.
-    - **auteurs par document** : moyenne des signataires, doublons retirés.
-    - **documents à auteur unique** : un seul signataire.
-    - **collaboration internationale** : part des documents signés par au
-      moins deux pays.
+    - **annual growth rate**: compound rate between the first and the last
+      complete year, ``(N_end/N_start)^(1/years) - 1``. It only makes sense
+      over at least two years.
+    - **average document age**: years elapsed since publication, counted from
+      the most recent year OF THE CORPUS, not from today; otherwise the value
+      would change every year.
+    - **authors per document**: mean number of authors, duplicates removed.
+    - **single-authored documents**: a single author.
+    - **international collaboration**: share of documents signed by at least
+      two countries.
     """
     docs = corpus.documents
     n_docs = int(len(docs))
@@ -37,7 +38,7 @@ def main_information(corpus) -> Dict[str, Any]:
     y_min = int(years.min()) if not years.empty else None
     y_max = int(years.max()) if not years.empty else None
 
-    # --- croissance annuelle composée -------------------------------------
+    # --- compound annual growth -------------------------------------------
     growth = None
     if y_min is not None and y_max is not None and y_max > y_min:
         per_year = years.astype(int).value_counts().sort_index()
@@ -46,7 +47,7 @@ def main_information(corpus) -> Dict[str, Any]:
         if first > 0 and span > 0:
             growth = round(((last / first) ** (1 / span) - 1) * 100, 2)
 
-    # --- âge moyen ---------------------------------------------------------
+    # --- average age -------------------------------------------------------
     age = None
     if not years.empty and y_max is not None:
         age = round(float((y_max - years).mean()), 2)
@@ -58,9 +59,9 @@ def main_information(corpus) -> Dict[str, Any]:
     single = int((per_doc == 1).sum())
     authors_per_doc = round(float(per_doc.mean()), 2) if not per_doc.empty else 0.0
 
-    # Index de collaboration : auteurs par document, calculé UNIQUEMENT sur
-    # les documents co-signés. Un corpus plein d'articles solos ferait
-    # autrement chuter l'indicateur alors qu'il ne mesure pas ça.
+    # Collaboration index: authors per document, computed ONLY on co-authored
+    # documents. A corpus full of single-author articles would otherwise drag
+    # the indicator down, while that is not what it measures.
     multi = per_doc[per_doc > 1]
     collab_index = round(float(multi.mean()), 2) if not multi.empty else 0.0
 
@@ -72,7 +73,7 @@ def main_information(corpus) -> Dict[str, Any]:
     docs_with_country = int(len(countries_per_doc))
     intl_share = round(100 * intl / docs_with_country, 1) if docs_with_country else 0.0
 
-    # --- mots-clés et références -------------------------------------------
+    # --- keywords and references -------------------------------------------
     kw = corpus.keywords
     n_kw_author = int(kw.loc[kw["kind"] == "author", "keyword"]
                         .map(str).str.lower().nunique())
@@ -101,11 +102,11 @@ def main_information(corpus) -> Dict[str, Any]:
         "authors": corpus.n_authors(),
         "authors_per_document": authors_per_doc,
         "single_authored_documents": single,
-        # Auteurs moyens des seuls documents CO-SIGNÉS (l'« indice de
-        # collaboration » de bibliometrix). À ne pas confondre avec le CI de
-        # Lawani (`collaboration.collaboration_indicators`), qui moyenne sur
-        # TOUS les documents et vaut `authors_per_document`. L'interface les
-        # nomme donc « Authors / co-authored document » et « CI (Lawani) ».
+        # Mean number of authors of CO-AUTHORED documents only (a collaboration
+        # index). Not to be confused with Lawani's CI
+        # (`collaboration.collaboration_indicators`), which averages over ALL
+        # documents and equals `authors_per_document`. The interface therefore
+        # names them "Authors / co-authored document" and "CI (Lawani)".
         "collaboration_index": collab_index,
         "countries": int(aff["country"].nunique()) if not aff.empty else 0,
         "international_documents": intl,
@@ -114,19 +115,19 @@ def main_information(corpus) -> Dict[str, Any]:
 
 
 def most_cited_documents(corpus, n: int = 20) -> pd.DataFrame:
-    """Documents les plus cités du corpus.
+    """Most cited documents of the corpus.
 
-    ``citations_per_year`` rapporte les citations à l'ancienneté : sans cette
-    colonne, un article de 2016 écrase systématiquement un article de 2024 qui
-    peut être bien plus percutant.
+    ``citations_per_year`` relates citations to age: without this column, an
+    article from 2016 systematically crushes an article from 2024 that may be
+    far more striking.
     """
     d = corpus.documents.copy()
     d["citations"] = pd.to_numeric(d["cited_by"], errors="coerce").fillna(0).astype(int)
     years = pd.to_numeric(d["year"], errors="coerce")
     if years.notna().any():
         latest = int(years.max())
-        # +1 an : un article paru l'année la plus récente a déjà « vécu » un an,
-        # sinon on diviserait par zéro.
+        # +1 year: an article published in the most recent year has already "lived"
+        # one year; otherwise we would divide by zero.
         d["citations_per_year"] = (d["citations"] / (latest - years + 1)).round(2)
     else:
         d["citations_per_year"] = np.nan
@@ -143,11 +144,11 @@ def most_cited_documents(corpus, n: int = 20) -> pd.DataFrame:
 
 
 def most_cited_references(corpus, n: int = 20) -> pd.DataFrame:
-    """Références les plus citées PAR le corpus (impact local).
+    """References most cited BY the corpus (local impact).
 
-    À distinguer du nombre de citations mondiales : ici on compte combien de
-    documents du corpus citent ce travail. C'est ce qui identifie les
-    fondations du domaine tel que ce corpus le pratique.
+    Not to be confused with the number of global citations: here we count how
+    many documents of the corpus cite that work. That is what identifies the
+    foundations of the field as this corpus practises it.
     """
     refs = corpus.references
     empty = pd.DataFrame(columns=["reference", "ref_year", "ref_doi",
@@ -156,8 +157,8 @@ def most_cited_references(corpus, n: int = 20) -> pd.DataFrame:
         return empty
 
     r = refs.copy()
-    # Identité : DOI si présent, sinon titre normalisé, même règle que le
-    # réseau de co-citation, pour que les deux vues concordent.
+    # Identity: DOI if present, otherwise the normalised title, the same rule as
+    # the co-citation network, so that the two views agree.
     key = r["ref_doi"].fillna("")
     key = key.where(key.map(str).str.strip() != "",
                     "t:" + r["ref_title"].fillna("").map(str).str.lower().str.strip())

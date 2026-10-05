@@ -1,5 +1,5 @@
-"""Profil d'affiliation : une seule affiliation, deux, davantage, et les
-auteurs à plusieurs rattachements."""
+"""Affiliation profile: one affiliation, two, more, and authors with several
+affiliations."""
 import pandas as pd
 import pytest
 
@@ -21,12 +21,12 @@ def _doc(i, authors, full_names, ids, affs, awa, year=2020):
 @pytest.fixture
 def corpus():
     return Corpus.from_dataframe(pd.DataFrame([
-        # un auteur seul, une seule affiliation
+        # a single author, a single affiliation
         _doc(1, "Solo A.", "Solo, Ann (1)", "1", A, f"Solo A., {A}"),
-        # deux auteurs, deux affiliations, dont un DOUBLE rattachement
+        # two authors, two affiliations, including a DOUBLE affiliation
         _doc(2, "Hosni M.; Idri A.", "Hosni, Mohamed (2); Idri, Ali (3)", "2; 3",
              f"{A}; {B}", f"Hosni M., {A}, {B}; Idri A., {A}"),
-        # trois affiliations
+        # three affiliations
         _doc(3, "Hosni M.; Juan C.", "Hosni, Mohamed (2); Carrillo, Juan (4)", "2; 4",
              f"{A}; {B}; {C}", f"Hosni M., {B}; Juan C., {C}"),
     ]))
@@ -37,7 +37,7 @@ def test_documents_by_affiliation_count(corpus):
     assert table.loc[1, "documents"] == 1
     assert table.loc[2, "documents"] == 1
     assert table.loc[3, "documents"] == 1
-    # 3 x 33.33 : l'arrondi de chaque part laisse un centieme.
+    # 3 x 33.33: rounding each share leaves one hundredth.
     assert table["share"].sum() == pytest.approx(100.0, abs=0.05)
 
 
@@ -56,12 +56,12 @@ def test_an_author_with_two_institutions_on_one_article_is_counted(corpus):
     authors = corpus.authors_by_affiliation_count().set_index("author")
     assert authors.loc["Hosni M.", "max_in_one_document"] == 2
     assert authors.loc["Hosni M.", "institutions"] == 2
-    assert "Idri A." not in authors.index                   # une seule institution
+    assert "Idri A." not in authors.index                   # a single institution
 
 
 def test_an_author_who_changed_institution_is_not_a_double_affiliation():
-    """Deux institutions d'un article à l'autre : c'est une mobilité, pas un
-    double rattachement déclaré."""
+    """Two institutions from one article to the next: that is mobility, not a
+    declared double affiliation."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "Move A.", "Move, Ann (9)", "9", A, f"Move A., {A}", year=2018),
         _doc(2, "Move A.", "Move, Ann (9)", "9", B, f"Move A., {B}", year=2022),

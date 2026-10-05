@@ -1,29 +1,29 @@
-"""Dessin d'un réseau bibliométrique, sans navigateur.
+"""Drawing a bibliometric network, without a browser.
 
-Pourquoi ce module existe
--------------------------
-Le package sait CONSTRUIRE les réseaux (`networks.build`), les annoter en
-communautés et centralités (`networks.analysis.annotate`) et placer leurs
-nœuds (`networks.analysis.layout`). Mais il ne savait pas les DESSINER :
-`figures.render` ne couvre que barres, lignes et nuages de points, et le
-rendu des réseaux vivait uniquement dans le navigateur de l'application web.
+Why this module exists
+----------------------
+The package knows how to BUILD networks (`networks.build`), annotate them
+with communities and centralities (`networks.analysis.annotate`) and place
+their nodes (`networks.analysis.layout`). But it could not DRAW them:
+`figures.render` only covers bars, lines and scatter plots, and the
+rendering of networks lived only in the browser of the web application.
 
-Quelqu'un qui installe seulement `bibliominer-analysis`, un carnet, un
-script, une chaîne d'intégration, obtenait donc des chiffres et aucune
-carte. C'est ce que ce module comble.
+Someone who installs only `bibliominer-analysis` (a notebook, a script, a
+CI pipeline) therefore got figures and no map. That is the gap this module
+fills.
 
-Ce qu'il garantit
------------------
-**Le dessin est déterministe.** Les coordonnées viennent de
-`networks.analysis.layout`, un MDS sur les plus courts chemins : deux
-exécutions sur les mêmes données donnent la même carte. Une figure publiée
-dans un article ne peut pas bouger d'une exécution à l'autre, c'est
-précisément ce qu'une simulation de forces ne sait pas promettre.
+What it guarantees
+------------------
+**The drawing is deterministic.** The coordinates come from
+`networks.analysis.layout`, an MDS on shortest paths: two runs on the
+same data give the same map. A figure published in an article cannot
+move from one run to the next, which is precisely what a force simulation
+cannot promise.
 
-**Rien n'est inventé.** La taille d'un nœud porte une grandeur calculée (son
-poids, ou une centralité si on la demande), sa couleur porte sa communauté.
-Un nœud sans communauté reçoit une couleur neutre, jamais une teinte prise
-au hasard dans la palette.
+**Nothing is invented.** The size of a node carries a computed quantity
+(its weight, or a centrality if asked), its colour carries its community.
+A node without a community gets a neutral colour, never a hue picked at
+random from the palette.
 """
 
 from __future__ import annotations
@@ -44,31 +44,30 @@ __all__ = ["render_network", "NetworkFigureError"]
 _FORMATS = {"png", "jpg", "svg", "pdf"}
 _MPL_FORMAT = {"jpg": "jpeg"}
 
-#: Bornes de l'aire des disques, en points². En dessous, un nœud disparaît ;
-#: au-dessus, il masque ses voisins et la carte devient illisible.
+#: Bounds of the disc area, in points². Below, a node disappears; above, it
+#: hides its neighbours and the map becomes unreadable.
 _MIN_AREA, _MAX_AREA = 30.0, 700.0
 
-#: Groupes nommés dans la légende ; les suivants sont résumés en une ligne.
+#: Groups named in the legend; the following ones are summed up in one line.
 _LEGEND_MAX = 10
 
 
 class NetworkFigureError(ValueError):
-    """Le réseau ne peut pas être dessiné, et on dit pourquoi."""
+    """The network cannot be drawn, and we say why."""
 
 
 def _node_areas(nodes: List[Dict[str, Any]], size_by: str) -> List[float]:
-    """Aire de chaque disque, proportionnelle à la grandeur demandée.
+    """Area of each disc, proportional to the requested quantity.
 
-    L'AIRE, pas le rayon : c'est la surface que l'œil compare. Doubler le
-    rayon quadruplerait la tache pour une valeur seulement deux fois plus
-    grande, et la carte exagérerait ses propres écarts.
+    The AREA, not the radius: the surface is what the eye compares. Doubling
+    the radius would quadruple the spot for a value only twice as large, and
+    the map would exaggerate its own differences.
 
-    Toutes les valeurs égales -> tous les disques identiques, plutôt qu'une
-    division par zéro.
+    All values equal -> all discs identical, rather than a division by zero.
     """
-    # La grandeur demandée n'existe pas sur ce réseau (``weight`` n'est posé
-    # qu'après `annotate`) : on prend le nombre d'occurrences, que porte tout
-    # nœud. Sans ce repli, tous les disques avaient la même taille.
+    # The requested quantity does not exist on this network (``weight`` is only
+    # set after `annotate`): the number of occurrences, which every node
+    # carries, is used. Without this fallback, all the discs had the same size.
     if not any(node.get(size_by) is not None for node in nodes):
         size_by = "occurrences"
     values = [float(node.get(size_by) or 0.0) for node in nodes]
@@ -82,12 +81,11 @@ def _node_areas(nodes: List[Dict[str, Any]], size_by: str) -> List[float]:
 
 def _node_colours(nodes: List[Dict[str, Any]], palette: List[str],
                   neutral: str) -> List[str]:
-    """Une couleur par communauté, la même d'un dessin à l'autre.
+    """One colour per community, the same from one drawing to the next.
 
-    On suit le NUMÉRO de communauté posé par `annotate`, pas l'ordre
-    d'apparition des nœuds : sinon deux exécutions coloreraient
-    différemment les mêmes groupes, et comparer deux cartes deviendrait
-    impossible.
+    The community NUMBER set by `annotate` is followed, not the order in which
+    nodes appear: otherwise two runs would colour the same groups differently,
+    and comparing two maps would become impossible.
     """
     out: List[str] = []
     for node in nodes:
@@ -100,15 +98,15 @@ def _node_colours(nodes: List[Dict[str, Any]], palette: List[str],
 
 
 def _draw_edges(ax, edges, positions, colour, n_nodes: int) -> None:
-    """Les liens, sous les nœuds, avec une épaisseur qui suit leur poids.
+    """The links, under the nodes, with a width that follows their weight.
 
-    Une carte où tous les liens pèsent visuellement pareil ne dit rien de sa
-    propre structure : c'est justement l'inégalité des poids qui fait
-    apparaître les regroupements.
+    A map where all links weigh the same visually says nothing about its own
+    structure: it is precisely the inequality of the weights that reveals the
+    groupings.
 
-    Au-delà de trois liens par nœud, le fond s'efface : huit cents liens à
-    la même opacité faisaient une pelote grise qui cachait les nœuds. Les
-    liens forts restent nets.
+    Beyond three links per node, the background fades: eight hundred links at
+    the same opacity made a grey tangle that hid the nodes. Strong links stay
+    sharp.
     """
     weights = [float(edge.get("weight") or 0.0) for edge in edges]
     heaviest = max(weights) if weights else 0.0
@@ -129,27 +127,27 @@ def _draw_edges(ax, edges, positions, colour, n_nodes: int) -> None:
 
 
 def _place_labels(fig, ax, nodes, areas, positions, colour, limit: int) -> None:
-    """Étiquette les plus gros nœuds, en écartant celles qui se recouvrent.
+    """Labels the largest nodes, leaving out those that overlap.
 
-    Deux étiquettes superposées n'en font pas deux illisibles : elles en font
-    UNE fausse, où l'œil lit des mots qui n'existent pas (« Class balance » et
-    « Data preprocessing » imprimés l'un sur l'autre). Mieux vaut une carte
-    qui en montre moins et dit vrai.
+    Two overlapping labels do not make two unreadable ones: they make ONE
+    wrong one, where the eye reads words that do not exist ("Class balance"
+    and "Data preprocessing" printed on top of each other). A map that shows
+    less and tells the truth is better.
 
-    On mesure les rectangles réellement rendus plutôt que de les estimer :
-    la largeur d'un texte dépend de la police, de la taille, du DPI, une
-    estimation se trompe précisément là où les mots sont longs.
+    The rectangles actually rendered are measured rather than estimated: the
+    width of a text depends on the font, the size, the DPI; an estimate goes
+    wrong precisely where words are long.
     """
     ranked = sorted(zip(nodes, areas),
                     key=lambda pair: (-pair[1], str(pair[0].get("id"))))[:limit]
-    fig.canvas.draw()                       # il faut un rendu pour mesurer
+    fig.canvas.draw()                       # a rendering is needed to measure
     renderer = fig.canvas.get_renderer()
 
     kept = []
     for node, area in ranked:
         x, y = positions[str(node["id"])]
-        # Le décalage suit le RAYON du disque : sinon une grosse bulle
-        # avale son étiquette, et une petite la laisse flotter loin.
+        # The offset follows the disc's RADIUS: otherwise a large bubble swallows
+        # its label, and a small one leaves it floating far away.
         radius_pt = (area ** 0.5) / 2
         text = ax.annotate(
             short_label(node.get("label") or node.get("id")), (x, y),
@@ -158,18 +156,18 @@ def _place_labels(fig, ax, nodes, areas, positions, colour, limit: int) -> None:
 
         box = text.get_window_extent(renderer=renderer).expanded(1.03, 1.15)
         if any(box.overlaps(other) for other in kept):
-            text.remove()                   # elle en cacherait une autre
+            text.remove()                   # it would hide another one
         else:
             kept.append(box)
 
 
 def short_label(label: Any, limit: int = 28) -> str:
-    """L'étiquette À L'ÉCRAN d'un nœud : courte, lisible.
+    """The ON-SCREEN label of a node: short, readable.
 
-    Une référence co-citée s'appelle « Ali Idri (2015), Accuracy Comparison
-    of Analogy-Based… » : sur la carte, « Ali Idri (2015) » suffit à la
-    reconnaître, le titre complet reste dans la table du réseau. Au-delà de
-    ``limit`` caractères, le texte est coupé d'un « … ».
+    A co-cited reference is called "Ali Idri (2015), Accuracy Comparison of
+    Analogy-Based...": on the map, "Ali Idri (2015)" is enough to recognise
+    it; the full title stays in the network table. Beyond ``limit``
+    characters, the text is cut with "…".
     """
     from .palette import printable
     text = printable(label).strip()
@@ -179,11 +177,11 @@ def short_label(label: Any, limit: int = 28) -> str:
 
 
 def _add_community_legend(ax, nodes, palette, skin) -> None:
-    """Une légende dès qu'il y a plus d'une communauté.
+    """A legend as soon as there is more than one community.
 
-    La couleur porte ici une IDENTITÉ (à quel regroupement appartient ce
-    nœud). Sans légende, elle ne se lit pas : on voit trois familles sans
-    savoir qu'on regarde des communautés, ni combien de nœuds pèse chacune.
+    Colour carries an IDENTITY here (which group this node belongs to).
+    Without a legend it cannot be read: one sees three families without
+    knowing that they are communities, nor how many nodes each weighs.
     """
     from matplotlib.lines import Line2D
 
@@ -195,9 +193,9 @@ def _add_community_legend(ax, nodes, palette, skin) -> None:
     if len(counts) < 2:
         return
 
-    # Au-delà de dix groupes, la légende devenait plus haute que la carte
-    # (dix-sept lignes « Cluster 15 · 2 nodes »). Les dix plus gros sont
-    # nommés, les autres résumés en une ligne.
+    # Beyond ten groups, the legend became taller than the map (seventeen
+    # "Cluster 15 · 2 nodes" lines). The ten largest are named, the others
+    # summed up in one line.
     ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
     shown, rest = sorted(ranked[:_LEGEND_MAX]), ranked[_LEGEND_MAX:]
     handles = [
@@ -210,9 +208,8 @@ def _add_community_legend(ax, nodes, palette, skin) -> None:
     if rest:
         handles.append(Line2D([], [], linestyle="none", label=(
             f"+ {len(rest)} smaller clusters · {sum(s for _, s in rest)} nodes")))
-    # SOUS la carte, jamais dedans. Posée dans un coin du graphe, elle
-    # recouvrait des nœuds, et une légende qui cache la donnée qu'elle
-    # explique est un contresens.
+    # BELOW the map, never inside it. Placed in a corner of the plot, it covered
+    # nodes, and a legend that hides the data it explains defeats its purpose.
     legend = ax.legend(handles=handles, loc="upper left",
                        bbox_to_anchor=(0, -0.02), ncol=min(len(handles), 4),
                        frameon=False, fontsize=7.5,
@@ -222,13 +219,13 @@ def _add_community_legend(ax, nodes, palette, skin) -> None:
 
 
 def _fit_margins(fig, ax, areas) -> None:
-    """Élargit le cadre pour que le PLUS GROS disque tienne en entier.
+    """Widens the frame so that the LARGEST disc fits entirely.
 
-    Une marge fixe est exprimée en fraction des données ; le rayon d'un nœud,
-    lui, est en points. Un gros disque placé au bord se trouvait donc coupé
-    par la moitié, et un nœud tronqué se lit comme une erreur de rendu, pas
-    comme un nœud. On mesure la taille réelle des axes pour convertir le
-    rayon en fraction, et on ajoute ce qu'il faut.
+    A fixed margin is expressed as a fraction of the data; a node's radius is
+    in points. A large disc placed at the edge was therefore cut in half, and
+    a truncated node reads as a rendering error, not as a node. The real size
+    of the axes is measured to convert the radius into a fraction, and the
+    necessary amount is added.
     """
     fig.canvas.draw()
     box = ax.get_window_extent()
@@ -238,7 +235,8 @@ def _fit_margins(fig, ax, areas) -> None:
 
 
 def _in_render_rc(func):
-    """Applique `RENDER_RC` le temps du rendu, et le rend ensuite intact."""
+    """Applies `RENDER_RC` for the duration of the rendering, and restores it
+    untouched afterwards."""
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         with matplotlib.rc_context(RENDER_RC):
@@ -260,20 +258,20 @@ def render_network(
     height: float = 7.0,
     dpi: int = 200,
 ) -> bytes:
-    """Dessine un réseau et renvoie les octets de l'image.
+    """Draws a network and returns the image's bytes.
 
-    ``graph``      le réseau tel que le rendent `networks.build`, puis
-                   `networks.analysis.annotate` si l'on veut les communautés.
-    ``coords``     les coordonnées ; calculées par MDS si on n'en donne pas.
-    ``size_by``    la grandeur que porte la taille des nœuds : ``weight``, ou
-                   toute clé posée par `annotate` (``pagerank``,
-                   ``betweenness``…).
-    ``label_top``  on n'étiquette que les N plus gros nœuds. En étiqueter
-                   cinquante donne un enchevêtrement illisible ; n'en
-                   étiqueter aucun rend la carte muette.
+    ``graph``      the network as returned by `networks.build`, then
+                   `networks.analysis.annotate` if communities are wanted.
+    ``coords``     the coordinates; computed by MDS if none are given.
+    ``size_by``    the quantity carried by the size of the nodes: ``weight``,
+                   or any key set by `annotate` (``pagerank``,
+                   ``betweenness``...).
+    ``label_top``  only the N largest nodes are labelled. Labelling fifty
+                   gives an unreadable tangle; labelling none leaves the map
+                   mute.
 
-    Lève `NetworkFigureError` sur un réseau vide plutôt que de rendre une
-    image blanche, qu'on croirait valide.
+    Raises `NetworkFigureError` on an empty network rather than returning a
+    blank image that would be taken as valid.
     """
     nodes = list(graph.get("nodes") or [])
     edges = list(graph.get("edges") or [])
@@ -283,8 +281,8 @@ def render_network(
         raise NetworkFigureError(
             f"Unsupported format '{fmt}'. Use one of {sorted(_FORMATS)}.")
 
-    # Pas encore de communautés : on les calcule (déterministe), sinon tous
-    # les nœuds restent gris et la carte ne montre aucun regroupement.
+    # No communities yet: they are computed (deterministic), otherwise every
+    # node stays grey and the map shows no grouping.
     if not any(node.get("community") is not None for node in nodes):
         from ..networks.analysis import annotate
         graph = annotate({"nodes": nodes, "edges": edges})
@@ -299,8 +297,8 @@ def render_network(
     skin = chrome(mode)
     palette = categorical(mode)
 
-    # Une `Figure` avec son canevas Agg, jamais `pyplot` : ni fenêtre, ni
-    # moteur d'affichage global changé chez l'utilisateur (voir RENDER_RC).
+    # A `Figure` with its Agg canvas, never `pyplot`: no window, no global
+    # display backend changed on the user's side (see RENDER_RC).
     fig = Figure(figsize=(width, height), dpi=dpi)
     FigureCanvasAgg(fig)
     ax = fig.subplots()
@@ -316,22 +314,22 @@ def render_network(
                s=areas, c=_node_colours(placed, palette, skin["muted"]),
                zorder=2, edgecolors=skin["surface"], linewidths=0.8)
 
-    # Une carte de réseau se lit en DISTANCES : deux nœuds proches sont
-    # proches. Laisser matplotlib étirer un axe plus que l'autre déforme
-    # exactement ce qu'on vient de calculer, un amas rond devient une
-    # colonne, et la carte ment sur sa propre structure.
-    # `box` et non `datalim` : on rétrécit le CADRE à la forme des données
-    # plutôt que d.étirer les données pour remplir le cadre. Avec
-    # `bbox_inches="tight"`, la figure se recadre sur la carte au lieu de
-    # la noyer dans du blanc.
+    # A network map is read in DISTANCES: two close nodes are close. Letting
+    # matplotlib stretch one axis more than the other distorts exactly what was
+    # just computed: a round cluster becomes a column, and the map lies about
+    # its own structure.
+    # `box` and not `datalim`: the FRAME is shrunk to the shape of the data
+    # rather than stretching the data to fill the frame. With
+    # `bbox_inches="tight"`, the figure is cropped to the map instead of
+    # drowning it in white space.
     ax.set_aspect("equal", adjustable="box")
 
     if title:
         ax.set_title(title, fontsize=11, color=skin["text_primary"],
                      loc="left", pad=12)
 
-    # Une carte de réseau n'a PAS d'axes : les coordonnées d'un MDS n'ont
-    # aucune unité, les graduer laisserait croire qu'elles se lisent.
+    # A network map has NO axes: MDS coordinates have no unit, and graduating
+    # them would suggest they can be read.
     ax.set_xticks([])
     ax.set_yticks([])
     for side in ax.spines.values():

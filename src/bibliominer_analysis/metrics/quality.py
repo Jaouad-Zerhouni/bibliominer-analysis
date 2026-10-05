@@ -1,16 +1,16 @@
-"""Qualité des données : ce que le corpus permet vraiment de calculer.
+"""Data quality: what the corpus really allows to compute.
 
-Toutes les analyses de ce paquet reposent sur des champs qui peuvent manquer.
-Sans références, pas de citations locales ni d'historiographe. Sans ISSN, pas
-de quartile. Sans résumé, pas de fouille de texte. Ces limites existent déjà,
-page par page, ce module les rassemble **avant** l'analyse, pour qu'on sache
-quels chiffres on a le droit de citer.
+Every analysis of this package relies on fields that can be missing.
+Without references, no local citations and no historiograph. Without an
+ISSN, no quartile. Without an abstract, no text mining. These limits
+already exist, page by page; this module gathers them **before** the
+analysis, so that one knows which figures one may cite.
 
-Un piège précis motive tout ce fichier. Une valeur manquante convertie en
-chaîne donne ``"nan"`` ou ``"None"`` selon qu'elle vient de numpy ou de Python.
-Un test naïf ``valeur != ""`` les compte donc comme remplies, et un tableau de
-complétude annonce 100 % partout. Le contrôle est faux d'une façon
-particulièrement traîtresse : il rassure.
+One specific trap motivates this whole file. A missing value converted to
+a string gives ``"nan"`` or ``"None"`` depending on whether it comes from
+numpy or from Python. A naive ``value != ""`` test therefore counts them
+as filled, and a completeness table reports 100 % everywhere. The check
+is wrong in a particularly treacherous way: it reassures.
 """
 
 from __future__ import annotations
@@ -21,23 +21,23 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
-#: Toutes les écritures d'une valeur absente, quelle que soit son origine.
+#: All the ways of writing a missing value, whatever its origin.
 _MISSING = frozenset(["", "nan", "none", "na", "null", "<na>", "nat", "-"])
 
-#: Seuils de lecture. Ce sont des repères de prudence, pas des vérités : un
-#: indicateur « partiel » reste calculable, il demande seulement d'être cité
-#: avec sa couverture.
+#: Reading thresholds. They are markers of caution, not truths: a "partial"
+#: indicator can still be computed, it only needs to be cited with its
+#: coverage.
 READY, PARTIAL, LIMITED = "ready", "partial", "limited"
 _READY_AT = 90.0
 _PARTIAL_AT = 50.0
 
 
 def is_filled(series: pd.Series) -> pd.Series:
-    """Masque des valeurs réellement renseignées.
+    """Mask of the values that are really filled in.
 
-    Le seul test fiable : convertir en chaîne, réduire, et comparer à TOUTES
-    les écritures d'une absence. `notna()` seul laisserait passer les chaînes
-    vides ; `!= ""` seul laisserait passer « nan » et « None ».
+    The only reliable test: convert to a string, reduce, and compare against
+    ALL the ways of writing an absence. `notna()` alone would let empty
+    strings through; `!= ""` alone would let "nan" and "None" through.
     """
     if series is None or len(series) == 0:
         return pd.Series([], dtype=bool)
@@ -58,8 +58,8 @@ def _status(share: float) -> str:
     return LIMITED
 
 
-#: Champ → ce qu'il rend possible. Sans cette colonne, un taux de remplissage
-#: n'est qu'une curiosité ; avec elle, c'est une décision.
+#: Field -> what it makes possible. Without this column, a fill rate is only
+#: a curiosity; with it, it is a decision.
 _DOCUMENT_FIELDS = [
     ("title", "Title", "Document lists, local citation matching by title"),
     ("year", "Year", "Everything time-based: production, growth, trends"),
@@ -76,9 +76,9 @@ _DOCUMENT_FIELDS = [
 
 
 def field_completeness(corpus) -> pd.DataFrame:
-    """Remplissage de chaque champ, et ce qu'il conditionne.
+    """Fill rate of every field, and what it conditions.
 
-    Colonnes : ``field``, ``label``, ``filled``, ``total``, ``share``,
+    Columns: ``field``, ``label``, ``filled``, ``total``, ``share``,
     ``status``, ``unlocks``.
     """
     cols = ["field", "label", "filled", "total", "share", "status", "unlocks"]
@@ -103,12 +103,12 @@ def field_completeness(corpus) -> pd.DataFrame:
 
 
 def _with_a_city(affiliations: pd.DataFrame) -> pd.DataFrame:
-    """Les affiliations qui DOIVENT avoir une ville.
+    """The affiliations that MUST have a city.
 
-    « site: virtual » (laboratoire virtuel, plusieurs sites) n'a pas de ville
-    par décision : le compter comme une ville manquante ferait baisser la
-    couverture pour un choix fait exprès. Un jeu importé avant cette colonne
-    n'en a pas : rien n'est retiré.
+    "site: virtual" (virtual laboratory, several sites) has no city by
+    decision: counting it as a missing city would lower the coverage for a
+    deliberate choice. A dataset imported before this column does not have
+    it: nothing is removed.
     """
     if "site" not in affiliations.columns:
         return affiliations
@@ -119,9 +119,11 @@ def _with_a_city(affiliations: pd.DataFrame) -> pd.DataFrame:
 
 
 def table_completeness(corpus) -> pd.DataFrame:
-    """Remplissage des tables liées : auteurs, affiliations, mots-clés, références.
+    """Fill rate of the linked tables: authors, affiliations, keywords,
+    references.
 
-    Colonnes : ``table``, ``field``, ``filled``, ``total``, ``share``, ``status``.
+    Columns: ``table``, ``field``, ``filled``, ``total``, ``share``,
+    ``status``.
     """
     cols = ["table", "field", "filled", "total", "share", "status"]
     checks = [
@@ -160,13 +162,13 @@ def _norm_title(value: Any) -> str:
 
 
 def duplicates(corpus) -> pd.DataFrame:
-    """Doublons probables, par DOI puis par titre normalisé.
+    """Probable duplicates, by DOI then by normalised title.
 
-    Colonnes : ``kind``, ``key``, ``documents``, ``titles``.
+    Columns: ``kind``, ``key``, ``documents``, ``titles``.
 
-    Un doublon n'est pas forcément une erreur, un article peut exister en
-    version conférence et en version revue. Mais il compte deux fois dans tous
-    les indicateurs, et mieux vaut le savoir.
+    A duplicate is not necessarily an error: an article can exist in a
+    conference version and a journal version. But it counts twice in every
+    indicator, and it is better to know it.
     """
     cols = ["kind", "key", "documents", "titles"]
     docs = corpus.documents
@@ -199,9 +201,9 @@ def duplicates(corpus) -> pd.DataFrame:
 
 
 def anomalies(corpus) -> pd.DataFrame:
-    """Incohérences qui faussent les indicateurs sans lever d'erreur.
+    """Inconsistencies that distort the indicators without raising an error.
 
-    Colonnes : ``check``, ``documents``, ``share``, ``severity``, ``detail``.
+    Columns: ``check``, ``documents``, ``share``, ``severity``, ``detail``.
     """
     cols = ["check", "documents", "share", "severity", "detail"]
     docs = corpus.documents
@@ -244,14 +246,13 @@ def anomalies(corpus) -> pd.DataFrame:
 
 
 def indicator_readiness(corpus) -> pd.DataFrame:
-    """**Le tableau qui compte** : quelle analyse est fiable sur CE corpus.
+    """**The table that matters**: which analysis is reliable on THIS corpus.
 
-    Colonnes : ``analysis``, ``status``, ``coverage``, ``basis``, ``note``.
+    Columns: ``analysis``, ``status``, ``coverage``, ``basis``, ``note``.
 
-    Chaque ligne relie une famille d'analyses au champ dont elle dépend, avec
-    son taux de couverture réel. C'est ce qui permet de savoir, avant d'écrire
-    une phrase, si le chiffre qu'on s'apprête à citer porte sur tout le corpus
-    ou sur les deux tiers.
+    Each row links a family of analyses to the field it depends on, with its
+    real coverage rate. That is what tells, before writing a sentence, whether
+    the figure about to be cited covers the whole corpus or two thirds of it.
     """
     cols = ["analysis", "status", "coverage", "basis", "note"]
     docs = corpus.documents
@@ -299,8 +300,8 @@ def indicator_readiness(corpus) -> pd.DataFrame:
     add("Text mining", _share(docs.get("abstract", pd.Series(dtype=object))),
         "Abstract", "Terms are extracted from titles and abstracts.")
 
-    # Les citations locales dépendent du DOI des références, et surtout du
-    # nombre de rapprochements RÉELLEMENT trouvés, le seul chiffre honnête.
+    # Local citations depend on the DOI of the references, and above all on the
+    # number of matches ACTUALLY found, the only honest figure.
     ref_doi = share_of("references", "ref_doi")
     try:
         from .local import citation_pairs
@@ -327,7 +328,7 @@ def indicator_readiness(corpus) -> pd.DataFrame:
 
 
 def quality_summary(corpus) -> Dict[str, Any]:
-    """Vue d'ensemble : combien d'analyses sont pleinement exploitables."""
+    """Overview: how many analyses are fully usable."""
     readiness = indicator_readiness(corpus)
     dup = duplicates(corpus)
     anom = anomalies(corpus)

@@ -1,21 +1,21 @@
-"""Le package SEUL, de bout en bout, sur de vrais fichiers nettoyés.
+"""The package ALONE, end to end, on real cleaned files.
 
-Aucune interface, aucun serveur : exactement ce que fait quelqu'un qui installe
-`bibliominer-analysis` et ouvre un notebook. Chaque méthode publique de
-`Corpus` est appelée, et le test ÉCHOUE si une méthode publique n'est pas dans
-la liste : une fonction ajoutée plus tard ne peut pas échapper au test.
+No interface, no server: exactly what someone does who installs
+`bibliominer-analysis` and opens a notebook. Every public method of
+`Corpus` is called, and the test FAILS if a public method is not in the
+list: a function added later cannot escape the test.
 
-Au-delà du « ça ne plante pas », on vérifie les invariants qu'un résultat
-bibliométrique doit respecter quel que soit le corpus : des parts qui somment à
-100 %, h ≤ g ≤ documents, des zones de Bradford qui somment au total, des liens
-de réseau qui pointent vers des nœuds existants, une disposition déterministe.
+Beyond "it does not crash", the invariants that a bibliometric result
+must respect whatever the corpus are checked: shares that add up to
+100 %, h ≤ g ≤ documents, Bradford zones that add up to the total,
+network links pointing to existing nodes, a deterministic layout.
 
-Les fichiers réels ne sont pas versionnés (ce sont les corpus de
-l'utilisateur) : le test lit leurs chemins dans ``BIBLIOMINER_CLEANED_CSV``
-(séparés par ``os.pathsep``). Sans eux, il tourne sur un corpus FICTIF au
-même format (``data/synthetic_cleaned.csv``, voir ``make_synthetic_corpus``) :
-la CI le sautait faute de fichier, et ne vérifiait jamais une analyse
-complète.
+The real files are not versioned (they are the user's corpora): the test
+reads their paths from ``BIBLIOMINER_CLEANED_CSV`` (separated by
+``os.pathsep``). Without them, it runs on a FICTITIOUS corpus in the same
+format (``data/synthetic_cleaned.csv``, see ``make_synthetic_corpus``):
+the CI used to skip it for lack of a file, and never checked a complete
+analysis.
 """
 
 from __future__ import annotations
@@ -39,10 +39,10 @@ SYNTHETIC = os.path.join(os.path.dirname(__file__), "data", "synthetic_cleaned.c
 PATHS = ([p for p in os.environ.get("BIBLIOMINER_CLEANED_CSV", "").split(os.pathsep) if p]
          or [SYNTHETIC])
 
-#: Au-delà, un appel est signalé comme trop lent pour une interface.
+#: Beyond this, a call is reported as too slow for an interface.
 SLOW_SECONDS = 20.0
 
-#: Méthode -> arguments. TOUTES les méthodes publiques doivent y figurer.
+#: Method -> arguments. ALL the public methods must appear here.
 CALLS = {
     "access_over_time": {}, "access_routes": {}, "access_status": {},
     "access_summary": {}, "affiliation_profile": {}, "agr": {},
@@ -89,7 +89,7 @@ CALLS = {
     "top_sources": {}, "top_terms": {"field": "abstract"},
     "topic_dendrogram": {}, "trend_forecast": {}, "trend_topics": {},
     "word_dynamics": {}, "year_range": {}, "zipf": {},
-    # ce que l'interface montre, assemblé par le paquet (views.py)
+    # what the interface shows, assembled by the package (views.py)
     "citation_balance": {}, "citation_graph": {}, "density_map": {},
     "document_list": {}, "most_normalized_documents": {},
     "network": {"unit": "keywords", "normalization": "association",
@@ -97,11 +97,11 @@ CALLS = {
     "term_network": {},
 }
 
-#: Appelées à part, parce qu'elles prennent un graphe ou construisent le corpus.
+#: Called separately, because they take a graph or build the corpus.
 SEPARATE = {"from_csv", "from_dataframe", "from_tables", "filter",
             "network_density", "network_layout", "network_metrics",
             "network_summary", "attach_layout",
-            # le catalogue des figures : `test_every_catalog_figure_renders`
+            # the figure catalogue: `test_every_catalog_figure_renders`
             "figure", "figure_spec", "figure_catalog"}
 
 NETWORKS = ("co_word", "co_authorship", "co_citation", "co_citation_authors",
@@ -113,12 +113,12 @@ def test_every_public_method_is_exercised():
     public = {n for n, m in inspect.getmembers(Corpus)
               if not n.startswith("_") and callable(m)}
     missing = public - set(CALLS) - SEPARATE
-    assert not missing, "méthodes publiques non testées : %s" % sorted(missing)
+    assert not missing, "public methods not tested: %s" % sorted(missing)
 
 
 @pytest.fixture(scope="module", params=PATHS, ids=lambda p: os.path.basename(p))
 def run(request):
-    """Charge le fichier puis appelle chaque méthode une fois, en chronométrant."""
+    """Loads the file then calls every method once, timing it."""
     corpus = Corpus.from_csv(request.param)
     results, errors, timings = {}, {}, {}
     for name, kwargs in CALLS.items():
@@ -139,7 +139,7 @@ def test_no_method_raises(run):
 def test_no_method_is_too_slow(run):
     _, _, _, timings = run
     slow = {k: round(v, 1) for k, v in timings.items() if v > SLOW_SECONDS}
-    assert not slow, "trop lent pour une interface (s) : %s" % slow
+    assert not slow, "too slow for an interface (s): %s" % slow
 
 
 def _finite(value):
@@ -156,14 +156,14 @@ def _finite(value):
 
 
 def test_no_infinite_value_reaches_the_output(run):
-    """Un infini casse la sérialisation JSON de l'API et les graphiques."""
+    """An infinity breaks the API's JSON serialisation and the charts."""
     _, results, _, _ = run
     bad = [k for k, v in results.items() if not _finite(v)]
     assert not bad, bad
 
 
 def test_citation_balance_received_equals_emitted(run):
-    """Chaque citation interne est reçue par l'un et émise par l'autre."""
+    """Every internal citation is received by one document and given by another."""
     _, r, _, _ = run
     b = r["citation_balance"]
     assert int(b["received"].sum()) == int(b["emitted"].sum())
@@ -178,8 +178,8 @@ def test_document_list_is_the_corpus(run):
 
 
 def test_every_catalog_figure_renders(run):
-    """Chaque figure de l'interface, produite par le paquet sur ce fichier :
-    une image, ou un refus EXPLIQUÉ quand la donnée manque (SCImago…)."""
+    """Every figure of the interface, produced by the package on this file: an
+    image, or an EXPLAINED refusal when the data is missing (SCImago...)."""
     corpus, _, _, _ = run
     errors = {}
     for name in Corpus.figure_catalog()["name"]:
@@ -268,15 +268,15 @@ def test_layout_is_deterministic_and_complete(run):
     _, r, _, _ = run
     g = r["co_word"]
     if not g["n_nodes"]:
-        pytest.skip("pas de réseau de co-mots sur ce fichier")
+        pytest.skip("no co-word network on this file")
     first, second = Corpus.network_layout(g), Corpus.network_layout(g)
     assert first == second
     assert set(first) == {n["id"] for n in g["nodes"]}
     assert all(all(math.isfinite(v) for v in xy) for xy in first.values())
     density = Corpus.network_density(g)
     assert density["cells"]
-    # Les positions posées sur les nœuds (celles que dessine l'interface)
-    # sont exactement celles de la disposition.
+    # The positions set on the nodes (the ones the interface draws) are exactly
+    # those of the layout.
     placed = Corpus.attach_layout(g)
     assert {n["id"]: [n["x"], n["y"]] for n in placed["nodes"]} == first
 
@@ -285,7 +285,7 @@ def test_filter_returns_a_consistent_subcorpus(run):
     corpus, _, _, _ = run
     lo, hi = corpus.year_range()
     if lo is None:
-        pytest.skip("pas d'années")
+        pytest.skip("no years")
     sub = corpus.filter(years=(hi, hi))
     years = pd.to_numeric(sub.documents["year"], errors="coerce").dropna()
     assert (years == hi).all()

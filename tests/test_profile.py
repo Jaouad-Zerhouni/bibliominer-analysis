@@ -1,4 +1,4 @@
-"""Profil du corpus : vieillissement, concentration, auto-citation, acces."""
+"""Corpus profile: ageing, concentration, self-citation, access."""
 
 import pandas as pd
 import pytest
@@ -25,7 +25,7 @@ def _doc(i, year=2020, refs="", authors="1:A.", oa="", cited="0",
 # ------------------------------------------------------------ Price ---------
 
 def test_indice_de_price():
-    """Trois references recentes sur quatre -> 75 %."""
+    """Three recent references out of four -> 75 %."""
     refs = ";".join(["ref%d |  | %d | X | t%d" % (i, y, i)
                      for i, y in enumerate([2019, 2018, 2017, 2000])])
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, 2020, refs=refs)]))
@@ -90,7 +90,7 @@ def test_resume_couvre_toutes_les_dimensions():
 # ------------------------------------------------------ auto-citation -------
 
 def test_auto_citation_detectee():
-    """Doc 2 cite doc 1, meme auteur -> auto-citation d'auteur."""
+    """Doc 2 cites doc 1, same author -> author self-citation."""
     c = Corpus.from_dataframe(pd.DataFrame([
         {**_doc(1, authors="1:A."), "Title": LONG, "DOI": "10.1000/aaa"},
         {**_doc(2, authors="1:A."), "References": "r1 | 10.1000/aaa | 2016 | X | %s" % LONG},
@@ -112,7 +112,7 @@ def test_citation_externe_non_comptee_comme_auto():
 
 
 def test_niveaux_emboites():
-    """Une auto-citation d'auteur est forcement aussi une auto-citation pays."""
+    """An author self-citation is necessarily also a country self-citation."""
     c = Corpus.from_dataframe(pd.DataFrame([
         {**_doc(1, authors="1:A."), "Title": LONG, "DOI": "10.1000/aaa"},
         {**_doc(2, authors="1:A."), "References": "r1 | 10.1000/aaa | 2016 | X | %s" % LONG},
@@ -132,7 +132,7 @@ def test_voies_d_acces_extraites():
 
 
 def test_statut_deux_lignes_seulement():
-    """Scopus n'ecrit jamais « ferme » : inventer la ligne serait mentir."""
+    """Scopus never writes "closed": inventing the row would be lying."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, oa="All Open Access; Gold Open Access"), _doc(2),
     ]))
@@ -151,7 +151,7 @@ def test_un_article_peut_cumuler_deux_voies():
 
 
 def test_part_annuelle_rapportee_a_tous_les_documents():
-    """Se limiter aux documents signales donnerait 100 % chaque annee."""
+    """Restricting to the flagged documents would give 100 % every year."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, year=2020, oa="All Open Access; Gold Open Access"),
         _doc(2, year=2020),

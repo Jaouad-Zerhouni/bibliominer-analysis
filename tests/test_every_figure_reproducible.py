@@ -1,11 +1,11 @@
-"""Le même export donne le même fichier, octet pour octet, pour CHAQUE dessin.
+"""The same export gives the same file, byte for byte, for EVERY drawing.
 
-Les réseaux et les barres l'étaient ; les cartes du monde, le dendrogramme,
-les cartes de densité, le treemap et les Sankey portaient encore la date
-(PNG, SVG, PDF) ou des identifiants SVG tirés au hasard. Et l'export JPG
-passait `metadata=None`, que matplotlib 3.6, le minimum déclaré, refuse.
+Networks and bars already did; world maps, the dendrogram, density maps,
+the treemap and the Sankey diagrams still carried the date (PNG, SVG, PDF)
+or randomly drawn SVG identifiers. And the JPG export passed
+`metadata=None`, which matplotlib 3.6, the declared minimum, rejects.
 
-Une figure par module de dessin, dans les quatre formats.
+One figure per drawing module, in the four formats.
 """
 from __future__ import annotations
 

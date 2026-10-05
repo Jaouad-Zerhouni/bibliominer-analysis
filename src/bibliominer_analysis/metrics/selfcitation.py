@@ -1,20 +1,20 @@
-"""Auto-citations : quelle part de l'influence vient de soi-même.
+"""Self-citations: what share of the influence comes from oneself.
 
-Un compte de citations ne dit pas d'où elles viennent. Un auteur cité vingt
-fois par ses propres articles et un auteur cité vingt fois par des tiers ont le
-même total, et une réputation qui n'a rien à voir. C'est l'un des rares
-indicateurs que les comités de lecture demandent explicitement.
+A citation count does not say where citations come from. An author cited
+twenty times by their own articles and an author cited twenty times by
+others have the same total, and entirely different reputations. It is one
+of the few indicators that reviewers explicitly ask for.
 
-Une citation est une **auto-citation** à un niveau donné quand le document
-citant et le document cité partagent au moins une entité à ce niveau : un
-auteur, une organisation, un pays. Les trois niveaux ne se recouvrent pas,
-deux équipes distinctes d'un même pays produisent une auto-citation *nationale*
-sans aucune auto-citation d'auteur.
+A citation is a **self-citation** at a given level when the citing and
+the cited document share at least one entity at that level: an author, an
+organisation, a country. The three levels do not overlap: two distinct
+teams from the same country produce a *national* self-citation without
+any author self-citation.
 
-**Limite à énoncer avant tout usage** : le calcul ne porte que sur les
-citations INTERNES au corpus. Les auto-citations venues d'articles hors corpus
-sont invisibles ici. Le taux mesuré est donc un plancher, jamais le taux réel,
-et l'annoncer autrement serait trompeur.
+**Limit to state before any use**: the computation only covers citations
+INTERNAL to the corpus. Self-citations from articles outside the corpus
+are invisible here. The measured rate is therefore a floor, never the real
+rate, and presenting it otherwise would be misleading.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ LEVELS = ("authors", "institutions", "countries")
 
 
 def _members(corpus, level: str) -> Dict[str, set]:
-    """eid → ensemble des entités du document, au niveau demandé."""
+    """eid -> set of the document's entities, at the requested level."""
     out: Dict[str, set] = {}
 
     if level == "authors":
@@ -62,10 +62,10 @@ def _members(corpus, level: str) -> Dict[str, set]:
 
 
 def self_citation_rate(corpus, level: str = "authors") -> Dict[str, Any]:
-    """Taux global d'auto-citation à un niveau donné.
+    """Overall self-citation rate at a given level.
 
-    Retour : ``level``, ``citations``, ``self_citations``, ``external``,
-    ``self_rate`` (%), et ``coverage_note``.
+    Returns: ``level``, ``citations``, ``self_citations``, ``external``,
+    ``self_rate`` (%), and ``coverage_note``.
     """
     from .local import citation_pairs
 
@@ -96,17 +96,17 @@ def self_citation_rate(corpus, level: str = "authors") -> Dict[str, Any]:
 
 
 def self_citation_summary(corpus) -> pd.DataFrame:
-    """Les trois niveaux côte à côte.
+    """The three levels side by side.
 
-    Colonnes : ``level``, ``citations``, ``self_citations``, ``external``,
+    Columns: ``level``, ``citations``, ``self_citations``, ``external``,
     ``self_rate``.
 
-    Les niveaux ne sont PAS strictement emboîtés : un auteur qui a changé
-    d'établissement, ou de pays, entre l'article cité et l'article citant
-    produit une auto-citation d'auteur sans auto-citation d'institution. En
-    pratique le taux « pays » dépasse presque toujours le taux « auteur », et
-    c'est l'écart entre les deux qui informe ; mais ce n'est pas une garantie,
-    et un taux institutionnel plus bas que le taux auteur est possible.
+    The levels are NOT strictly nested: an author who changed institution, or
+    country, between the cited and the citing article produces an author
+    self-citation without an institution self-citation. In practice the
+    "country" rate almost always exceeds the "author" rate, and the gap
+    between the two is what informs; but it is not a guarantee, and an
+    institutional rate lower than the author rate is possible.
     """
     cols = ["level", "citations", "self_citations", "external", "self_rate"]
     rows = [self_citation_rate(corpus, lv) for lv in LEVELS]
@@ -115,11 +115,12 @@ def self_citation_summary(corpus) -> pd.DataFrame:
 
 def _received_citations(pairs: pd.DataFrame,
                         authors_of: Dict[str, set]) -> tuple:
-    """Citations reçues par auteur, et combien venaient de ses propres documents.
+    """Citations received per author, and how many came from their own
+    documents.
 
-    Un passage par citation, sur les SEULS auteurs du document cité : la
-    version précédente parcourait tous les auteurs du corpus à chaque
-    citation, et devenait inutilisable sur quelques milliers de documents.
+    One pass per citation, over the cited document's authors ONLY: the
+    previous version went through all the authors of the corpus for every
+    citation, and became unusable on a few thousand documents.
     """
     received: Dict[str, int] = {}
     self_hits: Dict[str, int] = {}
@@ -134,18 +135,18 @@ def _received_citations(pairs: pd.DataFrame,
 
 def authors_self_citation(corpus, n: Optional[int] = 20,
                           min_citations: int = 1) -> pd.DataFrame:
-    """Auto-citation par auteur.
+    """Self-citation per author.
 
-    Colonnes : ``author``, ``documents``, ``local_citations``,
+    Columns: ``author``, ``documents``, ``local_citations``,
     ``self_citations``, ``external_citations``, ``self_rate``.
 
-    ``self_citations`` compte les citations reçues par un auteur depuis des
-    documents qu'il a lui-même signés.
+    ``self_citations`` counts the citations an author received from
+    documents they signed themselves.
 
-    Un auteur est identifié comme partout ailleurs dans le package : par son
-    identifiant Scopus, sinon par son nom. Défaut corrigé : ce seul calcul
-    passait par le NOM, et fusionnait deux homonymes, l'un « s'auto-citait »
-    alors en citant l'autre.
+    An author is identified as everywhere else in the package: by their
+    Scopus identifier, otherwise by their name. Fixed defect: this one
+    computation went by NAME, and merged two namesakes; one then "cited
+    themselves" by citing the other.
     """
     from .local import citation_pairs
 

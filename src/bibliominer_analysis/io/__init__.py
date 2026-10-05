@@ -1,4 +1,4 @@
-"""Lecture et parsing du format Bibliominer."""
+"""Reading and parsing the Bibliominer format."""
 
 from . import parsers, reader, schema
 

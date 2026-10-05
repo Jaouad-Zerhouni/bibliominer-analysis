@@ -1,21 +1,21 @@
-"""Vieillissement de la littérature : indice de Price, âge des références.
+"""Ageing of the literature: Price index, age of references.
 
-Deux corpus de même taille et de même impact peuvent avoir des rapports au
-temps opposés. Un domaine qui cite surtout des travaux de moins de cinq ans se
-renouvelle vite ; un domaine qui cite des fondateurs de 1970 est stabilisé.
-Aucun indicateur de production ou de citation ne montre cela.
+Two corpora of the same size and impact can relate to time in opposite
+ways. A field that mostly cites work less than five years old renews
+itself quickly; a field that cites founders from 1970 is settled. No
+production or citation indicator shows this.
 
-  - **Indice de Price** (1970) : part des références âgées de **moins de cinq
-    ans** au moment de la publication. Au-dessus de ~50 %, on parle d'un front
-    de recherche ; en dessous de ~30 %, d'un champ d'archive.
-  - **Âge médian des références** : la moitié des références sont plus vieilles.
-  - **Demi-vie citée** : l'âge en deçà duquel se trouve la moitié des
-    références. Sur une distribution d'âges, c'est la médiane, on la nomme
-    ainsi par convention bibliométrique.
+  - **Price index** (1970): share of references **less than five years**
+    old at the time of publication. Above ~50 %, one speaks of a research
+    front; below ~30 %, of an archival field.
+  - **Median age of references**: half of the references are older.
+  - **Cited half-life**: the age below which half of the references lie.
+    On an age distribution it is the median; the name is a bibliometric
+    convention.
 
-L'âge se calcule document par document (année du citant moins année de la
-référence), jamais globalement : un corpus qui s'étale sur dix ans mélangerait
-sinon des points de vue temporels incompatibles.
+Age is computed document by document (citing year minus reference year),
+never globally: a corpus spanning ten years would otherwise mix
+incompatible time perspectives.
 """
 
 from __future__ import annotations
@@ -25,15 +25,15 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
-#: Seuil de Price, en années.
+#: Price threshold, in years.
 PRICE_WINDOW = 5
 
-#: Au-delà, on considère l'année de référence comme erronée.
+#: Beyond this, the reference year is considered wrong.
 MAX_AGE = 200
 
 
 def _reference_ages(corpus) -> pd.DataFrame:
-    """Une ligne par référence datée : ``eid``, ``year``, ``ref_year``, ``age``."""
+    """One row per dated reference: ``eid``, ``year``, ``ref_year``, ``age``."""
     refs = corpus.references
     if refs.empty or "ref_year" not in refs.columns:
         return pd.DataFrame(columns=["eid", "year", "ref_year", "age"])
@@ -47,22 +47,22 @@ def _reference_ages(corpus) -> pd.DataFrame:
         return pd.DataFrame(columns=["eid", "year", "ref_year", "age"])
 
     r["age"] = r["year"] - r["ref_year"]
-    # Un âge négatif est possible et légitime (référence « in press » parue
-    # l'année suivante) ; on le ramène à zéro. Un âge délirant vient d'une
-    # année mal lue et doit sortir.
+    # A negative age is possible and legitimate (an "in press" reference that
+    # appeared the following year); it is brought back to zero. An absurd age
+    # comes from a misread year and must go.
     r = r[(r["age"] >= -2) & (r["age"] <= MAX_AGE)]
     r["age"] = r["age"].clip(lower=0)
     return r
 
 
 def price_index(corpus, window: int = PRICE_WINDOW) -> Dict[str, Any]:
-    """Indice de Price du corpus, et les mesures d'âge qui l'accompagnent.
+    """Price index of the corpus, and the age measures that go with it.
 
-    Retour : ``price_index`` (%), ``references``, ``median_age``,
+    Returns: ``price_index`` (%), ``references``, ``median_age``,
     ``mean_age``, ``half_life``, ``documents_with_references``.
 
-    ``half_life`` est l'âge médian, nommé selon la convention bibliométrique :
-    la moitié des références citées sont plus jeunes que cette valeur.
+    ``half_life`` is the median age, named after the bibliometric convention:
+    half of the cited references are younger than this value.
     """
     r = _reference_ages(corpus)
     if r.empty:
@@ -84,13 +84,13 @@ def price_index(corpus, window: int = PRICE_WINDOW) -> Dict[str, Any]:
 
 
 def price_index_by_year(corpus, window: int = PRICE_WINDOW) -> pd.DataFrame:
-    """Indice de Price année par année.
+    """Price index year by year.
 
-    Colonnes : ``year``, ``documents``, ``references``, ``price_index``,
+    Columns: ``year``, ``documents``, ``references``, ``price_index``,
     ``median_age``.
 
-    C'est la lecture utile : un indice qui monte signale un domaine qui
-    s'accélère, un indice qui baisse un domaine qui se sédimente.
+    This is the useful reading: a rising index signals a field that is
+    speeding up, a falling one a field that is settling.
     """
     cols = ["year", "documents", "references", "price_index", "median_age"]
     r = _reference_ages(corpus)
@@ -111,12 +111,12 @@ def price_index_by_year(corpus, window: int = PRICE_WINDOW) -> pd.DataFrame:
 
 
 def reference_age_distribution(corpus, max_age: int = 40) -> pd.DataFrame:
-    """Distribution des âges de référence.
+    """Distribution of reference ages.
 
-    Colonnes : ``age``, ``references``, ``share``, ``cumulative_share``.
+    Columns: ``age``, ``references``, ``share``, ``cumulative_share``.
 
-    La part cumulée est ce qu'on lit pour situer la demi-vie : l'âge où elle
-    franchit 50 %.
+    The cumulative share is what is read to locate the half-life: the age at
+    which it crosses 50 %.
     """
     cols = ["age", "references", "share", "cumulative_share"]
     r = _reference_ages(corpus)
@@ -134,7 +134,7 @@ def reference_age_distribution(corpus, max_age: int = 40) -> pd.DataFrame:
         "references": counts.to_numpy().astype(int),
     })
     out["share"] = (100.0 * out["references"] / total).round(2)
-    # Le cumul se calcule sur le total RÉEL, pas sur la partie affichée :
-    # sinon il atteindrait 100 % à la borne, en cachant la queue.
+    # The cumulative share is computed on the REAL total, not on the displayed
+    # part: otherwise it would reach 100 % at the cut-off, hiding the tail.
     out["cumulative_share"] = out["share"].cumsum().round(2)
     return out

@@ -1,26 +1,26 @@
-"""Le catalogue des figures : chaque figure de l'interface, en Python.
+"""The figure catalogue: every figure of the interface, in Python.
 
-L'interface montre une soixantaine de graphiques. Le paquet savait calculer
-toutes leurs données et DESSINER barres, lignes, nuages, réseaux et cartes,
-mais c'était à l'utilisateur de refaire l'assemblage, quelle méthode, quelle
-colonne, quel axe. Ici, chaque figure de l'écran a une entrée :
+The interface shows about sixty charts. The package could compute all
+their data and DRAW bars, lines, scatters, networks and maps, but it was
+up to the user to redo the assembly: which method, which column, which
+axis. Here, every figure on screen has an entry:
 
-    >>> corpus.figure_catalog()                       # la liste, par page
+    >>> corpus.figure_catalog()                       # the list, by page
     >>> corpus.figure("top-authors", n=10, fmt="svg", path="top_authors.svg")
     >>> corpus.filter(years=(2023, 2025)).figure("documents-per-year")
 
-Le NOM est celui du fichier exporté par l'interface (``top-authors``,
-``collaboration-map``, ``network-keywords``…) ; ``top_authors`` est accepté.
-Les OPTIONS par défaut sont celles de l'écran (le top 20 des auteurs, les 15
-premiers pays…) : sans option, on obtient la figure de l'interface ; avec,
-la même figure autrement réglée.
+The NAME is that of the file exported by the interface (``top-authors``,
+``collaboration-map``, ``network-keywords``...); ``top_authors`` is
+accepted. The default OPTIONS are those of the screen (the top 20 authors,
+the top 15 countries...): without options, you get the interface's
+figure; with them, the same figure set up differently.
 
-Deux natures d'entrée :
-  - une figure « simple » (barres, lignes, nuage) : `figure_spec` en rend la
-    description (`FigureSpec`), modifiable avant le rendu ;
-  - une figure dessinée par un rendu dédié (réseau, carte du monde, treemap,
-    nuage de mots, Sankey, dendrogramme, carte de densité) : seul `figure`
-    la produit.
+Two kinds of entries:
+  - a "simple" figure (bars, lines, scatter): `figure_spec` returns its
+    description (`FigureSpec`), editable before rendering;
+  - a figure drawn by a dedicated renderer (network, world map, treemap,
+    word cloud, Sankey, dendrogram, density map): only `figure` produces
+    it.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ from .world import render_world_map
 
 __all__ = ["CATALOG", "Entry", "catalog_table", "figure_spec", "figure_bytes", "entry"]
 
-#: Titres d'axes : toute figure nomme SES DEUX axes.
+#: Axis titles: every figure names BOTH its axes.
 AXIS = {
     "doc_type": "Document type", "year": "Year", "documents": "Documents",
     "citations": "Citations", "cumulative": "Cumulative documents",
@@ -65,7 +65,7 @@ AXIS = {
     "mcp": "Multi-country (MCP)",
 }
 
-#: Les groupes du menu de l'interface, par page.
+#: The groups of the interface menu, by page.
 _SECTION = {
     "Overview": "Corpus", "Production": "Corpus", "Documents": "Corpus",
     "Corpus profile": "Corpus", "Quality": "Corpus",
@@ -80,7 +80,7 @@ _SECTION = {
     "Coupling clusters": "Networks",
 }
 
-#: Une figure dessinée par un rendu dédié : ``(fmt, dpi) -> octets``.
+#: A figure drawn by a dedicated renderer: ``(fmt, dpi) -> bytes``.
 Renderer = Callable[[str, int], bytes]
 Built = Union[FigureSpec, Renderer, None]
 
@@ -91,9 +91,9 @@ class Entry:
     title: str
     page: str
     build: Callable[..., Built]
-    #: options de l'écran, les défauts de `figure`
+    #: on-screen options, the defaults of `figure`
     options: Dict[str, Any] = dataclasses.field(default_factory=dict)
-    #: la méthode du `Corpus` qui porte les données, pour le README
+    #: the `Corpus` method that carries the data, for the README
     source: str = ""
 
     @property
@@ -102,7 +102,7 @@ class Entry:
 
 
 # ---------------------------------------------------------------------------
-# Formes génériques
+# Generic forms
 # ---------------------------------------------------------------------------
 
 def axis(column: str) -> str:
@@ -126,7 +126,7 @@ def _empty(table: Optional[pd.DataFrame], *columns: str) -> bool:
 
 def hbar(table, label: str, values: Union[str, List[str]], n: Optional[int] = None,
          value_label: str = "") -> Optional[FigureSpec]:
-    """Un classement : barres horizontales, la première en haut."""
+    """A ranking: horizontal bars, the first at the top."""
     values = [values] if isinstance(values, str) else values
     if _empty(table, label, values[0]):
         return None
@@ -140,7 +140,7 @@ def hbar(table, label: str, values: Union[str, List[str]], n: Optional[int] = No
 
 
 def vbar(table, cat: str, values: List[str], y_label: str = "") -> Optional[FigureSpec]:
-    """Barres verticales, une série par colonne."""
+    """Vertical bars, one series per column."""
     cols = [v for v in values if table is not None and v in table]
     if _empty(table, cat) or not cols:
         return None
@@ -161,7 +161,7 @@ def lines(table, cat: str, values: List[str], y_label: str = "") -> Optional[Fig
 
 def mixed(table, cat: str, bars: List[str], trend: List[str],
           y_label: str = "") -> Optional[FigureSpec]:
-    """Un compte en barres, sa tendance en ligne, sur le même axe."""
+    """A count as bars, its trend as a line, on the same axis."""
     if _empty(table, cat):
         return None
     series = ([Series(name=axis(b), values=_num(table[b]), kind="bar") for b in bars if b in table]
@@ -175,7 +175,7 @@ def mixed(table, cat: str, bars: List[str], trend: List[str],
 
 def over_time(table, entity: str, value: str = "documents", top: int = 8,
               y_label: str = "") -> Optional[FigureSpec]:
-    """Une table longue (entité, année, valeur) -> une ligne par entité de tête."""
+    """A long table (entity, year, value) -> one line per leading entity."""
     if _empty(table, entity, "year", value):
         return None
     leaders = (table.groupby(entity)[value].sum().sort_values(ascending=False, kind="stable")
@@ -191,7 +191,7 @@ def over_time(table, entity: str, value: str = "documents", top: int = 8,
 def points(groups: Dict[str, pd.DataFrame], x: str, y: str, label: Optional[str] = None,
            x_label: str = "", y_label: str = "", x_log: bool = False,
            y_log: bool = False) -> Optional[FigureSpec]:
-    """Un nuage, une série par groupe, étiqueté si ``label``."""
+    """A scatter, one series per group, labelled if ``label``."""
     series = []
     for name, t in groups.items():
         if t is None or t.empty or not {x, y} <= set(t.columns):
@@ -226,7 +226,7 @@ def _world(values: Dict[str, float], label: str, links=None) -> Optional[Rendere
 
 
 # ---------------------------------------------------------------------------
-# Les figures de l'interface, page par page
+# The interface's figures, page by page
 # ---------------------------------------------------------------------------
 
 CATALOG: Dict[str, Entry] = {}
@@ -534,11 +534,11 @@ _add("coupling-map", "Coupling clusters", "Coupling clusters",
 
 
 # ---------------------------------------------------------------------------
-# Accès
+# Access
 # ---------------------------------------------------------------------------
 
 def entry(name: str) -> Entry:
-    """L'entrée d'une figure ; ``top_authors`` vaut ``top-authors``."""
+    """The entry of a figure; ``top_authors`` means ``top-authors``."""
     key = str(name).strip().lower().replace("_", "-")
     if key not in CATALOG:
         close = sorted(k for k in CATALOG if key.split("-")[0] in k)[:8]
@@ -560,7 +560,7 @@ def _build(corpus, name: str, options: Dict[str, Any]) -> tuple:
 
 
 def figure_spec(corpus, name: str, **options) -> FigureSpec:
-    """La description d'une figure simple (barres, lignes, nuage), titrée."""
+    """The description of a simple figure (bars, lines, scatter), with its title."""
     e, built = _build(corpus, name, options)
     if not isinstance(built, FigureSpec):
         raise TypeError(f"{e.name} is drawn by a dedicated renderer (network, map…): "
@@ -568,15 +568,15 @@ def figure_spec(corpus, name: str, **options) -> FigureSpec:
     return dataclasses.replace(built, title=e.title)
 
 
-#: Ce que ``style`` peut changer : l'habillage, jamais les données.
+#: What ``style`` can change: the dressing, never the data.
 STYLE_FIELDS = ("kind", "orientation", "title", "show_title", "subtitle", "palette",
                 "color", "value_labels", "x_label", "y_label", "width_in", "height_in",
                 "mode")
 
 
 def _styled(spec: FigureSpec, style: Optional[Dict[str, Any]]) -> FigureSpec:
-    """La figure habillée comme dans la boîte d'export de l'interface :
-    forme (``kind="pie"``), titre écrit dessus, sous-titre, couleurs."""
+    """The figure dressed as in the interface's export dialog: form
+    (``kind="pie"``), title written on it, subtitle, colours."""
     if not style:
         return spec
     unknown = set(style) - set(STYLE_FIELDS)
@@ -589,10 +589,10 @@ def _styled(spec: FigureSpec, style: Optional[Dict[str, Any]]) -> FigureSpec:
 def figure_bytes(corpus, name: str, fmt: Optional[str] = None,
                  path: Union[str, Path, None] = None, dpi: int = 300,
                  style: Optional[Dict[str, Any]] = None, **options) -> bytes:
-    """L'image d'une figure ; écrite dans ``path`` si on le donne (le format
-    se déduit alors de l'extension). ``style`` : l'habillage de la boîte
-    d'export, ``{"kind": "pie", "show_title": True, "subtitle": "Years
-    2010-2013", "palette": "gradient", "value_labels": True}``."""
+    """The image of a figure; written to ``path`` if given (the format is then
+    deduced from the extension). ``style``: the export dialog's settings,
+    ``{"kind": "pie", "show_title": True, "subtitle": "Years 2010-2013",
+    "palette": "gradient", "value_labels": True}``."""
     fmt = (fmt or (Path(path).suffix.lstrip(".") if path else "") or "png").lower()
     fmt = "jpg" if fmt == "jpeg" else fmt
     e, built = _build(corpus, name, options)
@@ -610,8 +610,8 @@ def figure_bytes(corpus, name: str, fmt: Optional[str] = None,
 
 
 def catalog_table() -> pd.DataFrame:
-    """Toutes les figures : nom, titre, page et section de l'interface,
-    options (avec leur valeur à l'écran) et méthode qui porte les données."""
+    """All the figures: name, title, page and section of the interface, options
+    (with their on-screen value) and the method that carries the data."""
     return pd.DataFrame([{
         "name": e.name, "title": e.title, "page": e.page, "section": e.section,
         "options": ", ".join(f"{k}={v!r}" for k, v in e.options.items()),
@@ -620,8 +620,8 @@ def catalog_table() -> pd.DataFrame:
 
 
 def _check_signatures() -> None:
-    """Une entrée dont la fonction n'accepte pas ses options est une erreur de
-    programmation : on la refuse à l'import plutôt qu'au premier appel."""
+    """An entry whose function does not accept its options is a programming
+    error: it is refused at import time rather than at the first call."""
     for e in CATALOG.values():
         params = inspect.signature(e.build).parameters
         missing = [k for k in e.options if k not in params]

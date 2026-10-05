@@ -1,26 +1,29 @@
-"""Citations **locales** : les citations reçues à l'intérieur du corpus.
+"""**Local** citations: the citations received within the corpus.
 
-C'est la distinction la plus mal comprise de la bibliométrie, et la plus utile.
+It is the most misunderstood distinction of bibliometrics, and the most
+useful one.
 
-  - **GC** (*global citations*) : ce que Scopus compte, toutes sources
-    confondues. Un article très cité par une communauté voisine y brille.
-  - **LC** (*local citations*) : combien de documents **de ce corpus** le
-    citent. C'est la mesure de l'influence *dans le domaine étudié*.
+  - **GC** (*global citations*): what Scopus counts, all sources
+    combined. An article highly cited by a neighbouring community shines
+    there.
+  - **LC** (*local citations*): how many documents **of this corpus** cite
+    it. It is the measure of influence *within the field under study*.
 
-Un article peut avoir 800 citations mondiales et 0 locale : il est important
-ailleurs, pas ici. L'inverse existe aussi, et signale un travail fondateur pour
-la communauté précise qu'on analyse. Sans LC on ne peut construire ni
-l'historiographe, ni les classements « local cited », ni le réseau de citation
-directe, d'où ce module en socle.
+An article can have 800 global citations and 0 local ones: it matters
+elsewhere, not here. The reverse also exists, and signals a founding work
+for the precise community being analysed. Without LC one can build
+neither the historiograph, nor the "local cited" rankings, nor the direct
+citation network, hence this module as a foundation.
 
-Le rapprochement référence → document se fait en deux temps :
+Matching a reference to a document is done in two steps:
 
-  1. **par DOI**, quand les deux côtés en ont un. C'est un identifiant, donc
-     sans ambiguïté.
-  2. **par titre normalisé** sinon (minuscules, sans ponctuation ni accents,
-     espaces réduits). On exige un titre d'au moins 25 caractères : en dessous,
-     des titres génériques (« Introduction », « Machine learning ») créeraient
-     de faux rapprochements, et une fausse citation est pire qu'une manquante.
+  1. **by DOI**, when both sides have one. It is an identifier, hence
+     unambiguous.
+  2. **by normalised title** otherwise (lower case, no punctuation or
+     accents, collapsed spaces). A title of at least 25 characters is
+     required: below that, generic titles ("Introduction", "Machine
+     learning") would create false matches, and a false citation is worse
+     than a missing one.
 """
 
 from __future__ import annotations
@@ -34,7 +37,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-#: En dessous de cette longueur, un titre n'est pas assez discriminant.
+#: Below this length, a title is not discriminating enough.
 MIN_TITLE_LEN = 25
 
 
@@ -44,8 +47,8 @@ def _norm_doi(value) -> Optional[str]:
     s = str(value).strip().lower()
     if not s or s == "nan":
         return None
-    # Les exports mélangent « 10.1000/x », « https://doi.org/10.1000/x » et
-    # « doi:10.1000/x » : on ne garde que la partie qui commence à « 10. ».
+    # Exports mix "10.1000/x", "https://doi.org/10.1000/x" and
+    # "doi:10.1000/x": only the part starting at "10." is kept.
     m = re.search(r"10\.\d{4,9}/\S+", s)
     return m.group(0).rstrip(".,;)") if m else None
 
@@ -61,20 +64,20 @@ def _norm_title(value) -> Optional[str]:
 
 
 def citation_pairs(corpus) -> pd.DataFrame:
-    """Les liens de citation **internes** au corpus.
+    """The citation links **internal** to the corpus.
 
-    Colonnes : ``citing`` (eid du citant), ``cited`` (eid du cité), ``via``
-    (« doi » ou « title », comment le rapprochement a été fait).
+    Columns: ``citing`` (eid of the citing document), ``cited`` (eid of the
+    cited one), ``via`` ("doi" or "title", how the match was made).
 
-    Une paire n'apparaît qu'une fois même si le citant liste deux fois la même
-    référence, et l'auto-citation d'un document par lui-même est écartée.
+    A pair appears only once even if the citing document lists the same
+    reference twice, and a document citing itself is left out.
     """
     empty = pd.DataFrame(columns=["citing", "cited", "via"])
     docs, refs = corpus.documents, corpus.references
     if docs.empty or refs.empty:
         return empty
 
-    # Index des documents du corpus, côté « cité ».
+    # Index of the corpus documents, on the "cited" side.
     by_doi, by_title = {}, {}
     for eid, doi, title in zip(docs["eid"], docs.get("doi"), docs.get("title")):
         d = _norm_doi(doi)
@@ -106,7 +109,7 @@ def citation_pairs(corpus) -> pd.DataFrame:
     if not rows:
         return empty
     out = pd.DataFrame(rows, columns=["citing", "cited", "via"])
-    # Le DOI prime sur le titre quand les deux existent pour la même paire.
+    # The DOI takes precedence over the title when both exist for the same pair.
     out["_rank"] = (out["via"] == "title").astype(int)
     out = (out.sort_values("_rank", kind="stable")
               .drop_duplicates(subset=["citing", "cited"])
@@ -116,7 +119,7 @@ def citation_pairs(corpus) -> pd.DataFrame:
 
 
 def local_citations(corpus) -> pd.DataFrame:
-    """Compte de citations locales par document. Colonnes ``eid``, ``local_citations``."""
+    """Count of local citations per document. Columns ``eid``, ``local_citations``."""
     pairs = citation_pairs(corpus)
     base = pd.DataFrame({"eid": corpus.documents["eid"]})
     if pairs.empty:
@@ -141,15 +144,15 @@ def _doc_frame(corpus) -> pd.DataFrame:
 
 
 def most_local_cited_documents(corpus, n: Optional[int] = 20) -> pd.DataFrame:
-    """Les documents les plus cités **par les autres documents du corpus**.
+    """The documents most cited **by the other documents of the corpus**.
 
-    Colonnes : ``label``, ``title``, ``first_author``, ``year``, ``source``,
+    Columns: ``label``, ``title``, ``first_author``, ``year``, ``source``,
     ``local_citations``, ``global_citations``, ``lc_gc_ratio``,
     ``local_citations_per_year``.
 
-    ``lc_gc_ratio`` est le pourcentage des citations mondiales qui viennent du
-    corpus : élevé, le travail est spécifique au domaine ; proche de zéro, sa
-    notoriété vient d'ailleurs.
+    ``lc_gc_ratio`` is the percentage of global citations that come from the
+    corpus: high, the work is specific to the field; close to zero, its
+    renown comes from elsewhere.
     """
     lc = local_citations(corpus)
     d = _doc_frame(corpus).merge(lc, on="eid", how="left")
@@ -179,13 +182,13 @@ def most_local_cited_documents(corpus, n: Optional[int] = 20) -> pd.DataFrame:
 
 
 def _labels(d: pd.DataFrame) -> pd.Series:
-    """« HOSNI M., 2019 », l'étiquette courte usuelle en bibliométrie."""
+    """"HOSNI M., 2019", the usual short label in bibliometrics."""
     author = d["first_author"].fillna("ANONYMOUS").map(str).str.upper()
     year = d["year"].astype("Int64").map(str).replace("<NA>", "n.d.")
     base = author + ", " + year
-    # Deux documents du même auteur la même année : on suffixe a, b, c…
-    # dans l'ordre des TITRES, pas des lignes : sinon « 2018-b » changeait
-    # de document quand l'export Scopus était trié autrement.
+    # Two documents by the same author in the same year: suffixes a, b, c...
+    # in the order of the TITLES, not of the rows: otherwise "2018-b" changed
+    # document when the Scopus export was sorted differently.
     dup = base.duplicated(keep=False)
     if dup.any():
         order = pd.DataFrame({"base": base,
@@ -199,10 +202,10 @@ def _labels(d: pd.DataFrame) -> pd.Series:
 
 
 def most_local_cited_authors(corpus, n: Optional[int] = 20) -> pd.DataFrame:
-    """Auteurs classés par citations reçues **depuis l'intérieur du corpus**.
+    """Authors ranked by citations received **from within the corpus**.
 
-    Un document cité localement 5 fois apporte 5 à chacun de ses signataires :
-    c'est le comptage entier (*full counting*), celui de bibliometrix.
+    A document cited locally 5 times gives 5 to each of its authors: that is
+    full counting.
     """
     lc = local_citations(corpus)
     a = corpus.authors[["eid", "name"]].dropna(subset=["name"])
@@ -222,7 +225,7 @@ def most_local_cited_authors(corpus, n: Optional[int] = 20) -> pd.DataFrame:
 
 
 def most_local_cited_sources(corpus, n: Optional[int] = 20) -> pd.DataFrame:
-    """Revues classées par citations locales cumulées de leurs articles."""
+    """Journals ranked by the cumulative local citations of their articles."""
     lc = local_citations(corpus)
     d = corpus.documents[["eid", "source"]].copy()
     d = d[d["source"].notna() & (d["source"].map(str).str.strip() != "")]
@@ -241,15 +244,15 @@ def most_local_cited_sources(corpus, n: Optional[int] = 20) -> pd.DataFrame:
 
 
 def historiograph(corpus, n: int = 25) -> dict:
-    """Graphe de **citation directe** entre les documents les plus influents.
+    """**Direct citation** graph between the most influential documents.
 
-    L'historiographe de Garfield : on garde les `n` documents les plus cités
-    localement et on ne trace que les citations qui les relient entre eux. Lu
-    de gauche à droite (le temps), il montre la filiation des idées, quel
-    travail s'appuie sur quel autre, ce qu'aucun classement ne donne.
+    Garfield's historiograph: the `n` most locally cited documents are kept
+    and only the citations linking them are drawn. Read from left to right
+    (time), it shows the lineage of ideas, which work builds on which other,
+    something no ranking gives.
 
-    Retour : ``{"nodes": [...], "edges": [...], "n_nodes", "n_edges"}``.
-    Chaque nœud porte ``id``, ``label``, ``year``, ``local_citations``,
+    Returns: ``{"nodes": [...], "edges": [...], "n_nodes", "n_edges"}``.
+    Every node carries ``id``, ``label``, ``year``, ``local_citations``,
     ``global_citations``, ``title``.
     """
     pairs = citation_pairs(corpus)
@@ -286,25 +289,26 @@ def historiograph(corpus, n: int = 25) -> dict:
     }
 
 
-#: Unités sur lesquelles on peut agréger un réseau de citation directe.
+#: Units on which a direct citation network can be aggregated.
 CITATION_UNITS = ("documents", "authors", "sources", "countries", "institutions")
 
 
 def citation_network(corpus, unit: str = "sources", top_n: int = 40,
                      min_weight: int = 1, level: str = "parent") -> dict:
-    """Réseau de **citation directe**, agrégé à l'unité demandée.
+    """**Direct citation** network, aggregated to the requested unit.
 
-    La co-citation dit « ces deux travaux sont cités ensemble ». Le couplage dit
-    « ces deux travaux citent les mêmes choses ». La citation directe dit tout
-    autre chose, et c'est la seule des trois qui ait un **sens** : *qui cite
-    qui*. C'est donc la seule à produire un graphe orienté.
+    Co-citation says "these two works are cited together". Coupling says
+    "these two works cite the same things". Direct citation says something
+    else entirely, and it is the only one of the three that has a
+    **direction**: *who cites whom*. It is therefore the only one producing a
+    directed graph.
 
-    Agrégée aux auteurs, aux revues ou aux pays, elle montre les rapports de
-    dépendance intellectuelle : une revue qui alimente tout le domaine sans
-    jamais le citer en retour se voit immédiatement.
+    Aggregated to authors, journals or countries, it shows relations of
+    intellectual dependence: a journal that feeds the whole field without
+    ever citing it back is seen at once.
 
-    Les auto-citations d'une entité vers elle-même sont écartées : au niveau
-    d'un pays elles écraseraient tout le reste, et ne disent rien d'un échange.
+    Self-citations of an entity to itself are left out: at country level
+    they would crush everything else, and they say nothing about an exchange.
     """
     from collections import Counter
 
@@ -340,7 +344,7 @@ def citation_network(corpus, unit: str = "sources", top_n: int = 40,
         return empty
 
     linked = {e["source"] for e in edges} | {e["target"] for e in edges}
-    # `occurrences` = citations échangées, c'est ce qui donne sa taille au nœud.
+    # `occurrences` = citations exchanged, which gives the node its size.
     nodes = [{"id": k, "label": k, "occurrences": int(weight_of[k]),
               "degree": int(sum(e["weight"] for e in edges
                                 if e["source"] == k or e["target"] == k))}
@@ -353,7 +357,7 @@ def citation_network(corpus, unit: str = "sources", top_n: int = 40,
 
 
 def _unit_members(corpus, unit: str, level: str = "parent") -> dict:
-    """eid → entités du document, selon l'unité d'agrégation."""
+    """eid -> entities of the document, according to the aggregation unit."""
     out: dict = {}
 
     if unit == "documents":

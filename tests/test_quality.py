@@ -1,4 +1,4 @@
-"""Qualite des donnees : le piege des valeurs manquantes, et la fiabilite."""
+"""Data quality: the missing-value trap, and reliability."""
 
 import numpy as np
 import pandas as pd
@@ -22,14 +22,14 @@ def _doc(i, year=2020, title=None, doi="", issn="", abstract="Some abstract text
     }
 
 
-# --------------------------------------------------- le piege des absences ---
+# ------------------------------------------------- the missing-value trap ---
 
 def test_is_filled_attrape_toutes_les_ecritures_d_une_absence():
-    """« nan » et « None » sont des CHAINES apres conversion : le piege.
+    """"nan" and "None" are STRINGS after conversion: the trap.
 
-    Un test naif `valeur != ""` les compte comme remplies, et le tableau de
-    completude annonce 100 % partout, un controle faux d'une facon
-    particulierement traitresse, puisqu'il rassure.
+    A naive `value != ""` test counts them as filled, and the completeness
+    table reports 100 % everywhere: a wrong check of a particularly treacherous
+    kind, since it reassures.
     """
     s = pd.Series(["a", "", None, np.nan, "nan", "None", "  ", "NA", "null", "b"])
     mask = q.is_filled(s)
@@ -122,7 +122,7 @@ def test_document_sans_mot_cle_signale():
 
 
 def test_anomalies_toujours_toutes_les_lignes():
-    """Une verification absente se lirait comme non effectuee."""
+    """A missing check would read as not performed."""
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1)]))
     a = q.anomalies(c)
     assert len(a) == 7
@@ -138,9 +138,9 @@ def test_tables_liees_evaluees():
 # ------------------------------------------ « No single city » (site: virtual)
 
 def test_a_virtual_site_is_read_and_not_a_missing_city():
-    """« site: virtual » : l'utilisateur a coché « No single city » au
-    nettoyage (laboratoire virtuel). Pas de ville PAR DÉCISION : ni une
-    ville nommée « virtual », ni une ville manquante."""
+    """"site: virtual": the user ticked "No single city" during cleaning
+    (virtual laboratory). No city BY DECISION: neither a city named "virtual"
+    nor a missing city."""
     docs = [_doc(1), _doc(2, aff="parent 1: LIRIMA, site: virtual, country: France")]
     c = Corpus.from_dataframe(pd.DataFrame(docs))
     lirima = c.affiliations[c.affiliations["parent1"] == "LIRIMA"].iloc[0]

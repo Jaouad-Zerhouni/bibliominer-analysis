@@ -1,22 +1,23 @@
-"""Les **villes** : l'échelle géographique que le pays écrase.
+"""**Cities**: the geographic scale that the country crushes.
 
-Le nettoyage résout chaque affiliation jusqu'à la ville. Ne s'arrêter au pays,
-c'est perdre l'essentiel : un corpus « marocain » à 90 % peut être un réseau
-Rabat-Meknès-Oujda très structuré, ou trois équipes isolées qui ne se parlent
-jamais. Le pays ne distingue pas ces deux situations ; la ville, si.
+The cleaning resolves every affiliation down to the city. Stopping at the
+country loses the essential: a 90 % "Moroccan" corpus can be a highly
+structured Rabat-Meknes-Oujda network, or three isolated teams that never
+talk to each other. The country does not distinguish these two
+situations; the city does.
 
-D'où l'indicateur central de ce module, **l'échelle de collaboration**, qui
-raffine le partage binaire habituel (national / international) en trois
-niveaux :
+Hence the central indicator of this module, the **collaboration scale**,
+which refines the usual binary split (national / international) into three
+levels:
 
-  - **locale**, tous les signataires dans la même ville. La collaboration de
-    couloir, celle qui ne coûte rien.
-  - **nationale**, plusieurs villes, un seul pays. Elle demande un effort réel
-    d'organisation, et reste invisible dans un décompte SCP/MCP, qui la range
-    avec la collaboration locale.
-  - **internationale**, plusieurs pays.
+  - **local**: all authors in the same city. Corridor collaboration, the
+    kind that costs nothing.
+  - **national**: several cities, one country. It requires a real
+    organisational effort, and stays invisible in an SCP/MCP count, which
+    files it with local collaboration.
+  - **international**: several countries.
 
-Le niveau national est précisément celui que la bibliométrie usuelle perd.
+The national level is precisely the one that usual bibliometrics loses.
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ from .production import institution_rows
 
 
 def _city_frame(corpus) -> pd.DataFrame:
-    """Couples (document, ville) uniques, avec pays, citations et année."""
+    """Unique (document, city) pairs, with country, citations and year."""
     aff = corpus.affiliations
     cols = ["eid", "city", "country"]
     if aff.empty or "city" not in aff.columns:
@@ -38,8 +39,8 @@ def _city_frame(corpus) -> pd.DataFrame:
 
     a = aff[cols].copy()
     a["city"] = a["city"].map(str).str.strip()
-    # « None » vient d'une colonne absente convertie en chaîne : sans ce filtre,
-    # un corpus sans ville produirait une ville nommée « None ».
+    # "None" comes from a missing column converted to a string: without this
+    # filter, a corpus without cities would produce a city named "None".
     a = a[(a["city"] != "") & (~a["city"].str.lower().isin({"nan", "none"}))]
     if a.empty:
         return pd.DataFrame(columns=cols + ["citations", "year"])
@@ -55,14 +56,13 @@ def _city_frame(corpus) -> pd.DataFrame:
 
 
 def top_cities(corpus, n: Optional[int] = 20) -> pd.DataFrame:
-    """Villes par nombre de documents.
+    """Cities by number of documents.
 
-    Colonnes : ``city``, ``country``, ``documents``, ``citations``,
+    Columns: ``city``, ``country``, ``documents``, ``citations``,
     ``institutions``, ``citations_per_document``.
 
-    Un document co-signé par deux villes compte une fois pour chacune : la
-    somme dépasse donc volontairement le nombre de documents, comme pour les
-    pays.
+    A document co-signed by two cities counts once for each: the sum
+    therefore deliberately exceeds the number of documents, as for countries.
     """
     cols = ["city", "country", "documents", "citations", "institutions",
             "citations_per_document"]
@@ -70,9 +70,9 @@ def top_cities(corpus, n: Optional[int] = 20) -> pd.DataFrame:
     if a.empty:
         return pd.DataFrame(columns=cols)
 
-    # Institutions distinctes par ville : c'est ce qui distingue un pôle
-    # universitaire d'un laboratoire isolé à production égale.
-    # Parent 1 ET parent 2 : un double rattachement nomme deux institutions.
+    # Distinct institutions per city: that is what distinguishes a university
+    # hub from an isolated laboratory with the same production.
+    # Parent 1 AND parent 2: a double affiliation names two institutions.
     inst = pd.DataFrame(columns=["city", "institutions"])
     rows = institution_rows(corpus.affiliations)
     if not rows.empty and "city" in rows.columns:
@@ -98,7 +98,7 @@ def top_cities(corpus, n: Optional[int] = 20) -> pd.DataFrame:
 
 def cities_impact(corpus, n: Optional[int] = 20,
                   min_documents: int = 1) -> pd.DataFrame:
-    """h, g et m par ville."""
+    """h, g and m per city."""
     cols = ["city", "country", "documents", "citations", "h_index", "g_index",
             "m_index", "first_year", "last_year"]
     a = _city_frame(corpus)
@@ -133,14 +133,14 @@ def cities_impact(corpus, n: Optional[int] = 20,
 
 
 def collaboration_scale(corpus) -> pd.DataFrame:
-    """Documents répartis par **portée géographique** de la collaboration.
+    """Documents distributed by the **geographic scope** of the collaboration.
 
-    Colonnes : ``scale``, ``documents``, ``share``, ``citations``,
+    Columns: ``scale``, ``documents``, ``share``, ``citations``,
     ``citations_per_document``.
 
-    Les quatre lignes sont toujours présentes, à zéro si besoin. ``single`` =
-    une seule affiliation identifiée : ce n'est pas de la collaboration locale,
-    et les confondre gonflerait artificiellement cette dernière.
+    The four rows are always present, at zero if needed. ``single`` = a
+    single identified affiliation: it is not local collaboration, and
+    confusing the two would artificially inflate the latter.
     """
     cols = ["scale", "documents", "share", "citations", "citations_per_document"]
     order = [("single", "Single affiliation"), ("local", "Local (same city)"),
@@ -157,10 +157,10 @@ def collaboration_scale(corpus) -> pd.DataFrame:
                                    countries=("country", "nunique"),
                                    citations=("citations", "first"))
 
-    # Le nombre d'AFFILIATIONS se compte sur la table d'origine, jamais sur
-    # `a` : celle-ci est dédoublonnée par ville, donc deux laboratoires d'une
-    # même ville n'y forment qu'une ligne. Compter là-dessus rendait la
-    # collaboration locale structurellement impossible à détecter.
+    # The number of AFFILIATIONS is counted on the original table, never on
+    # `a`: that one is deduplicated per city, so two laboratories of the same
+    # city form a single row there. Counting on it made local collaboration
+    # structurally impossible to detect.
     raw = corpus.affiliations
     key = "parent1" if "parent1" in raw.columns else "raw"
     affs = (raw[["eid", key]].dropna().drop_duplicates()
@@ -173,8 +173,8 @@ def collaboration_scale(corpus) -> pd.DataFrame:
             return "international"
         if r["cities"] > 1:
             return "national"
-        # Une seule ville : collaboration locale seulement si au moins deux
-        # affiliations distinctes y figurent.
+        # A single city: local collaboration only if at least two distinct
+        # affiliations appear in it.
         return "local" if r["affiliations"] > 1 else "single"
 
     per_doc["scale"] = per_doc.apply(classify, axis=1)
@@ -196,10 +196,10 @@ def collaboration_scale(corpus) -> pd.DataFrame:
 
 
 def cities_over_time(corpus, n: int = 8) -> pd.DataFrame:
-    """Production annuelle et cumulée des `n` villes principales.
+    """Yearly and cumulative production of the top `n` cities.
 
-    Toutes les années de l'intervalle sont présentes, à zéro si besoin : sans
-    cela le cumul serait faux.
+    Every year of the range is present, at zero if needed: without it the
+    cumulative count would be wrong.
     """
     import numpy as np
 
@@ -228,9 +228,9 @@ def cities_over_time(corpus, n: int = 8) -> pd.DataFrame:
 
 
 def _institutions_by_affiliations(parents: pd.Series) -> list:
-    """[(institution, affiliations)], la plus fréquente d'abord ; à égalité,
-    par ordre alphabétique, pour qu'un même corpus donne toujours le même
-    ordre (et le même leader)."""
+    """[(institution, affiliations)], the most frequent first; on a tie, in
+    alphabetical order, so that the same corpus always gives the same order
+    (and the same leader)."""
     names = parents.dropna().map(str).str.strip()
     names = names[names != ""]
     counts = names.value_counts()
@@ -239,21 +239,21 @@ def _institutions_by_affiliations(parents: pd.Series) -> list:
 
 
 def city_hierarchy(corpus, n: Optional[int] = 40) -> pd.DataFrame:
-    """Pays → ville → institutions.
+    """Country -> city -> institutions.
 
-    Colonnes : ``country``, ``city``, ``institutions``, ``documents``,
+    Columns: ``country``, ``city``, ``institutions``, ``documents``,
     ``top_institution``, ``share_of_country``, ``institution_affiliations``.
 
-    ``share_of_country`` dit si une ville porte l'essentiel de la production de
-    son pays ou n'en est qu'une composante, la même lecture que la hiérarchie
-    établissement → unités, transposée à la géographie.
+    ``share_of_country`` says whether a city carries most of its country's
+    production or is only one part of it: the same reading as the
+    institution -> units hierarchy, transposed to geography.
 
-    ``institution_affiliations`` liste TOUTES les institutions de la ville avec
-    leur nombre d'affiliations, de la plus fréquente à la moins fréquente :
-    « Mohammed V University (26); National School of Mineral Industry (12) ».
-    Le seul leader cachait les autres, une école de 12 documents disparaissait
-    derrière l'université de sa ville. ``top_institution`` en est le premier
-    élément.
+    ``institution_affiliations`` lists ALL the institutions of the city with
+    their number of affiliations, from the most to the least frequent:
+    "Mohammed V University (26); National School of Mineral Industry (12)".
+    The leader alone hid the others: a school with 12 documents disappeared
+    behind the university of its city. ``top_institution`` is its first
+    element.
     """
     cols = ["country", "city", "institutions", "documents", "top_institution",
             "share_of_country", "institution_affiliations"]
@@ -267,11 +267,11 @@ def city_hierarchy(corpus, n: Optional[int] = 40) -> pd.DataFrame:
     if a.empty:
         return pd.DataFrame(columns=cols)
 
-    # Total par pays calculé sur TOUTES ses villes, avant toute troncature :
-    # sinon la part serait rapportée à un dénominateur incomplet.
+    # Total per country computed over ALL its cities, before any truncation:
+    # otherwise the share would relate to an incomplete denominator.
     by_country = a.drop_duplicates(["eid", "country"]).groupby("country")["eid"].nunique()
 
-    # Les institutions d'une ville : parent 1 ET parent 2 de ses affiliations.
+    # The institutions of a city: parent 1 AND parent 2 of its affiliations.
     institutions = {key: g["institution"] for key, g in
                     institution_rows(a).groupby(["country", "city"], sort=False)}
     empty = pd.Series(dtype=object)
@@ -292,8 +292,8 @@ def city_hierarchy(corpus, n: Optional[int] = 40) -> pd.DataFrame:
                 f"{name} ({count})" for name, count in ranked),
         })
 
-    # La ville départage les ex æquo : sans elle, les villes gardées sous la
-    # troncature `n` dépendaient de l'ordre des lignes du fichier.
+    # The city breaks ties: without it, the cities kept under the `n` cut-off
+    # depended on the order of the rows in the file.
     out = pd.DataFrame(rows).sort_values(
         ["country", "documents", "city"],
         ascending=[True, False, True], kind="stable").reset_index(drop=True)

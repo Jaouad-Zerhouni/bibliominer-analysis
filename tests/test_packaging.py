@@ -1,8 +1,8 @@
-"""Ce que la distribution doit contenir pour être installable telle quelle.
+"""What the distribution must contain to be installable as it is.
 
-Un commentaire dans `pyproject.toml` ne garantit rien : il ne s'exécute pas.
-Ces tests tiennent les promesses que le paquet fait à qui l'installe depuis
-PyPI, sans le dépôt autour.
+A comment in `pyproject.toml` guarantees nothing: it does not run. These
+tests keep the promises the package makes to whoever installs it from
+PyPI, without the repository around it.
 """
 from pathlib import Path
 
@@ -10,25 +10,26 @@ import bibliominer_analysis
 
 
 def test_the_scimago_reference_travels_with_the_package():
-    """Sans lui, `pip install` livrerait un module qui ne sait plus rien des revues.
+    """Without it, `pip install` would ship a module that knows nothing about
+    journals any more.
 
-    `metrics/scimago.py` le lit à côté du module (`data_ref/`), pas depuis le
-    dépôt : il doit donc être DANS la distribution. C'est le seul fichier de
-    données du paquet, et son absence ne se verrait qu'à l'exécution, chez
-    l'utilisateur.
+    `metrics/scimago.py` reads it next to the module (`data_ref/`), not from
+    the repository: it must therefore be IN the distribution. It is the only
+    data file of the package, and its absence would only show at run time, on
+    the user's machine.
     """
     root = Path(bibliominer_analysis.__file__).parent
     reference = root / "data_ref" / "scimagojr_2025.csv"
 
-    assert reference.is_file(), "le référentiel SCImago manque à la distribution"
-    assert reference.stat().st_size > 1_000_000, "référentiel suspect de troncature"
+    assert reference.is_file(), "the SCImago reference table is missing from the distribution"
+    assert reference.stat().st_size > 1_000_000, "reference table suspiciously truncated"
 
 
 def test_the_declared_version_is_the_one_the_module_exposes():
-    """La version vit dans `__init__.py` ; `pyproject.toml` la lit de là.
+    """The version lives in `__init__.py`; `pyproject.toml` reads it from there.
 
-    Deux copies finissent toujours par diverger, et c'est celle du module que
-    lisent les utilisateurs.
+    Two copies always end up diverging, and the module's copy is the one users
+    read.
     """
     assert bibliominer_analysis.__version__
     assert bibliominer_analysis.__version__[0].isdigit()

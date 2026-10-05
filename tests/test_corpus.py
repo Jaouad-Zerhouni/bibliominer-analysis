@@ -1,7 +1,7 @@
-"""Tests du Corpus et des indicateurs, sur un mini-corpus contrôlé.
+"""Tests of the Corpus and its indicators, on a small controlled corpus.
 
-Même discipline que le golden du cleaning : un jeu de données minuscule dont
-on connaît les réponses à la main, pour qu'une régression saute aux yeux.
+Same discipline as the cleaning's golden file: a tiny dataset whose answers
+are known by hand, so that a regression is obvious.
 """
 
 import pandas as pd
@@ -13,7 +13,7 @@ from bibliominer_analysis.io.schema import INDEPENDENT_LABEL
 
 @pytest.fixture
 def mini() -> Corpus:
-    """3 documents, 2 pays, 1 chercheur indépendant, 1 co-publication."""
+    """3 documents, 2 countries, 1 independent researcher, 1 co-publication."""
     df = pd.DataFrame([
         {
             "Title": "Doc A", "Year": "2020", "Cited by": "10",
@@ -81,14 +81,14 @@ def test_production_by_year_sans_trou(mini):
 
 
 def test_pays_compte_une_fois_par_document(mini):
-    """Doc B est maroco-espagnol : il compte 1 fois pour chaque pays."""
+    """Doc B is Moroccan-Spanish: it counts once for each country."""
     g = mini.production_by_country().set_index("country")["documents"]
     assert g["Spain"] == 2       # Doc A + Doc B
     assert g["Morocco"] == 2     # Doc B + Doc C
 
 
 def test_institutions_excluent_les_independants(mini):
-    """« Independent researcher » n'est pas une institution."""
+    """"Independent researcher" is not an institution."""
     inst = list(mini.top_institutions()["institution"])
     assert INDEPENDENT_LABEL not in inst
     assert "University of Murcia" in inst
@@ -97,7 +97,7 @@ def test_institutions_excluent_les_independants(mini):
 def test_top_authors_compte_les_premiers_auteurs(mini):
     g = mini.top_authors().set_index("author")
     assert g.loc["Hosni M.", "documents"] == 2
-    assert g.loc["Hosni M.", "first_author"] == 1     # premier sur Doc B seulement
+    assert g.loc["Hosni M.", "first_author"] == 1     # first author on Doc B only
     assert g.loc["Idri A.", "first_author"] == 1
 
 
@@ -109,7 +109,7 @@ def test_keywords_insensibles_a_la_casse(mini):
 def test_filter_ne_modifie_pas_l_original(mini):
     f = mini.filter(years=(2021, 2021))
     assert len(f) == 2
-    assert len(mini) == 3                       # l'original est intact
+    assert len(mini) == 3                       # the original is untouched
     assert set(f.authors["eid"]) <= {"eid-B", "eid-C"}
 
 
@@ -119,9 +119,9 @@ def test_filter_par_pays(mini):
 
 
 def test_corpus_vide_ne_plante_pas():
-    c = Corpus.from_dataframe(pd.DataFrame([{"Title": "Sans rien"}]))
+    c = Corpus.from_dataframe(pd.DataFrame([{"Title": "Nothing at all"}]))
     assert c.summary()["documents"] == 1
-    assert c.production_by_year().empty        # aucune année exploitable
+    assert c.production_by_year().empty        # no usable year
     assert c.top_authors().empty
 
 

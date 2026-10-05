@@ -1,8 +1,8 @@
-"""Les résultats tels que l'interface les montre, disponibles en Python.
+"""Results as the interface shows them, available in Python.
 
-Liste des documents, citations normalisées, balance des citations, réseau du
-« Network lab », carte de densité : l'API ne fait plus que les appeler, un
-utilisateur du paquet obtient donc exactement les tableaux de l'écran.
+Document list, normalised citations, citation balance, the "Network lab"
+network, density map: the API only calls them now, so a package user gets
+exactly the tables on screen.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ ABSTRACT = ("Software effort estimation with ensemble methods improves "
 
 @pytest.fixture(scope="module")
 def corpus():
-    """Doc 3 (J3) cite doc 1 (J1) et doc 2 (J2) ; doc 4 (J3) cite doc 1."""
+    """Doc 3 (J3) cites doc 1 (J1) and doc 2 (J2); doc 4 (J3) cites doc 1."""
     return Corpus.from_dataframe(pd.DataFrame([
         _doc(1, T1, "J1", 2016, 100, "Idri A.; Hosni M.", RABAT + "; " + MADRID,
              keywords="effort estimation; ensemble", abstract=ABSTRACT,
@@ -65,7 +65,7 @@ def test_document_list_colonnes_et_tri(corpus):
                                   "doc_type", "citations", "local_citations", "doi"]
     assert list(docs["citations"]) == [100, 10, 4, 0]
     assert docs.loc[0, "first_author"] == "Idri A."
-    # doc 1 est cité par doc 3 et doc 4, doc 2 par doc 3
+    # doc 1 is cited by doc 3 and doc 4, doc 2 by doc 3
     assert dict(zip(docs["title"], docs["local_citations"]))[T1] == 2
     assert dict(zip(docs["title"], docs["local_citations"]))[T2] == 1
 
@@ -86,7 +86,7 @@ def test_most_normalized_documents(corpus):
                                  "year_mean_citations", "normalized_citations"]
     values = list(top["normalized_citations"])
     assert values == sorted(values, reverse=True)
-    # Seul de son année, un document vaut exactement la moyenne : 1.
+    # Alone in its year, a document is worth exactly the mean: 1.
     assert dict(zip(top["title"], top["normalized_citations"]))[T1] == pytest.approx(1.0)
 
 
@@ -102,14 +102,14 @@ def test_citation_balance_sources(corpus):
 
 
 def test_citation_balance_reprend_le_reseau(corpus):
-    """Le tableau et le dessin viennent du même réseau."""
+    """The table and the drawing come from the same network."""
     graph = corpus.citation_graph("sources", min_weight=1)
     labels = {n["label"] for n in graph["nodes"]}
     assert set(corpus.citation_balance("sources", min_weight=1)["label"]) == labels
     assert "summary" in graph and "community" in graph["nodes"][0]
 
 
-# --- réseaux -----------------------------------------------------------------
+# --- networks ----------------------------------------------------------------
 
 @pytest.mark.parametrize("unit", NETWORK_UNITS)
 def test_network_toutes_les_unites(corpus, unit):

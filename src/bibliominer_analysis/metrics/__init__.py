@@ -1,4 +1,4 @@
-"""Indicateurs bibliométriques. Chaque fonction renvoie un DataFrame ou un dict."""
+"""Bibliometric indicators. Every function returns a DataFrame or a dict."""
 
 from . import collaboration, flows, growth, impact, laws, overview, production, themes
 

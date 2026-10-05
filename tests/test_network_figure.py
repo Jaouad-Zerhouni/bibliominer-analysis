@@ -1,16 +1,16 @@
-"""Le package doit savoir DESSINER un réseau, pas seulement le calculer.
+"""The package must be able to DRAW a network, not only compute it.
 
-Sans ce rendu, quelqu'un qui installe `bibliominer-analysis` sans
-l'application web obtenait des chiffres et aucune carte : les réseaux
-n'existaient qu'en JSON, et leur dessin vivait dans le navigateur.
+Without this rendering, someone installing `bibliominer-analysis` without
+the web application got figures and no map: networks only existed as
+JSON, and their drawing lived in the browser.
 
-Deux exigences portent ces tests :
+Two requirements carry these tests:
 
-  - **la carte se rejoue**, deux exécutions sur les mêmes données donnent
-    le même fichier, sans quoi une figure publiée bougerait d'un tirage à
-    l'autre et deviendrait indéfendable ;
-  - **rien n'est inventé**, un réseau vide lève plutôt que de rendre une
-    image blanche, qu'on croirait valide.
+  - **the map replays**: two runs on the same data give the same file,
+    otherwise a published figure would move from one draw to the next and
+    become indefensible;
+  - **nothing is invented**: an empty network raises rather than returning
+    a blank image that would be taken as valid.
 """
 import pytest
 
@@ -41,43 +41,43 @@ def graph():
 
 def test_it_renders_a_png(graph):
     image = render_network(graph, title="Co-word network")
-    assert image.startswith(b"\x89PNG"), "ce n'est pas un PNG"
-    assert len(image) > 5_000, "image suspecte de vacuité"
+    assert image.startswith(b"\x89PNG"), "this is not a PNG"
+    assert len(image) > 5_000, "suspiciously empty image"
 
 
 @pytest.mark.parametrize("fmt", ["png", "jpg", "svg", "pdf"])
 def test_the_same_data_gives_the_same_file(graph, fmt):
-    """Une figure publiée ne peut pas bouger d'une exécution à l'autre.
+    """A published figure cannot move from one run to the next.
 
-    Deux sources de bruit ont dû être neutralisées : l'horodatage que
-    matplotlib inscrit dans le fichier, et, en SVG, les identifiants
-    d'éléments tirés d'un grain aléatoire.
+    Two sources of noise had to be neutralised: the timestamp matplotlib
+    writes into the file, and, in SVG, element identifiers drawn from a
+    random seed.
     """
     assert render_network(graph, fmt=fmt) == render_network(graph, fmt=fmt)
 
 
 def test_the_layout_is_not_redrawn_at_random(graph):
-    """Le placement vient d'un MDS déterministe, pas d'une simulation."""
+    """Placement comes from a deterministic MDS, not from a simulation."""
     from bibliominer_analysis.networks.analysis import layout
     assert layout(graph) == layout(graph)
 
 
 def test_given_coordinates_are_used_as_is(graph):
-    """On doit pouvoir dessiner EXACTEMENT la carte affichée à l'écran.
+    """It must be possible to draw EXACTLY the map shown on screen.
 
-    L'application web calcule les coordonnées une fois ; la figure exportée
-    doit être la même image, sinon l'article ne montre pas ce que
-    l'utilisateur a vu.
+    The web application computes the coordinates once; the exported figure
+    must be the same image, otherwise the article does not show what the
+    user saw.
     """
     coords = {n["id"]: [i * 1.0, -i * 1.0]
               for i, n in enumerate(graph["nodes"])}
     fixed = render_network(graph, coords=coords)
-    assert fixed != render_network(graph)      # ce n'est pas la carte MDS
+    assert fixed != render_network(graph)      # this is not the MDS map
     assert fixed == render_network(graph, coords=coords)
 
 
 def test_node_size_can_carry_a_centrality(graph):
-    """`annotate` pose pagerank & co. : la taille doit pouvoir les porter."""
+    """`annotate` sets pagerank and the others: size must be able to carry them."""
     assert render_network(graph, size_by="pagerank") != render_network(graph)
 
 
@@ -92,27 +92,27 @@ def test_an_unknown_format_is_refused(graph):
 
 
 def test_a_network_without_communities_still_draws():
-    """Sans `annotate`, pas de communauté : couleur neutre, pas d'exception."""
+    """Without `annotate`, no community: neutral colour, no exception."""
     image = render_network(_GRAPH)
     assert image.startswith(b"\x89PNG")
 
 
 # ---------------------------------------------------------------------------
-# La disposition doit occuper le PLAN, pas une droite
+# The layout must fill the PLANE, not a line
 # ---------------------------------------------------------------------------
 
 _TWO_COMPONENTS = {
     "nodes": [{"id": n, "label": n, "weight": 10} for n in
               ["a", "b", "c", "d", "e", "x", "y", "z"]],
     "edges": [
-        # une composante dense…
+        # a dense component...
         {"source": "a", "target": "b", "weight": 9},
         {"source": "b", "target": "c", "weight": 7},
         {"source": "c", "target": "d", "weight": 8},
         {"source": "d", "target": "a", "weight": 6},
         {"source": "a", "target": "e", "weight": 5},
         {"source": "c", "target": "e", "weight": 4},
-        # …et une autre, sans aucun lien avec la première.
+        # ...and another one, without any link to the first.
         {"source": "x", "target": "y", "weight": 9},
         {"source": "y", "target": "z", "weight": 8},
         {"source": "x", "target": "z", "weight": 7},
@@ -127,13 +127,13 @@ def _span(coords, ids):
 
 
 def test_a_disconnected_component_does_not_flatten_the_map():
-    """Le défaut qui rendait toute carte illisible.
+    """The defect that made every map unreadable.
 
-    Les paires qu'aucun chemin ne relie recevaient une distance ARTIFICIELLE,
-    grande, dans le même MDS que les autres. Ce contraste devenait le fait
-    dominant du nuage : le premier axe servait à séparer les composantes, et
-    la structure réelle se repliait sur une droite (mesuré sur un corpus
-    réel : 0,18 d'étendue en X contre 1,32 en Y).
+    Pairs that no path connects received an ARTIFICIAL, large distance, in the
+    same MDS as the others. That contrast became the dominant fact of the
+    cloud: the first axis served to separate the components, and the real
+    structure folded onto a line (measured on a real corpus: 0.18 of extent
+    in X against 1.32 in Y).
     """
     from bibliominer_analysis.networks.analysis import layout
 
@@ -142,23 +142,23 @@ def test_a_disconnected_component_does_not_flatten_the_map():
     ratio = min(width, height) / max(width, height)
 
     assert ratio > 0.2, (
-        f"la composante principale est aplatie (rapport {ratio:.2f}) : "
-        "elle occupe une droite, pas le plan"
+        f"the main component is flattened (ratio {ratio:.2f}): "
+        "it fills a line, not the plane"
     )
 
 
 def test_every_node_of_a_component_gets_its_own_place():
-    """Les trois nœuds isolés se retrouvaient tous au MÊME point."""
+    """The three isolated nodes all ended up at the SAME point."""
     from bibliominer_analysis.networks.analysis import layout
 
     coords = layout(_TWO_COMPONENTS)
     small = [tuple(coords[i]) for i in ("x", "y", "z")]
-    assert len(set(small)) == 3, "des nœuds distincts sont empilés au même endroit"
+    assert len(set(small)) == 3, "distinct nodes are stacked at the same place"
 
 
 def test_components_do_not_sit_on_top_of_each_other():
-    """Juxtaposées, pas superposées : sinon on lirait un seul amas. Côte à
-    côte OU l'une sous l'autre (rangées) : leurs cadres sont disjoints."""
+    """Side by side, not stacked: otherwise one would read a single cluster.
+    Side by side OR one below the other (rows): their frames are disjoint."""
     from bibliominer_analysis.networks.analysis import layout
 
     coords = layout(_TWO_COMPONENTS)
@@ -173,8 +173,8 @@ def test_components_do_not_sit_on_top_of_each_other():
 
 
 def _many_small_groups(groups=18, size=3):
-    """Le cas d'un vrai réseau de co-auteurs : une vingtaine de petites
-    équipes sans lien entre elles."""
+    """The case of a real co-authorship network: about twenty small teams with
+    no link between them."""
     nodes, edges = [], []
     for g in range(groups):
         ids = [f"g{g}n{k}" for k in range(size)]
@@ -186,20 +186,20 @@ def _many_small_groups(groups=18, size=3):
 
 
 def test_many_components_fill_the_frame_not_a_strip():
-    """Constaté sur un vrai corpus : dix-sept équipes alignées sur UNE ligne,
-    une bande vingt fois plus large que haute, cadrée à l'écran, un chapelet
-    de disques empilés. Elles remplissent maintenant des rangées."""
+    """Found on a real corpus: seventeen teams aligned on ONE line, a band twenty
+    times wider than tall, framed on screen, a string of stacked discs. They
+    now fill rows."""
     import numpy as np
     from bibliominer_analysis.networks.analysis import layout
 
     xy = np.array(list(layout(_many_small_groups()).values()))
     width, height = np.ptp(xy, axis=0)
-    assert width / height < 3.0, f"une bande {width / height:.1f} fois plus large que haute"
+    assert width / height < 3.0, f"a band {width / height:.1f} times wider than tall"
 
 
 def test_no_disc_covers_another_at_drawing_size():
-    """Chaque nœud est écarté de ses voisins de la somme de leurs rayons
-    DESSINÉS (10 + 26·√(occ/max) px de diamètre, cadre de la carte)."""
+    """Each node is kept away from its neighbours by the sum of their DRAWN radii
+    (diameter of 10 + 26·√(occ/max) px, map frame)."""
     import numpy as np
     from bibliominer_analysis.networks.analysis import (LAYOUT_HEIGHT, LAYOUT_WIDTH,
                                                         layout)
@@ -219,28 +219,28 @@ def test_no_disc_covers_another_at_drawing_size():
 
 
 def test_the_layout_stays_the_same_across_runs():
-    """Y compris l'ORDRE dans lequel les composantes sont juxtaposées."""
+    """Including the ORDER in which the components are placed side by side."""
     from bibliominer_analysis.networks.analysis import layout
     assert layout(_TWO_COMPONENTS) == layout(_TWO_COMPONENTS)
 
 
 def test_a_dense_group_is_spread_out_not_stacked():
-    """Constaté : le MDS classique empilait les co-auteurs d'un même groupe
-    au même endroit (une colonne de disques, noms superposés). La carte est
-    maintenant desserrée, et reste identique d'un calcul à l'autre."""
+    """Found: classical MDS stacked the co-authors of the same group at the same
+    place (a column of discs, overlapping names). The map is now loosened,
+    and stays identical from one computation to the next."""
     import numpy as np
     from bibliominer_analysis.networks.analysis import layout
-    # une clique de 12 nœuds : toutes les distances égales, le cas qui écrasait
+    # a clique of 12 nodes: all distances equal, the case that collapsed
     nodes = [{"id": f"n{i}", "label": f"N{i}", "occurrences": 3} for i in range(12)]
     edges = [{"source": f"n{i}", "target": f"n{j}", "weight": 2}
              for i in range(12) for j in range(i + 1, 12)]
     g = {"nodes": nodes, "edges": edges}
     a, b = layout(g), layout(g)
-    assert a == b                                   # déterministe
+    assert a == b                                   # deterministic
     xy = np.array(list(a.values()))
     d = np.sqrt(((xy[:, None] - xy[None]) ** 2).sum(-1))
     np.fill_diagonal(d, np.inf)
-    assert d.min() > 0.3                            # aucun nœud sur un autre
+    assert d.min() > 0.3                            # no node on top of another
 
 
 def test_labels_are_short_and_printable():

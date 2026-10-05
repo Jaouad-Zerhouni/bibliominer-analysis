@@ -1,10 +1,10 @@
-"""Les figures exportées et versées au rapport se lisent SEULES.
+"""Figures exported or added to the report read ON THEIR OWN.
 
-Signalé par l'utilisateur : une seule couleur, pas de titre, pas de choix de
-forme. Désormais : titre et sous-titre (la période) écrits sur la figure,
-dégradé ou une teinte par catégorie, valeurs au bout des barres, et la forme
-au choix, barres, sucettes, aires, secteurs, anneau. Et une entrée du rapport
-calculée sur une période porte cette période dans le nom de son fichier.
+Reported by the user: a single colour, no title, no choice of form. Now:
+title and subtitle (the period) written on the figure, a gradient or one
+hue per category, values at the end of the bars, and the form of choice:
+bars, lollipops, areas, pie, donut. And a report entry computed over a
+period carries that period in its file name.
 """
 from __future__ import annotations
 

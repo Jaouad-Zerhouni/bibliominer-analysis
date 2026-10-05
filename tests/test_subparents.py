@@ -1,8 +1,9 @@
-"""Niveau SOUS-PARENT : unités internes (laboratoires, écoles, départements).
+"""SUB-PARENT level: internal units (laboratories, schools, departments).
 
-Le cleaning distingue l'organisme mère (`parent 1`) de l'unité qui y travaille
-(`subparent`). Les deux répondent à des questions différentes, et les tests
-vérifient que le paramètre `level` change bien l'objet analysé.
+The cleaning distinguishes the parent organisation (`parent 1`) from the
+unit working inside it (`subparent`). The two answer different questions,
+and these tests check that the `level` parameter does change the object
+analysed.
 """
 
 import pandas as pd
@@ -26,7 +27,7 @@ def _aff(sub, parent, country="Morocco"):
 
 @pytest.fixture
 def corpus() -> Corpus:
-    """Deux universités, quatre laboratoires."""
+    """Two universities, four laboratories."""
     return Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff("LMAID", "Moulay Ismail University"), 2020, 10),
         _doc(2, _aff("LMAID", "Moulay Ismail University"), 2021, 4),
@@ -53,10 +54,10 @@ def test_comptes_par_niveau(corpus):
 
 def test_impact_par_niveau(corpus):
     s = corpus.institutions_impact(level="subparent").set_index("institution")
-    # LMAID : citations 10 et 4 -> h = 2
+    # LMAID: citations 10 and 4 -> h = 2
     assert s.loc["LMAID", "citations"] == 14
     assert s.loc["LMAID", "h_index"] == 2
-    # ENSIAS : 6 et 0 -> h = 1
+    # ENSIAS: 6 and 0 -> h = 1
     assert s.loc["ENSIAS", "h_index"] == 1
 
 
@@ -69,19 +70,19 @@ def test_over_time_par_niveau(corpus):
 
 def test_by_country_par_niveau(corpus):
     s = corpus.institutions_by_country(level="subparent").set_index("country")
-    assert s.loc["Morocco", "institutions"] == 3       # 3 unités, pas 2 universités
+    assert s.loc["Morocco", "institutions"] == 3       # 3 units, not 2 universities
 
 
 def test_reseau_par_niveau():
-    """Deux unités d'une MÊME université collaborant : invisible au niveau parent."""
+    """Two units of the SAME university collaborating: invisible at parent level."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff("LMAID", "Univ A") + "; " + _aff("MOSI", "Univ A")),
         _doc(2, _aff("LMAID", "Univ A") + "; " + _aff("MOSI", "Univ A")),
     ]))
     parent = c.co_institution(level="parent", min_weight=1)
     sub = c.co_institution(level="subparent", min_weight=1)
-    assert parent["n_edges"] == 0        # une seule université -> aucun lien
-    assert sub["n_edges"] == 1           # les deux labos collaborent
+    assert parent["n_edges"] == 0        # a single university -> no edge
+    assert sub["n_edges"] == 1           # the two labs collaborate
     assert sub["edges"][0]["weight"] == 2
 
 
@@ -91,7 +92,7 @@ def test_hierarchie(corpus):
     assert set(mi.index) == {"LMAID", "MOSI"}
     assert mi.loc["LMAID", "documents"] == 2
     assert mi.loc["LMAID", "parent_documents"] == 3
-    # LMAID porte 2 des 3 documents de son université
+    # LMAID carries 2 of the 3 documents of its university
     assert mi.loc["LMAID", "share"] == pytest.approx(66.7, abs=0.1)
 
 
@@ -103,7 +104,7 @@ def test_hierarchie_ignore_les_affiliations_sans_unite():
     h = c.org_hierarchy()
     assert list(h["subparent"]) == ["Lab"]
     assert h.iloc[0]["documents"] == 1
-    assert h.iloc[0]["parent_documents"] == 2     # l'université en a bien 2
+    assert h.iloc[0]["parent_documents"] == 2     # the university does have 2
 
 
 def test_subparent_exclut_les_independants():

@@ -1,4 +1,4 @@
-"""Réseaux déclinés par unité d'analyse : institutions, pays, auteurs cités."""
+"""Networks per unit of analysis: institutions, countries, cited authors."""
 
 import pandas as pd
 
@@ -18,10 +18,10 @@ def _aff(parent, country, city="X"):
     return "parent 1: %s, city: %s, country: %s" % (parent, city, country)
 
 
-# --- collaboration entre institutions --------------------------------------
+# --- collaboration between institutions ------------------------------------
 
 def test_co_institution_poids():
-    """Univ A et Univ B ensemble sur 2 documents -> lien de poids 2."""
+    """Univ A and Univ B together on 2 documents -> an edge of weight 2."""
     both = _aff("Univ A", "Morocco") + "; " + _aff("Univ B", "Spain")
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, both), _doc(2, both),
@@ -34,17 +34,17 @@ def test_co_institution_poids():
 
 
 def test_co_institution_exclut_les_independants():
-    """« Independent researcher » n'est pas un établissement."""
+    """"Independent researcher" is not an institution."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff("Univ A", "Morocco") + "; " + _aff(INDEPENDENT_LABEL, "Morocco")),
         _doc(2, _aff("Univ A", "Morocco") + "; " + _aff(INDEPENDENT_LABEL, "Morocco")),
     ]))
     g = c.co_institution(min_weight=1)
     assert all(INDEPENDENT_LABEL not in n["label"] for n in g["nodes"])
-    assert g["n_edges"] == 0        # il ne reste qu'une institution
+    assert g["n_edges"] == 0        # only one institution is left
 
 
-# --- collaboration entre pays ----------------------------------------------
+# --- collaboration between countries ---------------------------------------
 
 def test_co_country():
     c = Corpus.from_dataframe(pd.DataFrame([
@@ -54,9 +54,9 @@ def test_co_country():
     ]))
     g = c.co_country(min_weight=1)
     assert g["n_nodes"] == 2
-    assert g["edges"][0]["weight"] == 2      # Maroc-Espagne sur 2 documents
+    assert g["edges"][0]["weight"] == 2      # Morocco-Spain on 2 documents
     occ = {n["label"]: n["occurrences"] for n in g["nodes"]}
-    assert occ["Morocco"] == 3               # présent sur les 3 documents
+    assert occ["Morocco"] == 3               # present on all 3 documents
 
 
 def test_co_country_document_national_sans_lien():
@@ -65,10 +65,10 @@ def test_co_country_document_national_sans_lien():
     assert g["n_edges"] == 0 and g["n_nodes"] == 0
 
 
-# --- co-citation d'auteurs --------------------------------------------------
+# --- author co-citation -----------------------------------------------------
 
 def test_co_citation_authors_premier_auteur():
-    """La convention ACA retient le PREMIER auteur de chaque référence."""
+    """The ACA convention keeps the FIRST author of each reference."""
     refs = ("ref1 | 10.1/a | 2015 | Biau G., Scornet E. | Random forests ; "
             "ref2 | 10.1/b | 2016 | Chen T., Guestrin C. | XGBoost")
     c = Corpus.from_dataframe(pd.DataFrame([
@@ -82,7 +82,7 @@ def test_co_citation_authors_premier_auteur():
 
 
 def test_co_citation_authors_regroupe_les_graphies():
-    """« Chen T. » et « Chen T. » cités par deux documents = un seul nœud."""
+    """"Chen T." and "Chen T." cited by two documents = a single node."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff("U", "Morocco"),
              refs="ref1 | 10.1/b | 2016 | Chen T., Guestrin C. | XGBoost ; "
@@ -93,13 +93,13 @@ def test_co_citation_authors_regroupe_les_graphies():
     ]))
     g = c.co_citation_authors(min_weight=2)
     ids = {n["id"] for n in g["nodes"]}
-    assert "chen t." in ids            # les deux graphies ont fusionné
+    assert "chen t." in ids            # the two spellings were merged
     assert g["n_nodes"] == 2
 
 
 def test_co_citation_authors_sans_auteurs():
     c = Corpus.from_dataframe(pd.DataFrame([
-        _doc(1, _aff("U", "Morocco"), refs="ref1 | 10.1/a | 2015 | | Sans auteur")]))
+        _doc(1, _aff("U", "Morocco"), refs="ref1 | 10.1/a | 2015 | | Without author")]))
     assert c.co_citation_authors(min_weight=1)["n_nodes"] == 0
 
 

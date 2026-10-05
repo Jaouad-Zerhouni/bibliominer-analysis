@@ -1,27 +1,28 @@
-"""Analyse thématique : carte stratégique de Callon et sujets émergents.
+"""Thematic analysis: Callon's strategic map and emerging topics.
 
-La **carte thématique** (Callon, 1991) place chaque groupe de mots-clés sur
-deux axes :
+The **thematic map** (Callon, 1991) places each cluster of keywords on two
+axes:
 
-  - **centralité**, l'intensité des liens du groupe avec les AUTRES groupes.
-    Elle mesure à quel point le thème est relié au reste du domaine.
-  - **densité**, l'intensité des liens INTERNES au groupe. Elle mesure à quel
-    point le thème est développé, structuré.
+  - **centrality**: the intensity of the cluster's links with the OTHER
+    clusters. It measures how connected the theme is to the rest of the
+    field.
+  - **density**: the intensity of the links INSIDE the cluster. It
+    measures how developed, how structured the theme is.
 
-En coupant aux médianes, on obtient quatre quadrants :
+Cutting at the medians gives four quadrants:
 
-    densité ↑
-      niches            │   thèmes moteurs
-      (développés,      │   (développés,
-       peu reliés)      │    centraux)
-    ──────────────────── ┼────────────────────► centralité
-      émergents ou      │   thèmes de base
-      déclinants        │   (centraux,
-                        │    peu développés)
+    density ↑
+      niche themes      │   motor themes
+      (developed,       │   (developed,
+       weakly linked)   │    central)
+    ──────────────────── ┼────────────────────► centrality
+      emerging or       │   basic themes
+      declining         │   (central,
+                        │    little developed)
 
-Le quadrant en bas à gauche est ambigu par construction : un thème peu
-développé et peu relié peut être en train d'apparaître **ou** de disparaître.
-C'est la lecture chronologique qui tranche, pas la carte.
+The bottom-left quadrant is ambiguous by construction: a theme that is
+little developed and weakly linked may be appearing **or** disappearing.
+The chronological reading decides, not the map.
 """
 
 from __future__ import annotations
@@ -34,15 +35,15 @@ import pandas as pd
 
 def trend_topics(corpus, n: int = 25, min_documents: int = 2,
                  kind: str = "author") -> pd.DataFrame:
-    """Sujets et leur position dans le temps.
+    """Topics and their position in time.
 
-    Pour chaque terme : la **médiane** des années où il apparaît, encadrée par
-    le premier et le troisième quartile. La médiane dit quand le terme a été
-    le plus employé ; l'écart entre quartiles dit s'il est concentré sur une
-    période ou étalé.
+    For each term: the **median** of the years in which it appears, framed by
+    the first and third quartiles. The median says when the term was used the
+    most; the interquartile range says whether it is concentrated on one
+    period or spread out.
 
-    On préfère la médiane à la moyenne : une seule occurrence ancienne ne doit
-    pas tirer tout le terme vers le passé.
+    The median is preferred to the mean: a single old occurrence must not
+    pull the whole term into the past.
     """
     k = corpus.keywords
     if kind != "all":
@@ -83,24 +84,24 @@ def trend_topics(corpus, n: int = 25, min_documents: int = 2,
 def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
                  min_cluster_size: int = 2,
                  kind: str = "author") -> Dict[str, Any]:
-    """Carte stratégique de Callon, calculée sur le réseau de co-mots.
+    """Callon's strategic map, computed on the co-word network.
 
-    Renvoie ``{"clusters": DataFrame, "medians": {...}}``.
+    Returns ``{"clusters": DataFrame, "medians": {...}}``.
 
-    Formules de Callon et al. (1991) :
+    Formulas of Callon et al. (1991):
 
-        centralité = 10 × Σ e_kh   (liens entre un terme du groupe et un terme hors groupe)
-        densité    = 100 × Σ e_ij / w   (liens internes, w = nombre de termes)
+        centrality = 10 × Σ e_kh   (links between a term of the cluster and a term outside it)
+        density    = 100 × Σ e_ij / w   (internal links, w = number of terms)
 
-    où **e_ij est l'indice d'équivalence** c_ij² / (c_i · c_j), compris entre
-    0 et 1, pas la co-occurrence brute c_ij. Les constantes 10 et 100 sont
-    calibrées pour cet indice. Défaut corrigé : les poids bruts étaient
-    utilisés, ce qui favorisait les termes fréquents et pouvait changer un
-    thème de quadrant, pas seulement l'échelle des axes.
+    where **e_ij is the equivalence index** c_ij² / (c_i · c_j), between 0 and
+    1, not the raw co-occurrence c_ij. The constants 10 and 100 are calibrated
+    for this index. Fixed defect: the raw weights were used, which favoured
+    frequent terms and could move a theme to another quadrant, not only change
+    the scale of the axes.
 
-    Les groupes sont détectés par modularité gloutonne sur ce même réseau
-    normalisé : c'est un algorithme déterministe, donc deux exécutions donnent
-    la même carte, indispensable pour un résultat qu'on publie.
+    Clusters are detected by greedy modularity on the same normalised
+    network: it is a deterministic algorithm, so two runs give the same map,
+    which is essential for a published result.
     """
     from ..networks import build as nets
     from ..networks.analysis import normalize
@@ -116,19 +117,19 @@ def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
 
     import networkx as nx
 
-    # Ordre FIXE de construction et de numérotation : sans lui, la
-    # modularité gloutonne départageait ses ex æquo selon le hachage des
-    # chaînes, différent à chaque exécution (voir `_stable`).
+    # FIXED order of construction and numbering: without it, greedy modularity
+    # broke its ties by the hashing of strings, different at every run (see
+    # `_stable`).
     G = ordered_graph(graph["nodes"], graph["edges"])
     communities = ordered_communities(
         nx.community.greedy_modularity_communities(G, weight="weight"))
 
-    # Le seuil `min_weight` sert à DÉTECTER les groupes, pas à les mesurer.
-    # Centralité et densité se calculent sur toutes les co-occurrences entre
-    # les termes retenus (Callon : tous les liens externes comptent). Mesurées
-    # sur le réseau seuillé, un petit corpus se cassait en îlots : 13 thèmes
-    # sur 15 à centralité 0, médiane 0, et plus aucun thème en « niche » ni
-    # en « émergent », des quadrants sans signification.
+    # The `min_weight` threshold is used to DETECT the clusters, not to measure
+    # them. Centrality and density are computed on all co-occurrences between
+    # the retained terms (Callon: every external link counts). Measured on the
+    # thresholded network, a small corpus broke into islands: 13 themes out of
+    # 15 with zero centrality, a median of 0, and no theme left as "niche" or
+    # "emerging", meaningless quadrants.
     kept = set(G.nodes)
     full = normalize(nets.co_word(corpus, top_n=top_n, min_weight=1, kind=kind),
                      "equivalence")
@@ -151,15 +152,15 @@ def thematic_map(corpus, top_n: int = 100, min_weight: int = 2,
                 external += w
 
         occ = {n: G.nodes[n]["occurrences"] for n in members}
-        # À fréquence égale, l'ordre alphabétique : c'est lui qui choisit le
-        # NOM du groupe quand deux termes sont ex æquo.
+        # At equal frequency, alphabetical order: it chooses the cluster's NAME
+        # when two terms are tied.
         ordered = sorted(members, key=lambda n: (-occ[n], str(G.nodes[n]["label"]).lower(), str(n)))
         labels = [G.nodes[n]["label"] for n in ordered]
 
         rows.append({
             "cluster": i,
-            # Le groupe porte le nom de son terme le plus fréquent : c'est la
-            # convention de lecture des cartes thématiques.
+            # The cluster is named after its most frequent term: that is the reading
+            # convention of thematic maps.
             "label": labels[0],
             "terms": ", ".join(labels[:8]),
             "n_terms": len(members),

@@ -1,9 +1,9 @@
-"""Parseurs des cellules compactées de l'export Scopus.
+"""Parsers for the packed cells of the Scopus export.
 
-Chaque fonction prend UNE cellule et renvoie une liste de dictionnaires. Elles
-sont pures, sans état, et ne lèvent jamais : une cellule vide ou mal formée
-renvoie une liste vide. Une ligne abîmée ne doit pas faire tomber l'analyse
-d'un corpus de 3 000 documents.
+Every function takes ONE cell and returns a list of dictionaries. They are
+pure, stateless, and never raise: an empty or malformed cell returns an
+empty list. A damaged row must not bring down the analysis of a
+3,000-document corpus.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ _FULLNAME_RE = re.compile(r"^(.*?)\s*\((\d{5,})\)\s*$")
 
 
 def _cell(value: Any) -> str:
-    """Normalise une cellule : NaN, None et « nan » deviennent une chaîne vide."""
+    """Normalises a cell: NaN, None and "nan" become an empty string."""
     if value is None:
         return ""
     s = str(value).strip()
@@ -30,7 +30,7 @@ def _cell(value: Any) -> str:
 
 
 def split_list(value: Any) -> List[str]:
-    """Découpe une cellule-liste Scopus (« A; B; C ») en éléments non vides."""
+    """Splits a Scopus list cell ("A; B; C") into non-empty items."""
     s = _cell(value)
     if not s:
         return []
@@ -38,7 +38,7 @@ def split_list(value: Any) -> List[str]:
 
 
 def strip_index(item: str) -> "tuple[Optional[int], str]":
-    """« 3:Abran A. » -> (3, 'Abran A.'). Sans préfixe -> (None, item)."""
+    """"3:Abran A." -> (3, 'Abran A.'). Without a prefix -> (None, item)."""
     m = _INDEX_RE.match(item or "")
     if not m:
         return None, (item or "").strip()
@@ -50,7 +50,7 @@ def strip_index(item: str) -> "tuple[Optional[int], str]":
 # ---------------------------------------------------------------------------
 
 def _by_index(items: List[str]) -> Optional[Dict[int, str]]:
-    """{position -> valeur} quand CHAQUE entrée porte son préfixe « n: »."""
+    """{position -> value} when EVERY entry carries its "n:" prefix."""
     out: Dict[int, str] = {}
     for raw in items:
         pos, value = strip_index(raw)
@@ -61,12 +61,12 @@ def _by_index(items: List[str]) -> Optional[Dict[int, str]]:
 
 
 def _surname_key(text: str) -> str:
-    # Le point final d'une initiale seule (« A. ») ne distingue personne.
+    # The final dot of a lone initial ("A.") distinguishes nobody.
     return text.strip().rstrip(".").strip().lower()
 
 
 def _surname_of_short(name: str) -> str:
-    """« El Baida M. » -> « el baida » : le nom court sans ses initiales."""
+    """"El Baida M." -> "el baida": the short name without its initials."""
     tokens = name.strip().split()
     while len(tokens) > 1 and "." in tokens[-1]:
         tokens.pop()
@@ -79,19 +79,19 @@ def _surname_of_full(full: str) -> str:
 
 
 def _align(names: List[tuple], items: List[str], by_surname) -> Dict[int, str]:
-    """Rang d'auteur -> valeur d'une colonne parallèle, SANS jamais deviner.
+    """Author rank -> value of a parallel column, WITHOUT ever guessing.
 
-    1. Les deux colonnes sont indexées (« n: », fichier nettoyé) : appariement
-       par position, le seul certain.
-    2. Même longueur : les colonnes Scopus sont alignées, appariement par rang.
-    3. Longueurs différentes : un décalage est certain mais son endroit
-       inconnu. On n'apparie alors que ce qu'un patronyme rattache à UN seul
-       auteur (`by_surname`), et rien du tout pour une colonne sans nom.
+    1. Both columns are indexed ("n:", cleaned file): matching by position,
+       the only certain one.
+    2. Same length: the Scopus columns are aligned, matching by rank.
+    3. Different lengths: a shift is certain but its place unknown. Only what
+       a surname attaches to ONE single author is then matched
+       (`by_surname`), and nothing at all for a column without names.
 
-    Défaut corrigé : l'appariement se faisait par rang même quand les
-    longueurs différaient. Un identifiant manquant au milieu de la liste
-    décalait tous les suivants, et le h-index, la co-signature et
-    l'auto-citation d'un auteur étaient attribués à son voisin.
+    Fixed defect: matching was done by rank even when the lengths differed. An
+    identifier missing in the middle of the list shifted all the following
+    ones, and an author's h-index, co-authorship and self-citation were
+    attributed to their neighbour.
     """
     if not items:
         return {}
@@ -117,15 +117,16 @@ def _align(names: List[tuple], items: List[str], by_surname) -> Dict[int, str]:
 
 def parse_authors(authors: Any, full_names: Any = None,
                   author_ids: Any = None) -> List[Dict[str, Any]]:
-    """Fusionne les trois colonnes d'auteurs en une liste ordonnée.
+    """Merges the three author columns into an ordered list.
 
-    Renvoie, par auteur : ``position``, ``name``, ``full_name``, ``scopus_id``.
+    Returns, per author: ``position``, ``name``, ``full_name``,
+    ``scopus_id``.
 
-    La POSITION vient du préfixe « n: » posé par le cleaning ; sans lui on
-    retombe sur le rang dans la liste. L'appariement des trois colonnes suit
-    `_align` : par position, par rang si les longueurs concordent, et jamais
-    par rang quand elles diffèrent, un export abîmé ne doit pas décaler les
-    identifiants d'un auteur à l'autre.
+    The POSITION comes from the "n:" prefix written by the cleaning; without
+    it, the rank in the list is used. Matching the three columns follows
+    `_align`: by position, by rank if the lengths agree, and never by rank
+    when they differ; a damaged export must not shift identifiers from one
+    author to another.
     """
     names = [strip_index(raw) for raw in split_list(authors)]
     fulls = _align(names, split_list(full_names), _surname_of_full)
@@ -136,10 +137,10 @@ def parse_authors(authors: Any, full_names: Any = None,
         full = fulls.get(rank, "")
         sid = ids.get(rank, "")
 
-        # L'identifiant peut venir de la colonne dédiée OU des parenthèses du
-        # nom complet. Les parenthèses priment : l'identifiant y est COLLÉ au
-        # nom de la personne et ne peut pas glisser vers un voisin, alors que
-        # la colonne dédiée, elle, peut être décalée.
+        # The identifier can come from the dedicated column OR from the brackets of
+        # the full name. The brackets take precedence: the identifier there is
+        # ATTACHED to the person's name and cannot slip to a neighbour, while the
+        # dedicated column can be shifted.
         m = _FULLNAME_RE.match(full) if full else None
         if m:
             full, sid = m.group(1).strip(), m.group(2)
@@ -158,18 +159,18 @@ def parse_authors(authors: Any, full_names: Any = None,
 # ---------------------------------------------------------------------------
 
 def parse_affiliation(segment: str) -> Dict[str, Optional[str]]:
-    """Une affiliation -> ses composants.
+    """An affiliation -> its components.
 
-    Format Bibliominer (étiqueté) :
+    Bibliominer format (labelled):
         ``subparent: X, parent 1: Y, city: C, country: K``
-    Les champs vides sont OMIS à l'export : on lit donc les LIBELLÉS, jamais
-    les positions.
+    Empty fields are OMITTED from the export: the LABELS are read, never the
+    positions.
 
-    Format brut Scopus (non nettoyé) : on ne peut rien affirmer sur les
-    segments intermédiaires. On applique la seule convention fiable, le
-    DERNIER segment est le pays, l'avant-dernier la ville, à condition que
-    ce dernier segment SOIT un pays reconnu (`io.countries.is_country`) ; le
-    reste à ``None`` plutôt que de deviner.
+    Raw Scopus format (not cleaned): nothing can be asserted about the
+    intermediate segments. The only reliable convention is applied: the LAST
+    segment is the country, the one before the city, provided that the last
+    segment IS a recognised country (`io.countries.is_country`); the rest is
+    ``None`` rather than a guess.
     """
     rec: Dict[str, Optional[str]] = {c: None for c in S.AFF_COLUMNS}
     rec["raw"] = (segment or "").strip()
@@ -196,10 +197,10 @@ def parse_affiliation(segment: str) -> Dict[str, Optional[str]]:
     rec["labelled"] = False
     from .countries import is_country
     if not is_country(parts[-1]):
-        # Le dernier segment n'est pas un pays (« …, University Moulay Ismail
-        # of Meknes ») : il devenait pourtant le « pays », et la ville le
-        # segment d'avant. Sans pays reconnu, la géographie reste vide plutôt
-        # que fausse ; le segment le plus à droite est l'organisme mère.
+        # The last segment is not a country ("..., University Moulay Ismail of
+        # Meknes"): it still became the "country", and the city the segment before.
+        # Without a recognised country, the geography stays empty rather than
+        # wrong; the rightmost segment is the parent organisation.
         rec["parent1"] = parts[-1]
         if len(parts) >= 2:
             rec["subparent"] = parts[-2]
@@ -208,8 +209,8 @@ def parse_affiliation(segment: str) -> Dict[str, Optional[str]]:
     if len(parts) >= 2:
         rec["city"] = parts[-2]
     if len(parts) >= 3:
-        # Le segment le plus à droite avant la géo est le plus englobant :
-        # c'est l'organisme mère dans l'ordre d'écriture Scopus.
+        # The rightmost segment before the geography is the most encompassing: it
+        # is the parent organisation in Scopus's writing order.
         rec["parent1"] = parts[-3]
     if len(parts) >= 4:
         rec["subparent"] = parts[-4]
@@ -217,12 +218,12 @@ def parse_affiliation(segment: str) -> Dict[str, Optional[str]]:
 
 
 def parse_affiliations(cell: Any) -> List[Dict[str, Optional[str]]]:
-    """Toutes les affiliations d'un document."""
+    """All the affiliations of a document."""
     return [parse_affiliation(s) for s in split_list(cell)]
 
 
-#: Ordre d'écriture des libellés dans une affiliation Bibliominer. Un libellé
-#: qui revient, ou qui remonte dans cet ordre, ouvre l'affiliation suivante.
+#: Writing order of the labels in a Bibliominer affiliation. A label that
+#: comes back, or goes back up in this order, opens the next affiliation.
 _AFF_ORDER = {key: rank for rank, key in enumerate(S.AFF_COLUMNS)}
 
 
@@ -231,7 +232,7 @@ def _aff_key(rec: Dict[str, Optional[str]]) -> tuple:
 
 
 def _labelled_blocks(parts: List[str]) -> "tuple[str, List[str]]":
-    """Segments d'un bloc AWA étiqueté -> (nom, [texte de chaque affiliation])."""
+    """Segments of a labelled AWA block -> (name, [text of each affiliation])."""
     name_parts: List[str] = []
     affs: List[List[str]] = []
     seen: Dict[str, int] = {}
@@ -241,7 +242,7 @@ def _labelled_blocks(parts: List[str]) -> "tuple[str, List[str]]":
         key = S.AFF_LABELS.get(label)
         if key is None:
             if affs:
-                affs[-1].append(part)      # une valeur contenant une virgule
+                affs[-1].append(part)      # a value containing a comma
             else:
                 name_parts.append(part)
             continue
@@ -258,23 +259,24 @@ def _labelled_blocks(parts: List[str]) -> "tuple[str, List[str]]":
 def author_affiliation_positions(block: str,
                                  doc_affs: List[Dict[str, Optional[str]]]
                                  ) -> List["tuple[Optional[int], str]"]:
-    """Les affiliations d'UN auteur, lues dans son bloc « Authors with
-    affiliations » : [(position dans la colonne Affiliations, texte)].
+    """The affiliations of ONE author, read from their "Authors with
+    affiliations" block: [(position in the Affiliations column, text)].
 
-    Un auteur peut en avoir plusieurs, écrites à la suite dans le même bloc :
-        ``Hosni M., subparent: ENSIAS, …, country: Morocco, subparent: ENSAM, …``
-    Chacune est rapprochée de l'affiliation IDENTIQUE du document. Apparier
-    au rang (auteur 3 -> affiliation 3) donnait à un auteur l'affiliation de
-    son voisin dès qu'un auteur précédent en avait deux, ou que deux auteurs
-    partageaient la même.
+    An author can have several, written one after the other in the same
+    block:
+        ``Hosni M., subparent: ENSIAS, ..., country: Morocco, subparent: ENSAM, ...``
+    Each one is matched to the IDENTICAL affiliation of the document. Matching
+    by rank (author 3 -> affiliation 3) gave an author their neighbour's
+    affiliation as soon as a previous author had two, or two authors shared
+    the same one.
 
-    Export Scopus brut (non étiqueté) : on retient les affiliations du
-    document dont le texte figure dans le bloc. Rien de reconnu : une seule
-    entrée, sans position, qui garde le texte.
+    Raw Scopus export (not labelled): the affiliations of the document whose
+    text appears in the block are kept. Nothing recognised: a single entry,
+    without a position, that keeps the text.
     """
     _, text = strip_index(block)
-    # « [2 affiliations] Hosni M., … » : la marque du cleaning dit à l'œil
-    # que cet auteur en porte plusieurs. Elle ne fait pas partie du nom.
+    # "[2 affiliations] Hosni M., ...": the cleaning's mark tells the eye that
+    # this author carries several. It is not part of the name.
     text = _AWA_MULTI_RE.sub("", text)
     parts = [p.strip() for p in text.split(",") if p.strip()]
     if not parts:
@@ -298,15 +300,15 @@ def _labelled_positions(parts: List[str], doc_affs) -> list:
 
 
 def _raw_positions(parts: List[str], doc_affs) -> list:
-    """Export brut : on retient les affiliations du document dont le texte
-    figure dans le bloc de l'auteur.
+    """Raw export: the affiliations of the document whose text appears in the
+    author's block are kept.
 
-    Une affiliation COURTE peut être un morceau d'une longue, « ENSAM,
-    University Moulay Ismail of Meknes » est la fin de « IEST Research Team,
-    AIDTM Laboratory, ENSAM, University Moulay Ismail of Meknes ». La
-    retenir donnerait à l'auteur un rattachement qu'il n'a pas. On garde
-    donc les correspondances les plus longues d'abord, et l'on écarte celles
-    qui tombent À L'INTÉRIEUR d'une correspondance déjà retenue.
+    A SHORT affiliation can be a piece of a long one: "ENSAM, University
+    Moulay Ismail of Meknes" is the end of "IEST Research Team, AIDTM
+    Laboratory, ENSAM, University Moulay Ismail of Meknes". Keeping it would
+    give the author an affiliation they do not have. The longest matches are
+    therefore kept first, and those that fall INSIDE a match already kept are
+    left out.
     """
     tail = ", ".join(parts[1:]).lower()
     spans = []
@@ -326,16 +328,16 @@ def _raw_positions(parts: List[str], doc_affs) -> list:
 
 
 # ---------------------------------------------------------------------------
-# Références réconciliées
+# Reconciled references
 # ---------------------------------------------------------------------------
 
-#: Une référence réconciliée commence par sa clé « refN | ».
+#: A reconciled reference starts with its "refN |" key.
 _RECONCILED_REF = re.compile(r"^\s*ref\d+\s*\|")
-#: Dans le texte Scopus BRUT, une référence finit par son année entre
-#: parenthèses ; la suivante commence après le « ; » qui la suit. Un simple
-#: découpage sur « ; » coupait AUSSI entre les auteurs d'une même référence
-#: (« Ali A.; Gravino C., A systematic… ») : chaque auteur devenait une
-#: « référence » sans titre ni année.
+#: In RAW Scopus text, a reference ends with its year in brackets; the next
+#: one starts after the ";" that follows. A plain split on ";" ALSO cut
+#: between the authors of the same reference ("Ali A.; Gravino C., A
+#: systematic..."): each author became a "reference" without a title or a
+#: year.
 _RAW_REF_END = re.compile(r"(?<=\(\d{4}\))\s*;\s*")
 _YEAR = re.compile(r"\((\d{4})\)")
 _DOI = re.compile(r"10\.\d{4,9}/[^\s,;]+")
@@ -356,12 +358,12 @@ def _reconciled(item: str, i: int) -> Dict[str, Any]:
 
 
 def _raw_scopus(item: str, i: int) -> Dict[str, Any]:
-    """« Ali A.; Gravino C., A systematic literature review…, Journal…, 31,
-    (2019) » -> auteurs, titre, année, DOI.
+    """"Ali A.; Gravino C., A systematic literature review..., Journal..., 31,
+    (2019)" -> authors, title, year, DOI.
 
-    Les auteurs sont séparés par « ; », le dernier est suivi du titre après
-    une virgule. Quand la forme n'est pas celle-là, le texte entier reste
-    le titre : on ne perd jamais l'information.
+    Authors are separated by ";", the last one is followed by the title after
+    a comma. When the form is not that one, the whole text stays the title:
+    information is never lost.
     """
     years = _YEAR.findall(item)
     doi = _DOI.search(item)
@@ -380,15 +382,15 @@ def _raw_scopus(item: str, i: int) -> Dict[str, Any]:
 
 
 def parse_references(cell: Any) -> List[Dict[str, Any]]:
-    """Les références d'un document, dans les deux écritures possibles.
+    """The references of a document, in the two possible forms.
 
-    Réconciliées par le cleaning :
+    Reconciled by the cleaning:
         ``ref1 | 10.1007/... | 2016 | Biau, Scornet | A random forest guided tour``
-    Brutes, telles que Scopus les exporte :
-        ``Ali A.; Gravino C., A systematic literature review…, (2019); …``
+    Raw, as Scopus exports them:
+        ``Ali A.; Gravino C., A systematic literature review..., (2019); ...``
 
-    Une référence qui ne se laisse pas lire garde son texte entier dans
-    ``ref_title`` : on ne perd jamais l'information, même non structurée.
+    A reference that cannot be read keeps its whole text in ``ref_title``:
+    information is never lost, even unstructured.
     """
     s = _cell(cell)
     if not s:
@@ -416,11 +418,11 @@ def _to_int(value: Any) -> Optional[int]:
 
 
 # ---------------------------------------------------------------------------
-# Mots-clés
+# Keywords
 # ---------------------------------------------------------------------------
 
 def parse_keywords(cell: Any) -> List[str]:
-    """Mots-clés d'une cellule, dédoublonnés sans casse mais graphie conservée."""
+    """Keywords of a cell, deduplicated ignoring case but keeping the spelling."""
     seen, out = set(), []
     for kw in split_list(cell):
         k = kw.strip()

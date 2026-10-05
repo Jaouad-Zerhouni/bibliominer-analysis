@@ -1,9 +1,9 @@
-"""Les graphiques de l'interface qui ne sont ni barres, ni lignes, ni nuages
-de points, cartes du monde, treemap, nuage de mots, Sankey, dendrogramme,
-carte de densité, ont chacun leur rendu dans le package.
+"""The interface charts that are neither bars, nor lines, nor scatter plots
+(world maps, treemap, word cloud, Sankey, dendrogram, density map) each
+have their rendering in the package.
 
-Et les corrections de calcul qui vont avec : une graphie par auteur et par
-mot-clé, la carte thématique mesurée sur toutes les co-occurrences.
+And the computation fixes that come with them: one spelling per author
+and per keyword, the thematic map measured on all co-occurrences.
 """
 
 from __future__ import annotations
@@ -40,8 +40,8 @@ def test_pays_absent_du_fond_de_carte():
 
 
 def test_aucun_anneau_ne_traverse_la_carte():
-    """Un anneau qui franchit la ligne des 180° ne doit pas sauter d'un bord
-    à l'autre (sinon une bande horizontale barre la carte)."""
+    """A ring that crosses the 180° line must not jump from one edge to the
+    other (otherwise a horizontal band strikes across the map)."""
     shapes, _ = _atlas()
     for name, rings in shapes.items():
         for ring in rings:
@@ -88,12 +88,12 @@ def test_une_graphie_par_auteur_selon_son_identifiant():
     t = unify_spellings(_tables(
         {"eid": ["d1", "d2", "d3", "d4"],
          "name": ["Fernández-Alemán J.L.", "Fernández-Alemán J.L.",
-                  "Fernandez-Aleman J.L.", "Sans Id A."],
+                  "Fernandez-Aleman J.L.", "Noid A."],
          "scopus_id": ["1", "1", "1", None]},
         {"eid": [], "keyword": [], "kind": []}))
     names = list(t["authors"]["name"])
     assert names[:3] == ["Fernández-Alemán J.L."] * 3
-    assert names[3] == "Sans Id A."
+    assert names[3] == "Noid A."
 
 
 def test_une_graphie_par_mot_cle_sans_la_casse():
@@ -123,13 +123,13 @@ def test_organisations_meme_nom_a_la_ponctuation_pres():
         "parent1": ["Mohammed 1st University"] * 3 + ["Universidad de Murcia"]})
     out = unify_spellings(tables)["affiliations"]
     assert list(out["subparent"][:3]) == ["Faculty of Sciences Oujda - FSO"] * 3
-    # Une traduction n'est PAS fusionnée ici : c'est le rôle du nettoyage.
+    # A translation is NOT merged here: that is the cleaning's job.
     assert out["subparent"][3] == "Facultad de Informática"
 
 
 def test_colonnes_non_textuelles_intactes():
-    """Un indicateur booléen (labelled) garde son type : seule une colonne de
-    NOMS est normalisée."""
+    """A boolean indicator (labelled) keeps its type: only a column of NAMES is
+    normalised."""
     tables = _tables({"eid": [], "name": [], "scopus_id": []},
                      {"eid": [], "keyword": [], "kind": []})
     tables["affiliations"] = pd.DataFrame({
@@ -152,7 +152,7 @@ def test_reconnaissance_des_pays(name, expected):
 
 def test_petits_pays_places_a_leur_capitale():
     from bibliominer_analysis.io.countries import atlas_name, position
-    assert atlas_name("Singapore") is None          # absent du fond 1:110 m
+    assert atlas_name("Singapore") is None          # absent from the 1:110 m base map
     lon, lat = position("Singapore")
     assert 103 < lon < 105 and 0 < lat < 2
     assert render_world_map({"Singapore": 3, "Morocco": 5}, dpi=60).startswith(PNG)
@@ -161,8 +161,8 @@ def test_petits_pays_places_a_leur_capitale():
 
 
 def test_affiliation_brute_sans_pays_reconnu():
-    """Le dernier segment n'est un pays que s'il en est un : sinon la
-    géographie reste vide, et ce segment est l'organisme."""
+    """The last segment is a country only if it is one: otherwise the geography
+    stays empty, and that segment is the organisation."""
     from bibliominer_analysis.io import parsers as P
     r = P.parse_affiliation("LIMIE Laboratory, University Moulay Ismail of Meknes")
     assert r["country"] is None and r["city"] is None
@@ -172,15 +172,15 @@ def test_affiliation_brute_sans_pays_reconnu():
 
 
 def test_trois_champs_meme_nom_dans_deux_colonnes():
-    """Un mot-clé et une revue de même nom restent deux nœuds distincts."""
+    """A keyword and a journal with the same name stay two distinct nodes."""
     links = pd.DataFrame({"source": ["A", "Energies"], "target": ["Energies", "Energies"],
                           "value": [2, 2], "depth": [0, 1]})
     assert render_three_fields(links, dpi=60).startswith(PNG)
 
 
 def test_first_author_countries_is_the_same_count_under_its_true_name():
-    """Le tableau SCP/MCP porte sur le PREMIER auteur ; l'ancien nom reste un
-    alias, pour les scripts existants."""
+    """The SCP/MCP table is about the FIRST author; the old name remains an
+    alias, for existing scripts."""
     from bibliominer_analysis import Corpus
     rows = pd.DataFrame([{
         "Title": "Paper", "Year": "2024", "EID": "e1",

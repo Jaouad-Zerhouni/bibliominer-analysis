@@ -1,30 +1,29 @@
-"""Accès ouvert : ce que dit l'export, ce que dit SCImago, et pourquoi c'est différent.
+"""Open access: what the export says, what SCImago says, and why they differ.
 
-Deux sources d'information, deux questions distinctes, les confondre est
-l'erreur courante :
+Two sources of information, two distinct questions; confusing them is the
+common mistake:
 
-  - **Le fichier importé** porte un statut **par article** (« Gold », « Green »,
-    « Bronze », « Hybrid »). C'est la vérité sur CE document : est-il librement
-    lisible, et par quelle voie.
-  - **SCImago** porte un statut **par revue**. C'est une propriété du support :
-    la revue est-elle entièrement ouverte.
+  - **The imported file** carries a status **per article** ("Gold",
+    "Green", "Bronze", "Hybrid"). It is the truth about THIS document: can
+    it be read freely, and through which route.
+  - **SCImago** carries a status **per journal**. It is a property of the
+    venue: is the journal fully open.
 
-Un article en accès ouvert dans une revue sur abonnement existe, c'est
-précisément l'hybride, et le vert (dépôt en archive). L'inverse aussi :
-une revue ouverte dont Scopus n'a pas renseigné le champ. Aucune des deux
-sources ne remplace l'autre.
+An open access article in a subscription journal exists: that is
+precisely hybrid, and green (archive deposit). The reverse too: an open
+journal whose field Scopus left empty. Neither source replaces the other.
 
-Les voies, dans la terminologie usuelle :
+The routes, in the usual terminology:
 
-  - **Or**, publié ouvert dans une revue entièrement ouverte.
-  - **Hybride**, ouvert par paiement dans une revue sur abonnement.
-  - **Bronze**, lisible gratuitement sur le site de l'éditeur, sans licence
-    explicite : l'accès peut être retiré à tout moment.
-  - **Vert**, déposé par l'auteur dans une archive.
+  - **Gold**: published open in a fully open journal.
+  - **Hybrid**: made open by payment in a subscription journal.
+  - **Bronze**: free to read on the publisher's site, without an explicit
+    licence: access can be withdrawn at any time.
+  - **Green**: deposited by the author in an archive.
 
-Un statut **absent n'est pas un statut fermé**. Scopus ne renseigne le champ
-que pour une partie des documents ; compter les vides comme « sur abonnement »
-ferait mécaniquement chuter la part d'accès ouvert.
+A **missing status is not a closed status**. Scopus fills the field for
+only part of the documents; counting the empty ones as "subscription"
+would mechanically lower the open access share.
 """
 
 from __future__ import annotations
@@ -34,7 +33,7 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
-#: Voies reconnues, dans l'ordre de lecture usuel.
+#: Recognised routes, in the usual reading order.
 ROUTES = ("Gold", "Hybrid", "Bronze", "Green")
 
 _ROUTE_PATTERNS = {
@@ -47,23 +46,23 @@ _ANY_OA = re.compile(r"\bopen\s*access\b", re.I)
 
 
 def routes_of(value: Any) -> list:
-    """Voies d'accès ouvert déclarées pour un document.
+    """Open access routes declared for a document.
 
-    Un même article peut en cumuler plusieurs, « Gold » ET « Green » quand il
-    est publié ouvert puis déposé en archive. On les garde toutes : n'en
-    retenir qu'une perdrait l'information la plus intéressante, celle du dépôt.
+    The same article can combine several, "Gold" AND "Green" when it is
+    published open and then deposited in an archive. All are kept: keeping
+    only one would lose the most interesting information, the deposit.
     """
     if not isinstance(value, str) or not value.strip():
         return []
     found = [name for name, pat in _ROUTE_PATTERNS.items() if pat.search(value)]
     if not found and _ANY_OA.search(value):
-        # « All Open Access » sans voie précisée : ouvert, voie inconnue.
+        # "All Open Access" without a specified route: open, route unknown.
         return ["Unspecified"]
     return found
 
 
 def _document_access(corpus) -> pd.DataFrame:
-    """Un document, son statut brut, ses voies, ses citations."""
+    """A document, its raw status, its routes, its citations."""
     docs = corpus.documents
     cols = ["eid", "raw", "is_open", "routes", "citations", "year"]
     if docs.empty:
@@ -74,11 +73,10 @@ def _document_access(corpus) -> pd.DataFrame:
         [None] * len(docs))
     d["raw"] = raw.to_numpy()
     d["routes"] = [routes_of(v) for v in d["raw"]]
-    # Scopus ne renseigne ce champ QUE pour les articles ouverts : il n'ecrit
-    # jamais « fermé ». Un champ vide signifie donc « non signalé comme
-    # ouvert », ce qui recouvre les articles fermés ET ceux dont le statut est
-    # simplement absent. On ne peut pas les distinguer, et pretendre le
-    # contraire fausserait la part d'acces ouvert.
+    # Scopus fills this field ONLY for open articles: it never writes "closed".
+    # An empty field therefore means "not reported as open", which covers closed
+    # articles AND those whose status is simply missing. They cannot be told
+    # apart, and pretending otherwise would distort the open access share.
     d["is_open"] = [bool(r) if r else None for r in d["routes"]]
     d["citations"] = pd.to_numeric(docs["cited_by"], errors="coerce").fillna(0).astype(int)
     d["year"] = pd.to_numeric(docs["year"], errors="coerce")
@@ -86,15 +84,15 @@ def _document_access(corpus) -> pd.DataFrame:
 
 
 def access_status(corpus) -> pd.DataFrame:
-    """Documents par statut d'accès, **d'après le fichier importé**.
+    """Documents by access status, **according to the imported file**.
 
-    Colonnes : ``status``, ``documents``, ``share``, ``citations``,
+    Columns: ``status``, ``documents``, ``share``, ``citations``,
     ``citations_per_document``.
 
-    Deux lignes seulement, et c'est volontaire. Scopus ne signale que les
-    articles OUVERTS ; il n'ecrit jamais « fermé ». « Non signalé » regroupe
-    donc les articles fermés et ceux dont le statut manque, les separer
-    supposerait une information qu'on n'a pas.
+    Only two rows, on purpose. Scopus only flags OPEN articles; it never
+    writes "closed". "Not reported" therefore groups closed articles and those
+    whose status is missing; separating them would assume information we do
+    not have.
     """
     cols = ["status", "documents", "share", "citations", "citations_per_document"]
     order = ["Open access", "Not flagged"]
@@ -127,14 +125,14 @@ def access_status(corpus) -> pd.DataFrame:
 
 
 def access_routes(corpus) -> pd.DataFrame:
-    """Voies d'accès ouvert déclarées.
+    """Declared open access routes.
 
-    Colonnes : ``route``, ``documents``, ``share_of_open``, ``citations``,
+    Columns: ``route``, ``documents``, ``share_of_open``, ``citations``,
     ``citations_per_document``.
 
-    Un article cumulant deux voies compte pour chacune : la somme dépasse donc
-    volontairement le nombre d'articles ouverts, et ``share_of_open`` se lit
-    par rapport aux SEULS documents ouverts, pas au corpus entier.
+    An article combining two routes counts for each: the sum therefore
+    deliberately exceeds the number of open articles, and ``share_of_open``
+    is read against the open documents ONLY, not against the whole corpus.
     """
     cols = ["route", "documents", "share_of_open", "citations",
             "citations_per_document"]
@@ -162,14 +160,14 @@ def access_routes(corpus) -> pd.DataFrame:
 
 
 def access_over_time(corpus) -> pd.DataFrame:
-    """Évolution annuelle de la part d'accès ouvert.
+    """Yearly evolution of the open access share.
 
-    Colonnes : ``year``, ``documents``, ``open_access``, ``share``.
+    Columns: ``year``, ``documents``, ``open_access``, ``share``.
 
-    Le denominateur est l'ENSEMBLE des documents de l'annee, pas seulement
-    ceux signales : comme Scopus n'ecrit jamais « ferme », se restreindre aux
-    documents renseignes donnerait 100 % chaque annee, un chiffre exact et
-    parfaitement inutile.
+    The denominator is ALL the documents of the year, not only the flagged
+    ones: since Scopus never writes "closed", restricting to the filled-in
+    documents would give 100 % every year, an exact and perfectly useless
+    figure.
     """
     cols = ["year", "documents", "open_access", "share"]
     d = _document_access(corpus).dropna(subset=["year"])
@@ -189,14 +187,14 @@ def access_over_time(corpus) -> pd.DataFrame:
 
 
 def access_summary(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
-    """Les deux sources côte à côte, avec ce qui les sépare.
+    """The two sources side by side, with what separates them.
 
-    Retour : ``documents``, ``reported``, ``open_documents``,
+    Returns: ``documents``, ``reported``, ``open_documents``,
     ``open_share_of_reported``, ``journal_open_documents``, ``disagreement``.
 
-    ``disagreement`` compte les documents déclarés ouverts alors que leur revue
-    ne l'est pas, les hybrides et les dépôts en archive. C'est le chiffre qui
-    justifie de garder les deux sources plutôt qu'une seule.
+    ``disagreement`` counts the documents declared open while their journal
+    is not: hybrids and archive deposits. It is the figure that justifies
+    keeping both sources rather than one.
     """
     from .scimago import enrich_sources
 

@@ -1,18 +1,18 @@
-"""Indices d'impact : h, g, et dérivés.
+"""Impact indices: h, g, and derived ones.
 
-Les définitions retenues sont les définitions canoniques, pas des variantes :
+The definitions used are the canonical ones, not variants:
 
-  - **h** (Hirsch, 2005) : le plus grand entier *h* tel que *h* documents
-    aient chacun **au moins** *h* citations.
+  - **h** (Hirsch, 2005): the largest integer *h* such that *h* documents
+    each have **at least** *h* citations.
 
-  - **g** (Egghe, 2006) : le plus grand entier *g* tel que les *g* documents
-    les plus cités totalisent **au moins** *g²* citations. Le g-index est
-    toujours ≥ h : il tient compte des articles très cités, que le h-index
-    plafonne.
+  - **g** (Egghe, 2006): the largest integer *g* such that the *g* most
+    cited documents total **at least** *g²* citations. The g-index is
+    always ≥ h: it accounts for highly cited articles, which the h-index
+    caps.
 
-Les citations sont celles de Scopus (`Cited by`), donc les citations
-**mondiales** de l'article, pas seulement celles reçues à l'intérieur du
-corpus. C'est la convention des classements bibliométriques usuels.
+Citations are those of Scopus (`Cited by`), hence the article's **global**
+citations, not only those received within the corpus. That is the
+convention of usual bibliometric rankings.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ import pandas as pd
 
 
 def h_index(citations: Iterable[int]) -> int:
-    """h-index d'une série de comptes de citations."""
+    """h-index of a series of citation counts."""
     c = np.sort(np.asarray([x for x in citations if x is not None and x >= 0],
                            dtype=float))[::-1]
     if c.size == 0:
@@ -34,7 +34,7 @@ def h_index(citations: Iterable[int]) -> int:
 
 
 def g_index(citations: Iterable[int]) -> int:
-    """g-index d'une série de comptes de citations."""
+    """g-index of a series of citation counts."""
     c = np.sort(np.asarray([x for x in citations if x is not None and x >= 0],
                            dtype=float))[::-1]
     if c.size == 0:
@@ -46,27 +46,27 @@ def g_index(citations: Iterable[int]) -> int:
 
 
 def i10_index(citations: Iterable[int]) -> int:
-    """Nombre de documents ayant au moins 10 citations."""
+    """Number of documents with at least 10 citations."""
     return int(sum(1 for x in citations if x is not None and x >= 10))
 
 
 def e_index(citations: Iterable[int]) -> float:
-    """e-index (Zhang, 2009) : les citations EXCÉDENTAIRES du noyau h.
+    """e-index (Zhang, 2009): the EXCESS citations of the h-core.
 
-    Le h-index ignore tout ce qui dépasse. Deux auteurs de h = 10 sont
-    indiscernables, que leurs dix articles aient 10 citations chacun ou 500 :
-    le premier a 100 citations dans son noyau, le second 5000, et h vaut 10
-    dans les deux cas. Le e-index mesure exactement ce que h jette :
+    The h-index ignores everything beyond. Two authors with h = 10 are
+    indistinguishable, whether their ten articles have 10 citations each or
+    500: the first has 100 citations in their core, the second 5000, and h is
+    10 in both cases. The e-index measures exactly what h throws away:
 
-        e² = (somme des citations des h articles du noyau) − h²
+        e² = (sum of the citations of the h core articles) - h²
         e  = √(e²)
 
-    Il ne remplace pas h, il le **complète**, c'est le sens du mot chez Zhang.
-    Lu avec h, il distingue une œuvre régulière d'une œuvre portée par quelques
-    travaux très cités.
+    It does not replace h, it **complements** it, which is the sense of the
+    word in Zhang. Read with h, it tells a steady body of work from one
+    carried by a few highly cited works.
 
-    e est toujours ≥ 0 : par définition du h-index, chacun des h articles du
-    noyau a au moins h citations, donc leur somme atteint au moins h².
+    e is always ≥ 0: by definition of the h-index, each of the h core
+    articles has at least h citations, so their sum reaches at least h².
     """
     c = np.sort(np.asarray([x for x in citations if x is not None and x >= 0],
                            dtype=float))[::-1]
@@ -80,15 +80,15 @@ def e_index(citations: Iterable[int]) -> float:
 
 
 def m_index(h: int, first_year, last_year) -> Optional[float]:
-    """h rapporté à l'ancienneté : m = h / nombre d'années d'activité.
+    """h relative to seniority: m = h / number of years of activity.
 
-    Le h-index ne peut que croître avec le temps : comparer un chercheur de
-    trente ans de carrière à un chercheur de cinq ans par leur seul h n'a pas
-    de sens. Le m corrige exactement ce biais.
+    The h-index can only grow over time: comparing a researcher with thirty
+    years of career to one with five years by their h alone makes no sense.
+    The m corrects exactly this bias.
 
-    `last_year` est la dernière année **du corpus**, jamais l'année courante :
-    sinon tous les m d'un corpus arrêté en 2020 baisseraient chaque 1ᵉʳ janvier
-    sans qu'aucune donnée n'ait changé.
+    `last_year` is the last year **of the corpus**, never the current year:
+    otherwise every m of a corpus that stops in 2020 would drop every 1
+    January without any data having changed.
     """
     if first_year is None or last_year is None:
         return None
@@ -101,11 +101,11 @@ def m_index(h: int, first_year, last_year) -> Optional[float]:
 
 
 # ---------------------------------------------------------------------------
-# Au niveau du corpus
+# At corpus level
 # ---------------------------------------------------------------------------
 
 def corpus_impact(corpus) -> dict:
-    """Indices d'impact du corpus entier."""
+    """Impact indices of the whole corpus."""
     cites = pd.to_numeric(corpus.documents["cited_by"],
                           errors="coerce").fillna(0).astype(int)
     total = int(cites.sum())
@@ -123,22 +123,23 @@ def corpus_impact(corpus) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Par auteur
+# Per author
 # ---------------------------------------------------------------------------
 
 def _rank_counts(ranks, total: int) -> dict:
-    """Répartition des signatures d'un auteur par RANG : 1ᵉʳ, 2ᵉ, 3ᵉ, 4ᵉ et plus.
+    """Distribution of an author's signatures by RANK: 1st, 2nd, 3rd, 4th and
+    later.
 
-    Le rang de signature n'est pas un détail : dans la plupart des disciplines
-    il encode le rôle. Premier auteur, c'est avoir porté le travail ; septième
-    sur huit, c'est y avoir contribué. Deux auteurs à 50 documents peuvent
-    avoir des carrières opposées, et seule cette ventilation le montre.
+    The authorship rank is not a detail: in most disciplines it encodes the
+    role. First author means having carried the work; seventh out of eight
+    means having contributed to it. Two authors with 50 documents can have
+    opposite careers, and only this breakdown shows it.
 
-    Les quatre comptes somment TOUJOURS au nombre de documents : « 4ᵉ et plus »
-    est calculé par différence. Un rang illisible y tombe donc aussi, c'est le
-    seau fourre-tout, et il vaut mieux un tableau qui s'additionne qu'une
-    colonne muette. En pratique les exports Scopus numérotent toujours les
-    signataires, ce cas ne se produit pas.
+    The four counts ALWAYS add up to the number of documents: "4th and later"
+    is computed by difference. An unreadable rank therefore falls into it
+    too, it is the catch-all bucket, and a table that adds up is better than
+    a silent column. In practice Scopus exports always number the authors, so
+    this case does not occur.
     """
     r = pd.to_numeric(ranks, errors="coerce")
     first = int((r == 1).sum())
@@ -154,21 +155,20 @@ def _rank_counts(ranks, total: int) -> dict:
 
 def authors_impact(corpus, n: Optional[int] = 20,
                    min_documents: int = 1) -> pd.DataFrame:
-    """Classement des auteurs avec leurs indices d'impact.
+    """Ranking of the authors with their impact indices.
 
-    Colonnes : ``author``, ``scopus_id``, ``documents``, ``citations``,
+    Columns: ``author``, ``scopus_id``, ``documents``, ``citations``,
     ``h_index``, ``g_index``, ``first_author``, ``years``, ``first_year``,
     ``last_year``.
 
-    Un auteur est identifié par son **identifiant Scopus** s'il existe ; sinon
-    par son nom. Deux homonymes sans identifiant restent indiscernables, c'est
-    une limite des données, pas du calcul, et mieux vaut le savoir que de le
-    masquer.
+    An author is identified by their **Scopus identifier** if it exists;
+    otherwise by their name. Two namesakes without an identifier stay
+    indistinguishable: a limit of the data, not of the computation, and it is
+    better to know it than to hide it.
 
-    Le calcul se fait sur les documents DU CORPUS : un h-index de 6 ici
-    signifie « 6 documents de ce corpus, cités au moins 6 fois chacun ». Ce
-    n'est pas le h-index global de la personne, qui porterait sur toute son
-    œuvre.
+    The computation is done on the documents OF THE CORPUS: an h-index of 6
+    here means "6 documents of this corpus, each cited at least 6 times". It
+    is not the person's global h-index, which would cover their whole work.
     """
     a = corpus.authors
     a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
@@ -188,15 +188,15 @@ def authors_impact(corpus, n: Optional[int] = 20,
 
     corpus_last = pd.to_numeric(corpus.documents["year"], errors="coerce").max()
 
-    # Tout se calcule en UNE passe sur la table, pas auteur par auteur : la
-    # boucle faisait cinq opérations pandas par auteur (dédoublonnage,
-    # conversions, mode), 9 s sur 10 000 documents et 2 500 auteurs, pour des
-    # calculs qui tiennent en quelques groupements. Mêmes règles qu'avant,
-    # même résultat (vérifié sur de vrais corpus).
+    # Everything is computed in ONE pass over the table, not author by author:
+    # the loop did five pandas operations per author (deduplication,
+    # conversions, mode), 9 s on 10,000 documents and 2,500 authors, for
+    # computations that fit in a few groupings. Same rules as before, same
+    # result (checked on real corpora).
     #
-    # Un auteur peut apparaître deux fois sur le même document (rare, mais
-    # les exports le font) : on dédoublonne, sinon citations et indices
-    # seraient gonflés.
+    # An author can appear twice on the same document (rare, but exports do
+    # it): duplicates are removed, otherwise citations and indices would be
+    # inflated.
     per_doc = a.drop_duplicates(subset=["key", "eid"])
     per_doc = per_doc.assign(year_num=pd.to_numeric(per_doc["year"], errors="coerce"),
                              r1=(per_doc["rank"] == 1).astype(int),
@@ -212,8 +212,8 @@ def authors_impact(corpus, n: Optional[int] = 20,
         "third_author": grouped["r3"].sum(),
     })
     cites = grouped["citations"].agg(list)
-    # Le nom le plus fréquent, le premier dans l'ordre alphabétique en cas
-    # d'égalité, exactement ce que donnait `Series.mode().iat[0]`.
+    # The most frequent name, the first in alphabetical order on a tie, exactly
+    # what `Series.mode().iat[0]` gave.
     counts = a.groupby(["key", "name"], sort=False).size().rename("n").reset_index()
     names = (counts.sort_values(["key", "n", "name"], ascending=[True, False, True])
              .drop_duplicates("key").set_index("key")["name"])
@@ -256,13 +256,13 @@ def authors_impact(corpus, n: Optional[int] = 20,
 
 def institutions_impact(corpus, n: Optional[int] = 20,
                         level: str = "parent") -> pd.DataFrame:
-    """Mêmes indices, agrégés par organisation.
+    """The same indices, aggregated per organisation.
 
-    `level` vaut « parent » (l'établissement) ou « subparent » (l'unité
-    interne : laboratoire, école, département).
+    `level` is "parent" (the institution) or "subparent" (the internal unit:
+    laboratory, school, department).
 
-    Un document compte UNE fois par organisation, même si trois de ses auteurs
-    y sont rattachés, sinon les citations seraient comptées trois fois.
+    A document counts ONCE per organisation, even if three of its authors are
+    affiliated with it; otherwise the citations would be counted three times.
     """
     from .production import _org_frame
 
@@ -306,21 +306,22 @@ def institutions_impact(corpus, n: Optional[int] = 20,
 
 
 def normalized_citations(corpus) -> pd.DataFrame:
-    """Citations rapportées à la moyenne de leur **année de publication**.
+    """Citations relative to the mean of their **publication year**.
 
-    Colonnes : ``eid``, ``citations``, ``year_mean_citations``,
+    Columns: ``eid``, ``citations``, ``year_mean_citations``,
     ``normalized_citations``.
 
-    Comparer les citations brutes de deux articles publiés à huit ans d'écart
-    n'a pas de sens : le plus ancien gagne presque toujours, et cela ne dit
-    rien de sa qualité. Le score normalisé divise par la moyenne de la cohorte :
+    Comparing the raw citations of two articles published eight years apart
+    makes no sense: the older one almost always wins, and that says nothing
+    about its quality. The normalised score divides by the mean of the
+    cohort:
 
-        1,0  = exactement la moyenne de son année
-        3,0  = trois fois mieux que ses contemporains
+        1.0  = exactly the mean of its year
+        3.0  = three times better than its contemporaries
 
-    C'est la seule colonne qui permette de classer ensemble un article de 2016
-    et un de 2024. Une année sans aucune citation donne 0 plutôt qu'une
-    division par zéro.
+    It is the only column that can rank an article from 2016 and one from
+    2024 together. A year without any citation gives 0 rather than a division
+    by zero.
     """
     d = corpus.documents[["eid"]].copy()
     d["citations"] = pd.to_numeric(corpus.documents["cited_by"],

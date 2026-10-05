@@ -1,7 +1,7 @@
-"""Le rapport : figures et tableaux d'une étude, rangés dans un seul ZIP.
+"""The report: the figures and tables of a study, gathered in a single ZIP.
 
-C'est le même rapport que le panier « Add to report » de l'interface, l'API
-appelle cette classe, et un utilisateur du paquet le construit en Python :
+It is the same report as the interface's "Add to report" basket: the API
+calls this class, and a package user builds it in Python:
 
     >>> from bibliominer_analysis import Corpus, Report
     >>> corpus = Corpus.from_csv("cleaned.csv").filter(years=(2023, 2025))
@@ -13,30 +13,30 @@ appelle cette classe, et un utilisateur du paquet le construit en Python :
     ...                   corpus.figure_spec("production_by_year"))
     >>> report.save("report.zip")
 
-Ce qu'il contient ::
+What it contains ::
 
-    README.txt                      l'index : chaque fichier, son titre, les filtres
-    all_tables.xlsx                 tous les tableaux, une feuille chacun
-    1-corpus/figures/<nom>.png      300 dpi, qualité impression
-    1-corpus/figures/<nom>.svg      vectoriel : s'agrandit sans perte
-    1-corpus/corpus_tables.xlsx     les tableaux de la section, une feuille
-                                    chacun, et une feuille « Contents »
+    README.txt                      the index: every file, its title, the filters
+    all_tables.xlsx                 every table, one sheet each
+    1-corpus/figures/<name>.png     300 dpi, print quality
+    1-corpus/figures/<name>.svg     vector: scales without loss
+    1-corpus/corpus_tables.xlsx     the section's tables, one sheet each,
+                                    and a "Contents" sheet
     2-actors/…  3-impact/…  4-concepts/…  5-networks/…
 
-UN classeur par section, pas un fichier par tableau : une étude compte une
-centaine de tableaux, et vingt fichiers Excel dans un dossier ne se
-parcourent pas. Son nom porte la section (``actors_tables.xlsx``) : Excel
-refuse d'ouvrir ensemble deux classeurs du même nom. La feuille « Contents »
-donne le titre ENTIER de chaque feuille, sa période et ses filtres : un nom
-de feuille est coupé à 31 caractères.
+ONE workbook per section, not one file per table: a study has about a
+hundred tables, and twenty Excel files in a folder are not browsable. Its
+name carries the section (``actors_tables.xlsx``): Excel refuses to open
+two workbooks with the same name at once. The "Contents" sheet gives the
+FULL title of each sheet, its period and its filters: a sheet name is cut
+at 31 characters.
 
-Une entrée calculée sur une PÉRIODE (``period="2010-2013"``) la porte dans le
-nom de son fichier (``top-authors_2010-2013.png``) ou de sa feuille. Deux
-classements des auteurs sur deux périodes donnent deux fichiers, deux
-feuilles, jamais un seul écrasé.
+An entry computed over a PERIOD (``period="2010-2013"``) carries it in
+its file name (``top-authors_2010-2013.png``) or sheet name. Two author
+rankings over two periods give two files, two sheets, never a single
+overwritten one.
 
-Une section par groupe de l'interface (Corpus, Actors, Impact, Concepts,
-Networks), dans l'ordre du menu ; une section inconnue vient ensuite.
+One section per group of the interface (Corpus, Actors, Impact, Concepts,
+Networks), in the order of the menu; an unknown section comes after.
 """
 
 from __future__ import annotations
@@ -57,10 +57,10 @@ from .figures.render import FigureSpec, render_figure
 
 __all__ = ["Report", "SECTIONS", "table_workbook"]
 
-#: Les groupes du menu de l'interface, dans leur ordre : un dossier chacun.
+#: The groups of the interface menu, in their order: one folder each.
 SECTIONS = ("Corpus", "Actors", "Impact", "Concepts", "Networks")
 
-#: Résolution des figures matricielles : celle qu'exigent les revues.
+#: Resolution of raster figures: the one journals require.
 PRINT_DPI = 300
 
 _EPOCH = (1980, 1, 1, 0, 0, 0)
@@ -85,10 +85,10 @@ def _frame(table: TableLike) -> pd.DataFrame:
 
 
 def table_workbook(table: TableLike, name: str = "Table") -> bytes:
-    """Un tableau seul, en classeur Excel d'une feuille.
+    """A single table, as a one-sheet Excel workbook.
 
-    L'export « Excel » d'un tableau de l'interface : écrit par le paquet,
-    comme les classeurs du rapport, sans dépendance de plus."""
+    The interface's "Excel" export of a table: written by the package, like
+    the report's workbooks, without any extra dependency."""
     return workbook_bytes([(name or "Table", _frame(table))])
 
 
@@ -121,23 +121,23 @@ class _Figure:
 
 
 def _book(section: str) -> str:
-    """Le classeur des tableaux d'une section : ``actors_tables.xlsx``."""
+    """The workbook of a section's tables: ``actors_tables.xlsx``."""
     return f"{_slug(section).replace('-', '_')}_tables.xlsx"
 
 
 def _stem(item: Union[_Table, _Figure]) -> str:
-    """Le nom de fichier d'une entrée : son nom, puis sa période."""
+    """The file name of an entry: its name, then its period."""
     stem = _slug(item.name)
     return f"{stem}_{_slug(item.period)}" if item.period.strip() else stem
 
 
 class Report:
-    """Un rapport en construction : on y ajoute tableaux, indicateurs et
-    figures, puis `save` écrit le ZIP.
+    """A report under construction: tables, indicators and figures are added to
+    it, then `save` writes the ZIP.
 
-    ``filters``  les filtres de l'étude (période, types…), recopiés dans le
-                 README : un chiffre sans son périmètre ne se cite pas.
-    ``formats``  les formats de chaque figure : PNG (``dpi``) et SVG par défaut.
+    ``filters``  the study's filters (period, types...), copied into the
+                 README: a figure without its scope cannot be cited.
+    ``formats``  the formats of each figure: PNG (``dpi``) and SVG by default.
     """
 
     def __init__(self, title: str = "Bibliometric report", *,
@@ -159,12 +159,11 @@ class Report:
 
     def add_table(self, section: str, name: str, table: TableLike,
                   note: str = "", *, title: str = "", period: str = "") -> "Report":
-        """Un tableau (DataFrame, liste de lignes ou dictionnaire) : un
-        feuille du classeur de sa section (``<section>_tables.xlsx``), et une feuille de
-        ``all_tables.xlsx``.
+        """A table (DataFrame, list of rows or dictionary): a sheet of its section's
+        workbook (``<section>_tables.xlsx``), and a sheet of ``all_tables.xlsx``.
 
-        ``title``  le titre écrit dans le README (à défaut, ``name``) ;
-        ``period`` la période du tableau, ajoutée au nom du fichier."""
+        ``title``  the title written in the README (``name`` by default);
+        ``period`` the table's period, added to the file name."""
         self._items.append(_Table(section, name, _frame(table), note, title, period))
         return self
 
@@ -172,9 +171,9 @@ class Report:
                        values: Union[Mapping[str, Any], TableLike],
                        definitions: Optional[Mapping[str, str]] = None,
                        *, period: str = "") -> "Report":
-        """Des indicateurs (ceux des tuiles de l'interface) : un tableau
-        ``indicator | value | definition``. Un dictionnaire imbriqué ou une
-        liste n'est pas un indicateur : ces valeurs-là sont écartées."""
+        """Indicators (those of the interface tiles): a table
+        ``indicator | value | definition``. A nested dictionary or a list is not
+        an indicator: such values are left out."""
         if isinstance(values, Mapping):
             definitions = definitions or {}
             rows = [{"indicator": key, "value": value,
@@ -188,13 +187,13 @@ class Report:
 
     def add_figure(self, section: str, name: str, figure: FigureLike,
                    note: str = "", *, title: str = "", period: str = "") -> "Report":
-        """Une figure, dans chacun des formats du rapport.
+        """A figure, in each of the report's formats.
 
-        ``figure`` peut être une `FigureSpec` (rendue ici, à ``dpi``), une
-        fonction ``fmt -> octets`` (``lambda fmt: render_network(g, fmt=fmt)``),
-        un dictionnaire ``{"png": …, "svg": …}`` déjà rendu, ou les octets
-        d'une seule image. ``title`` : le titre du README (à défaut, ``name``) ;
-        ``period`` : la période de la figure, ajoutée au nom du fichier.
+        ``figure`` can be a `FigureSpec` (rendered here, at ``dpi``), a function
+        ``fmt -> bytes`` (``lambda fmt: render_network(g, fmt=fmt)``), an already
+        rendered dictionary ``{"png": ..., "svg": ...}``, or the bytes of a single
+        image. ``title``: the README title (``name`` by default); ``period``: the
+        figure's period, added to the file name.
         """
         files: Dict[str, bytes] = {}
         if isinstance(figure, FigureSpec):
@@ -215,8 +214,8 @@ class Report:
     def add_corpus_figure(self, corpus: Any, name: str, *, period: str = "",
                           style: Optional[Mapping[str, Any]] = None,
                           **options: Any) -> "Report":
-        """Une figure du catalogue de l'interface, rangée dans SA section et
-        sous SON titre, l'équivalent du bouton « Add to report » :
+        """A figure from the interface catalogue, filed in ITS section and under ITS
+        title, the equivalent of the "Add to report" button:
 
             >>> report.add_corpus_figure(corpus, "top-authors", n=10)
             >>> recent = corpus.filter(years=(2010, 2013))
@@ -231,7 +230,7 @@ class Report:
                                                         style=dict(style or {}), **options),
                                title=e.title, period=period)
 
-    # -- écrire ---------------------------------------------------------------
+    # -- writing --------------------------------------------------------------
 
     def _folders(self) -> Dict[str, str]:
         extra = [s for s in dict.fromkeys(i.section for i in self._items)
@@ -265,7 +264,7 @@ class Report:
         return "\n".join(lines) + "\n"
 
     def to_bytes(self) -> bytes:
-        """Le ZIP du rapport, en mémoire."""
+        """The report's ZIP, in memory."""
         if not self._items:
             raise ValueError("the report is empty: add a table or a figure first")
         folders = self._folders()
@@ -283,17 +282,17 @@ class Report:
             return candidate
 
         sheets = []
-        # Les tableaux d'une section : un classeur, une feuille chacun.
+        # The tables of a section: one workbook, one sheet each.
         section_sheets: Dict[str, List[tuple]] = {}
         section_taken: Dict[str, set] = {}
-        # Dans l'ordre du menu, et dans l'ordre d'ajout à l'intérieur d'une
-        # section (tri stable).
+        # In the order of the menu, and in the order they were added within a
+        # section (stable sort).
         rank = {section: int(folder.split("-", 1)[0]) for section, folder in folders.items()}
         for item in sorted(self._items, key=lambda i: rank[i.section]):
             base = f"{folders[item.section]}"
             shown = item.title or item.name
-            # La période dans l'index aussi : deux « Top authors » sur deux
-            # périodes ne se distinguent pas autrement dans le README.
+            # The period in the index too: two "Top authors" over two periods cannot be
+            # told apart otherwise in the README.
             listed = f"{shown}, {item.period}" if item.period else shown
             if isinstance(item, _Table):
                 label = f"{shown} ({item.period})" if item.period else shown
@@ -337,7 +336,7 @@ class Report:
         return buffer.getvalue()
 
     def save(self, path: Union[str, Path]) -> Path:
-        """Écrit le ZIP et renvoie son chemin."""
+        """Writes the ZIP and returns its path."""
         target = Path(path)
         target.write_bytes(self.to_bytes())
         return target

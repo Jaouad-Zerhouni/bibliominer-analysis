@@ -1,5 +1,5 @@
-"""Le rendu matplotlib des figures publiables (barres, lignes, nuages
-simples) -- jamais un rendu de navigateur capturé.
+"""matplotlib rendering of the publishable figures (bars, lines, simple
+scatters) -- never a captured browser rendering.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ def test_barres_simples_produit_un_png_valide():
     )
     data = render_figure(spec, fmt="png")
     assert _png_signature(data)
-    assert len(data) > 500  # une figure vide ferait quelques dizaines d'octets
+    assert len(data) > 500  # an empty figure would be a few dozen bytes
 
 
 def test_lignes_multi_series_ne_leve_pas():
@@ -47,19 +47,19 @@ def test_nuage_de_points_simple():
 
 
 def test_barres_horizontales_grille_sur_l_axe_des_valeurs():
-    """Non-régression : le filet de grille doit suivre l'axe X (valeurs) en
-    orientation horizontale, pas Y (catégories) -- sinon il ne sert à rien."""
+    """Non-regression: the grid line must follow the X axis (values) in
+    horizontal orientation, not Y (categories) -- otherwise it is useless."""
     spec = FigureSpec(
         kind="bar", orientation="horizontal",
         categories=["Morocco", "France"],
         series=[Series(name="Documents", values=[40, 25])],
     )
-    render_figure(spec, fmt="png")  # ne doit pas lever
+    render_figure(spec, fmt="png")  # must not raise
 
 
 def test_barres_et_ligne_melangees_ne_leve_pas():
-    """Le motif « compte + tendance » (RPYS, moyenne mobile...) : une série
-    barres et une série ligne sur le même axe catégoriel."""
+    """The "count + trend" pattern (RPYS, moving average...): a bar series and a
+    line series on the same categorical axis."""
     spec = FigureSpec(
         kind="bar",
         categories=["2020", "2021", "2022"],
@@ -90,8 +90,8 @@ def test_type_non_couvert_leve_figure_error():
 
 
 def test_format_jpg_produit_un_jpeg_valide():
-    """"jpg" est le nom reconnu par l'utilisateur -- matplotlib, lui, ne
-    connaît que "jpeg" (alias interne, voir `_MPL_FORMAT`)."""
+    """"jpg" is the name users know -- matplotlib only knows "jpeg" (internal
+    alias, see `_MPL_FORMAT`)."""
     spec = FigureSpec(kind="bar", categories=["a", "b"],
                       series=[Series(name="x", values=[1, 2])])
     data = render_figure(spec, fmt="jpg")
@@ -112,8 +112,8 @@ def test_aucune_serie_leve_figure_error():
 
 
 def test_longueur_valeurs_categories_desaccordees_leve_figure_error():
-    """Une série de 2 valeurs pour 3 catégories est une donnée cassée -- la
-    figure ne doit pas se construire en silence sur un mauvais alignement."""
+    """A series of 2 values for 3 categories is broken data -- the figure must
+    not silently build itself on a wrong alignment."""
     spec = FigureSpec(
         kind="bar", categories=["2020", "2021", "2022"],
         series=[Series(name="Documents", values=[10, 15])],
@@ -136,22 +136,22 @@ def test_svg_est_du_texte_vectoriel():
 
 
 def test_couleurs_categorielles_dans_l_ordre_valide():
-    """La première série doit porter la PREMIÈRE couleur de la rampe validée
-    -- jamais une couleur choisie au hasard par matplotlib."""
+    """The first series must carry the FIRST colour of the validated ramp --
+    never a colour picked at random by matplotlib."""
     from bibliominer_analysis.figures.palette import CATEGORICAL_LIGHT
 
     spec = FigureSpec(
         kind="bar", categories=["a"],
         series=[Series(name="x", values=[1])], mode="light",
     )
-    # Rendu SVG : la couleur du rectangle apparaît en texte, vérifiable sans
-    # décoder un PNG.
+    # SVG rendering: the rectangle's colour appears as text, checkable without
+    # decoding a PNG.
     svg = render_figure(spec, fmt="svg").decode("utf-8", errors="ignore")
     assert CATEGORICAL_LIGHT[0].lower() in svg.lower()
 
 
 def test_axes_logarithmiques_pour_zipf():
-    """Zipf se lit en log-log : l'option doit changer l'échelle, pas lever."""
+    """Zipf is read in log-log: the option must change the scale, not raise."""
     spec = FigureSpec(kind="scatter", x_log=True, y_log=True,
                       series=[Series(name="observed",
                                      points=[(1, 40), (2, 20), (10, 4), (100, 1)])])
@@ -163,7 +163,7 @@ def test_axes_logarithmiques_pour_zipf():
 
 
 def test_etiquettes_de_points_superposes_fusionnees():
-    """Deux thèmes au même endroit : une seule étiquette « premier +1 »."""
+    """Two themes at the same place: a single "first +1" label."""
     spec = FigureSpec(kind="scatter", series=[Series(
         name="themes", points=[(0, 50), (0, 50), (1, 60)],
         labels=["Alpha theme", "Beta theme", "Gamma theme"])])
@@ -174,7 +174,7 @@ def test_etiquettes_de_points_superposes_fusionnees():
 
 
 def test_beaucoup_de_categories_graduations_clairsemees():
-    """77 rangs de Bradford : l'axe n'écrit pas 77 étiquettes côte à côte."""
+    """77 Bradford ranks: the axis does not write 77 labels side by side."""
     from bibliominer_analysis.figures import render as r
 
     cats = [str(i) for i in range(1, 78)]

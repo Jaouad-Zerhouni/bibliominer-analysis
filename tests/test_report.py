@@ -1,5 +1,5 @@
-"""Le rapport : un ZIP rangé par section, figures PNG 300 dpi + SVG, tableaux
-Excel. Le même que celui du panier « Add to report » de l'interface."""
+"""The report: a ZIP organised by section, PNG figures at 300 dpi + SVG,
+Excel tables. The same as the interface's "Add to report" basket."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def test_structure_du_zip():
     assert names[:2] == ["README.txt", "all_tables.xlsx"]
     assert "1-corpus/figures/annual-production.png" in names
     assert "1-corpus/figures/annual-production.svg" in names
-    # Un classeur par section, pas un fichier par tableau.
+    # One workbook per section, not one file per table.
     assert "2-actors/actors_tables.xlsx" in names
     assert "3-impact/impact_tables.xlsx" in names
     assert not any("/tables/" in n for n in names)
@@ -54,15 +54,15 @@ def test_figure_rendue_a_300_dpi():
     z = zipfile.ZipFile(io.BytesIO(_report().to_bytes()))
     png = z.read("1-corpus/figures/annual-production.png")
     width = int.from_bytes(png[16:20], "big")
-    assert width == int(SPEC.width_in * 300)           # 7,2 pouces à 300 dpi
+    assert width == int(SPEC.width_in * 300)           # 7.2 inches at 300 dpi
 
 
 def test_tableaux_excel_et_indicateurs():
     z = zipfile.ZipFile(io.BytesIO(_report().to_bytes()))
-    # Feuille 1 : le sommaire ; les tableaux suivent, dans l'ordre d'ajout.
+    # Sheet 1: the contents; the tables follow, in the order they were added.
     assert _cells(z.read("2-actors/actors_tables.xlsx"), sheet=2) == [
         "author", "documents", "Idri A.", "12", "Hosni M.", "9"]
-    # un indicateur imbriqué n'est pas un indicateur : écarté
+    # a nested indicator is not an indicator: left out
     assert _cells(z.read("3-impact/impact_tables.xlsx"), sheet=2) == [
         "indicator", "value", "definition", "CAGR", "12.5", "Compound annual growth rate"]
 
@@ -87,7 +87,7 @@ def test_noms_de_feuilles_excel():
     taken: set = set()
     assert sheet_name("A/B:C*?", taken) == "A B C"
     assert sheet_name("x" * 40, taken) == "x" * 31
-    assert sheet_name("X" * 40, taken) == "X" * 27 + " (2)"   # Excel ignore la casse
+    assert sheet_name("X" * 40, taken) == "X" * 27 + " (2)"   # Excel ignores case
 
 
 def test_cellules_vides_et_caracteres_interdits():

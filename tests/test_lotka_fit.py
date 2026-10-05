@@ -1,4 +1,4 @@
-"""Lotka generalise : y = C/n^a, exposant par maximum de vraisemblance."""
+"""Generalised Lotka: y = C/n^a, exponent by maximum likelihood."""
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,7 @@ from bibliominer_analysis.metrics import laws as lw
 
 
 def _corpus(productivities):
-    """Un corpus ou chaque auteur signe le nombre de documents demande."""
+    """A corpus where each author signs the requested number of documents."""
     rows, eid = [], 0
     for i, k in enumerate(productivities):
         for _ in range(k):
@@ -32,7 +32,7 @@ def test_zeta_valeurs_connues():
 
 
 def test_zeta_indefinie_en_dessous_de_un():
-    """La serie diverge : aucune constante ne normalise la loi."""
+    """The series diverges: no constant normalises the law."""
     assert np.isnan(lw._zeta(1.0))
     assert np.isnan(lw._zeta(0.755))
 
@@ -40,7 +40,7 @@ def test_zeta_indefinie_en_dessous_de_un():
 # ------------------------------------------------------------------- MLE ----
 
 def test_mle_retrouve_un_exposant_connu():
-    """Echantillon tire d'une loi zeta d'exposant 2,5 : on doit le retrouver."""
+    """A sample drawn from a zeta law with exponent 2.5: we must recover it."""
     rng = np.random.default_rng(7)
     a = 2.5
     n = np.arange(1, 200, dtype=float)
@@ -51,22 +51,22 @@ def test_mle_retrouve_un_exposant_connu():
 
 
 def test_mle_resiste_a_une_queue_qui_trompe_les_moindres_carres():
-    """Le defaut corrige : une queue de niveaux a un seul auteur.
+    """The fixed defect: a tail of levels with a single author each.
 
-    Les moindres carres sur log-log donnent le meme poids a chaque NIVEAU de
-    productivite. Quand la queue en compte beaucoup, tous a un seul auteur, la
-    pente s'aplatit jusqu'a passer sous 1, et la loi n'a alors meme plus de
-    constante de normalisation.
+    Least squares on log-log give the same weight to every productivity
+    LEVEL. When the tail has many of them, all with a single author, the slope
+    flattens until it drops below 1, and the law then no longer even has a
+    normalising constant.
     """
     productivities = [1] * 18 + [2] * 10 + [3, 3, 4, 4, 6, 7, 7, 7, 8, 10, 11, 12, 25, 50]
     c = _corpus(productivities)
     fit = c.lotka()["fit"]
-    assert fit["exponent_ols"] < 1.0, "le biais des moindres carres doit etre visible"
-    assert fit["exponent"] > 1.0, "la vraisemblance doit rester dans le domaine valide"
+    assert fit["exponent_ols"] < 1.0, "the least-squares bias must be visible"
+    assert fit["exponent"] > 1.0, "the likelihood must stay in the valid domain"
     assert np.isfinite(fit["constant"])
 
 
-# ------------------------------------------------------------- la formule ----
+# --------------------------------------------------------------- the formula ----
 
 def test_la_loi_ajustee_suit_bien_y_egale_c_sur_n_puissance_a():
     c = _corpus([1] * 12 + [2] * 6 + [3] * 3 + [5, 8])
@@ -78,7 +78,7 @@ def test_la_loi_ajustee_suit_bien_y_egale_c_sur_n_puissance_a():
 
 
 def test_constante_normalise_la_loi():
-    """C = 1/ζ(a) : la loi somme a 1 sur TOUS les entiers, pas seulement ceux vus."""
+    """C = 1/ζ(a): the law sums to 1 over ALL integers, not only the observed ones."""
     c = _corpus([1] * 12 + [2] * 6 + [3] * 3 + [5, 8])
     fit = c.lotka()["fit"]
     a, const = fit["exponent"], fit["constant"]
@@ -93,7 +93,7 @@ def test_les_trois_colonnes_sont_presentes():
 
 
 def test_lotka_strict_reste_l_exposant_deux():
-    """La colonne de reference ne doit PAS bouger avec l'ajustement."""
+    """The reference column must NOT move with the fit."""
     c = _corpus([1] * 8 + [2] * 4 + [3, 5])
     t = c.lotka()["table"].set_index("documents_written")
     zeta2 = np.pi ** 2 / 6
@@ -102,7 +102,7 @@ def test_lotka_strict_reste_l_exposant_deux():
 
 
 def test_deux_tests_ks_distincts():
-    """Suivre une loi de puissance et suivre CELLE de Lotka sont deux questions."""
+    """Following a power law and following LOTKA's law are two questions."""
     c = _corpus([1] * 18 + [2] * 10 + [3, 3, 4, 4, 7, 7, 7, 25, 50])
     r = c.lotka()
     assert set(r) >= {"ks_test", "ks_test_strict"}
@@ -111,7 +111,7 @@ def test_deux_tests_ks_distincts():
 
 
 def test_ajustement_plus_proche_que_lotka_strict():
-    """C'est tout l'objet de la correction : l'ecart doit diminuer."""
+    """That is the whole point of the fix: the gap must shrink."""
     c = _corpus([1] * 18 + [2] * 10 + [3, 3, 4, 4, 6, 7, 7, 7, 8, 10, 11, 12, 25, 50])
     r = c.lotka()
     assert r["ks_test"]["d"] <= r["ks_test_strict"]["d"]

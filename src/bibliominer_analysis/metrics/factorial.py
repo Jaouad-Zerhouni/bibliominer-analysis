@@ -1,23 +1,23 @@
-"""Structure conceptuelle : analyse factorielle des mots-clés.
+"""Conceptual structure: factorial analysis of keywords.
 
-Les réseaux de co-mots montrent *qui est lié à qui*. L'analyse factorielle
-répond à une autre question : **sur quels axes le domaine se structure-t-il ?**
-Elle projette les termes dans un plan où la distance a un sens, deux termes
-proches apparaissent dans les mêmes documents, puis on y cherche des groupes.
+Co-word networks show *who is linked to whom*. Factorial analysis answers
+another question: **along which axes is the field structured?** It
+projects the terms onto a plane where distance has a meaning (two close
+terms appear in the same documents), then groups are searched for there.
 
-Deux méthodes, deux points de vue :
+Two methods, two points of view:
 
-  - **AFC** (analyse factorielle des correspondances) sur le tableau
-    documents × termes. Les axes sont les directions de plus forte *inertie*,
-    c'est-à-dire de plus fort écart à l'indépendance. On sait quelle part de
-    l'information chaque axe porte, ce que ne donne pas le MDS.
-  - **MDS** (positionnement multidimensionnel) sur une matrice de
-    dissimilarité. Il ne cherche qu'à préserver les distances deux à deux :
-    plus fidèle localement, mais les axes n'ont pas d'interprétation propre.
+  - **CA** (correspondence analysis) on the documents × terms table. The
+    axes are the directions of greatest *inertia*, i.e. of greatest
+    departure from independence. We know what share of the information
+    each axis carries, which MDS does not give.
+  - **MDS** (multidimensional scaling) on a dissimilarity matrix. It only
+    tries to preserve the pairwise distances: more faithful locally, but
+    the axes have no interpretation of their own.
 
-Tout est calculé en numpy, SVD pour l'AFC, décomposition propre pour le MDS,
-k-moyennes pour les groupes. Aucune dépendance supplémentaire, et surtout des
-résultats **déterministes** : un article doit pouvoir être refait à l'identique.
+Everything is computed in numpy: SVD for the CA, eigendecomposition for
+the MDS, k-means for the groups. No additional dependency, and above all
+**deterministic** results: an article must be reproducible identically.
 """
 
 from __future__ import annotations
@@ -27,17 +27,17 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-#: Graine fixe : deux exécutions doivent donner exactement la même carte.
+#: Fixed seed: two runs must give exactly the same map.
 SEED = 20240101
 
 
 # ---------------------------------------------------------------------------
-# Tableau de départ
+# Starting table
 # ---------------------------------------------------------------------------
 
 def _incidence(corpus, kind: str = "author", top_n: int = 50,
                min_documents: int = 2):
-    """Tableau binaire documents × termes, et les occurrences de chaque terme."""
+    """Binary documents × terms table, and the occurrences of each term."""
     k = corpus.keywords
     if kind in ("author", "index"):
         k = k[k["kind"] == kind]
@@ -61,8 +61,8 @@ def _incidence(corpus, kind: str = "author", top_n: int = 50,
     matrix = pd.crosstab(k["eid"], k["norm"]).reindex(columns=counts.index,
                                                       fill_value=0)
     matrix = (matrix > 0).astype(float)
-    # Un document sans aucun des termes retenus n'apporte rien et casserait
-    # l'AFC (masse de ligne nulle).
+    # A document without any of the retained terms brings nothing and would
+    # break the CA (zero row mass).
     matrix = matrix.loc[matrix.sum(axis=1) > 0]
     if matrix.empty or matrix.shape[1] < 3:
         return None, None, None
@@ -70,24 +70,24 @@ def _incidence(corpus, kind: str = "author", top_n: int = 50,
 
 
 # ---------------------------------------------------------------------------
-# Analyse factorielle des correspondances
+# Correspondence analysis
 # ---------------------------------------------------------------------------
 
 def _correspondence(matrix: pd.DataFrame, n_dims: int = 2):
-    """AFC classique par SVD. Renvoie (coords colonnes, inerties expliquées)."""
+    """Classical CA by SVD. Returns (column coordinates, explained inertias)."""
     N = matrix.to_numpy(dtype=float)
     total = N.sum()
     if total <= 0:
         return None, None
 
     P = N / total
-    r = P.sum(axis=1)          # masses des lignes (documents)
-    c = P.sum(axis=0)          # masses des colonnes (termes)
+    r = P.sum(axis=1)          # row masses (documents)
+    c = P.sum(axis=0)          # column masses (terms)
     ok_r, ok_c = r > 0, c > 0
     P, r, c = P[np.ix_(ok_r, ok_c)], r[ok_r], c[ok_c]
 
-    # Matrice des résidus standardisés : l'écart au modèle d'indépendance,
-    # pondéré par les masses. C'est cette matrice que l'AFC décompose.
+    # Matrix of standardised residuals: the departure from the independence
+    # model, weighted by the masses. It is this matrix that the CA decomposes.
     S = (P - np.outer(r, c)) / np.sqrt(np.outer(r, c))
     U, sigma, Vt = np.linalg.svd(S, full_matrices=False)
 
@@ -98,7 +98,7 @@ def _correspondence(matrix: pd.DataFrame, n_dims: int = 2):
     explained = 100.0 * inertia / total_inertia
 
     k = min(n_dims, sigma.size)
-    # Coordonnées principales des colonnes : D_c^{-1/2} V Σ
+    # Principal coordinates of the columns: D_c^{-1/2} V Σ
     coords = (Vt[:k].T * sigma[:k]) / np.sqrt(c)[:, None]
 
     full = np.full((matrix.shape[1], k), np.nan)
@@ -111,13 +111,13 @@ def _correspondence(matrix: pd.DataFrame, n_dims: int = 2):
 # ---------------------------------------------------------------------------
 
 def _classical_mds(dissimilarity: np.ndarray, n_dims: int = 2):
-    """MDS classique (Torgerson) : double centrage puis décomposition propre."""
+    """Classical (Torgerson) MDS: double centring then eigendecomposition."""
     D2 = dissimilarity ** 2
     n = D2.shape[0]
     J = np.eye(n) - np.ones((n, n)) / n
     B = -0.5 * J @ D2 @ J
-    # B est symétrique : eigh est plus stable et plus rapide que eig, et rend
-    # les valeurs propres déjà triées.
+    # B is symmetric: eigh is more stable and faster than eig, and returns the
+    # eigenvalues already sorted.
     values, vectors = np.linalg.eigh(B)
     order = np.argsort(values)[::-1]
     values, vectors = values[order], vectors[:, order]
@@ -130,7 +130,7 @@ def _classical_mds(dissimilarity: np.ndarray, n_dims: int = 2):
 
 
 def _dissimilarity(matrix: pd.DataFrame) -> np.ndarray:
-    """1 − indice de Salton entre termes, à partir des co-occurrences."""
+    """1 - Salton index between terms, from the co-occurrences."""
     X = matrix.to_numpy(dtype=float)
     co = X.T @ X
     diag = np.diag(co).astype(float)
@@ -142,7 +142,7 @@ def _dissimilarity(matrix: pd.DataFrame) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# k-moyennes déterministes
+# Deterministic k-means
 # ---------------------------------------------------------------------------
 
 def _kmeans(X: np.ndarray, k: int, seed: int = SEED, iters: int = 100):
@@ -151,9 +151,9 @@ def _kmeans(X: np.ndarray, k: int, seed: int = SEED, iters: int = 100):
     if k >= n:
         return np.arange(n)
 
-    # k-means++ : le premier centre au hasard, les suivants proportionnellement
-    # au carré de la distance au centre le plus proche. Sans cela, deux
-    # exécutions convergent parfois vers des partitions différentes.
+    # k-means++: the first centre at random, the following ones proportionally
+    # to the squared distance to the nearest centre. Without it, two runs
+    # sometimes converge to different partitions.
     centers = [X[rng.integers(n)]]
     for _ in range(k - 1):
         d2 = np.min(((X[:, None, :] - np.array(centers)[None]) ** 2).sum(-1), axis=1)
@@ -177,7 +177,7 @@ def _kmeans(X: np.ndarray, k: int, seed: int = SEED, iters: int = 100):
 
 
 def _silhouette(X: np.ndarray, labels: np.ndarray) -> float:
-    """Silhouette moyenne, sert à choisir k, pas à juger la qualité absolue."""
+    """Mean silhouette: used to choose k, not to judge absolute quality."""
     uniq = np.unique(labels)
     if uniq.size < 2 or uniq.size >= X.shape[0]:
         return -1.0
@@ -207,23 +207,25 @@ def _choose_k(X: np.ndarray, k_max: int = 8) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Point d'entrée
+# Entry point
 # ---------------------------------------------------------------------------
 
 def conceptual_structure(corpus, method: str = "CA", kind: str = "author",
                          top_n: int = 50, min_documents: int = 2,
                          n_clusters: Optional[int] = None) -> Dict[str, Any]:
-    """Carte factorielle des mots-clés, avec regroupement automatique.
+    """Factorial map of the keywords, with automatic clustering.
 
-    `method` vaut ``"CA"`` (correspondances) ou ``"MDS"``.
-    `n_clusters` à ``None`` laisse la silhouette choisir le nombre de groupes.
+    `method` is ``"CA"`` (correspondence) or ``"MDS"``.
+    `n_clusters` set to ``None`` lets the silhouette choose the number of
+    groups.
 
-    Retour ::
+    Returns ::
 
         {"method", "terms": DataFrame, "explained": [dim1 %, dim2 %],
          "clusters": [{"cluster", "label", "terms", "size", "occurrences"}]}
 
-    ``terms`` porte ``keyword``, ``dim1``, ``dim2``, ``occurrences``, ``cluster``.
+    ``terms`` carries ``keyword``, ``dim1``, ``dim2``, ``occurrences``,
+    ``cluster``.
     """
     matrix, labels, counts = _incidence(corpus, kind, top_n, min_documents)
     empty = {"method": method, "terms": pd.DataFrame(
@@ -260,8 +262,8 @@ def conceptual_structure(corpus, method: str = "CA", kind: str = "author",
     for cid, g in df.groupby("cluster"):
         groups.append({
             "cluster": int(cid),
-            # Le terme le plus fréquent nomme le groupe, comme sur la carte
-            # thématique : les deux vues restent ainsi comparables.
+            # The most frequent term names the group, as on the thematic map: the two
+            # views thus stay comparable.
             "label": str(g.iloc[0]["keyword"]),
             "terms": ", ".join(g["keyword"].head(8)),
             "size": int(len(g)),
@@ -277,18 +279,18 @@ def conceptual_structure(corpus, method: str = "CA", kind: str = "author",
 
 
 # ---------------------------------------------------------------------------
-# Dendrogramme des thèmes
+# Dendrogram of themes
 # ---------------------------------------------------------------------------
 
 def _average_linkage(D: np.ndarray):
-    """Classification ascendante hiérarchique, lien moyen (UPGMA).
+    """Agglomerative hierarchical clustering, average linkage (UPGMA).
 
-    Renvoie la liste des fusions ``(a, b, distance, taille)``, dans l'ordre où
-    elles se produisent, le format d'une matrice de liaison classique.
+    Returns the list of merges ``(a, b, distance, size)``, in the order in
+    which they happen, the format of a classical linkage matrix.
 
-    Le lien **moyen** plutôt que le lien simple : ce dernier produit des
-    chaînages, où un groupe s'étire de proche en proche sans jamais être
-    compact, et le dendrogramme devient illisible.
+    **Average** linkage rather than single linkage: the latter produces
+    chaining, where a group stretches step by step without ever being
+    compact, and the dendrogram becomes unreadable.
     """
     n = D.shape[0]
     active = {i: [i] for i in range(n)}
@@ -309,8 +311,8 @@ def _average_linkage(D: np.ndarray):
         members = active[a] + active[b]
         merges.append((ids[a], ids[b], d, len(members)))
 
-        # Distance du nouveau groupe : moyenne pondérée par les effectifs,
-        # ce qui est exactement la définition du lien moyen.
+        # Distance of the new group: mean weighted by the group sizes, which is
+        # exactly the definition of average linkage.
         for k in keys:
             if k in (a, b):
                 continue
@@ -331,15 +333,15 @@ def _average_linkage(D: np.ndarray):
 def topic_dendrogram(corpus, kind: str = "author", top_n: int = 40,
                      min_documents: int = 2,
                      max_clusters: int = 6) -> Dict[str, Any]:
-    """Arbre hiérarchique des termes, coupé en `max_clusters` groupes.
+    """Hierarchical tree of the terms, cut into `max_clusters` groups.
 
-    Le dendrogramme montre ce qu'une carte factorielle cache : **à quel niveau**
-    deux thèmes se rejoignent. Deux termes peuvent être voisins dans le plan et
-    n'appartenir au même groupe qu'au tout dernier moment, l'arbre le dit, le
-    nuage de points non.
+    The dendrogram shows what a factorial map hides: **at which level** two
+    themes join. Two terms can be neighbours on the plane and only belong to
+    the same group at the very last moment; the tree says so, the scatter
+    plot does not.
 
-    Retour ``{"tree": {...}, "clusters": [...], "n_terms": int}``, l'arbre
-    étant directement consommable par un rendu de type « tree ».
+    Returns ``{"tree": {...}, "clusters": [...], "n_terms": int}``, the tree
+    being directly usable by a "tree" type rendering.
     """
     matrix, labels, counts = _incidence(corpus, kind, top_n, min_documents)
     empty = {"tree": None, "clusters": [], "n_terms": 0}
@@ -353,7 +355,7 @@ def topic_dendrogram(corpus, kind: str = "author", top_n: int = 40,
 
     merges = _average_linkage(D)
 
-    # On reconstruit l'arbre à partir des fusions.
+    # The tree is rebuilt from the merges.
     nodes: Dict[int, Dict[str, Any]] = {
         i: {"name": str(labels.get(t, t)), "value": int(counts.get(t, 0)),
             "size": 1, "height": 0.0}
@@ -372,12 +374,12 @@ def topic_dendrogram(corpus, kind: str = "author", top_n: int = 40,
 
     root = nodes[next_id - 1]
 
-    # Couper l'arbre : on défait les `max_clusters - 1` dernières fusions, qui
-    # sont les plus hautes, donc celles qui séparent le mieux.
+    # Cutting the tree: the last `max_clusters - 1` merges are undone; they are
+    # the highest, hence those that separate best.
     groups: List[Dict[str, Any]] = []
     frontier = [root]
     while len(frontier) < max_clusters:
-        # On ouvre le nœud le plus haut encore fusionné.
+        # Open the highest node still merged.
         openable = [x for x in frontier if x.get("children")]
         if not openable:
             break
@@ -399,7 +401,7 @@ def topic_dendrogram(corpus, kind: str = "author", top_n: int = 40,
 
 
 def _leaves(node: Dict[str, Any]):
-    """Feuilles d'un sous-arbre, les plus fréquentes d'abord."""
+    """Leaves of a subtree, the most frequent first."""
     if not node.get("children"):
         return [(node["name"], node.get("value", 0))]
     out = []

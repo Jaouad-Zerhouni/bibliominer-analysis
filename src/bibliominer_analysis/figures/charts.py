@@ -1,11 +1,11 @@
-"""Les graphiques de l'interface qui ne sont ni des barres, ni des lignes, ni
-des nuages de points : treemap, nuage de mots, diagramme de Sankey (trois
-champs, évolution thématique), dendrogramme, carte de densité.
+"""The interface charts that are neither bars, nor lines, nor scatter plots:
+treemap, word cloud, Sankey diagram (three fields, thematic evolution),
+dendrogram, density map.
 
-Chacun prend le RÉSULTAT du calcul correspondant (celui que l'interface
-affiche) et rend une figure matplotlib, PNG, SVG ou PDF, avec la même
-palette que `render_figure`. Ainsi tout graphique de l'application a son
-équivalent publiable depuis Python, sans navigateur.
+Each one takes the RESULT of the matching computation (the one the
+interface displays) and renders a matplotlib figure, PNG, SVG or PDF, with
+the same palette as `render_figure`. So every chart of the application has
+a publishable equivalent from Python, without a browser.
 """
 
 from __future__ import annotations
@@ -31,10 +31,10 @@ def _figure(width: float, height: float, dpi: int):
 
 
 def _bytes(plt, fig, fmt: str) -> bytes:
-    """Les octets de la figure, identiques d'un export à l'autre : ni date
-    (`no_timestamp`), ni identifiants SVG tirés au hasard (graine fixe, celle
-    de `RENDER_RC`). Sans la graine, le dendrogramme, les cartes de densité,
-    le treemap et les Sankey changeaient à chaque export SVG."""
+    """The figure's bytes, identical from one export to the next: no date
+    (`no_timestamp`), no randomly drawn SVG identifiers (fixed seed, the one
+    of `RENDER_RC`). Without the seed, the dendrogram, density maps, treemap
+    and Sankey diagrams changed at every SVG export."""
     buf = io.BytesIO()
     with plt.rc_context({"svg.hashsalt": RENDER_RC["svg.hashsalt"]}):
         fig.savefig(buf, format=fmt, bbox_inches="tight", facecolor="white",
@@ -53,8 +53,8 @@ def _bare(ax) -> None:
 # -- treemap -----------------------------------------------------------------
 
 def _squarify(values: Sequence[float]) -> List[Tuple[float, float, float, float]]:
-    """Rectangles (x, y, w, h) du treemap « squarified » (Bruls et al., 2000)
-    dans le carré unité, dans l'ordre des valeurs (décroissantes)."""
+    """Rectangles (x, y, w, h) of the squarified treemap (Bruls et al., 2000) in
+    the unit square, in the order of the values (descending)."""
     total = float(sum(values)) or 1.0
     scaled = [v / total for v in values]
     x, y, w, h = 0.0, 0.0, 1.0, 1.0
@@ -93,7 +93,7 @@ def _squarify(values: Sequence[float]) -> List[Tuple[float, float, float, float]
 
 def render_treemap(table: pd.DataFrame, label: str = "keyword", value: str = "documents",
                    n: int = 60, fmt: str = "png", dpi: int = 200) -> bytes:
-    """Treemap d'un classement (mots-clés par défaut) : l'aire est la valeur."""
+    """Treemap of a ranking (keywords by default): the area is the value."""
     t = table[[label, value]].dropna()
     t = t[t[value] > 0].sort_values(value, ascending=False, kind="stable").head(n)
     plt, fig, ax = _figure(10, 6, dpi)
@@ -112,12 +112,12 @@ def render_treemap(table: pd.DataFrame, label: str = "keyword", value: str = "do
     return _bytes(plt, fig, fmt)
 
 
-# -- nuage de mots -----------------------------------------------------------
+# -- word cloud ---------------------------------------------------------------
 
 def render_word_cloud(table: pd.DataFrame, label: str = "keyword", value: str = "documents",
                       n: int = 70, fmt: str = "png", dpi: int = 200) -> bytes:
-    """Nuage de mots : le plus fréquent au centre, puis en spirale, sans
-    chevauchement ; un mot qui ne trouve pas de place est omis."""
+    """Word cloud: the most frequent word in the centre, then in a spiral,
+    without overlap; a word that finds no room is left out."""
     t = table[[label, value]].dropna().sort_values(value, ascending=False,
                                                    kind="stable").head(n)
     plt, fig, ax = _figure(10, 6, dpi)
@@ -133,10 +133,10 @@ def render_word_cloud(table: pd.DataFrame, label: str = "keyword", value: str = 
     for i, (word, weight) in enumerate(zip(t[label], t[value])):
         text = ax.text(0, 0, str(word), fontsize=8 + 26 * (float(weight) / top) ** 0.7,
                        ha="center", va="center", color=pal[i % len(pal)])
-        # La boîte du mot est mesurée UNE fois, au centre : déplacer un texte
-        # ne change pas sa taille. Chaque position de la spirale se teste
-        # alors par un simple décalage, la mesurer à chaque essai (jusqu'à
-        # 2 500 par mot) prenait dix secondes pour cent vingt mots.
+        # The word's box is measured ONCE, at the centre: moving a text does not
+        # change its size. Each position of the spiral is then tested with a simple
+        # offset; measuring it at every attempt (up to 2,500 per word) took ten
+        # seconds for a hundred and twenty words.
         bb = text.get_window_extent(renderer)
         (bx0, by0), (bx1, by1) = inv.transform([(bb.x0, bb.y0), (bb.x1, bb.y1)])
         for step in range(2500):
@@ -177,7 +177,7 @@ def _sankey(ax, columns: List[List[str]], links: List[Tuple[str, str, float]],
         y = 1.0
         for n in sorted(col, key=lambda n: -size[n]):
             hgt = size[n] * scale
-            pos[n] = [ci, y - hgt, y, y, y]  # colonne, bas, haut, sortie, entrée
+            pos[n] = [ci, y - hgt, y, y, y]  # column, bottom, top, outgoing, incoming
             y -= hgt + gap
     pal = categorical("light")
     colour = {n: pal[i % len(pal)]
@@ -219,10 +219,10 @@ def _sankey(ax, columns: List[List[str]], links: List[Tuple[str, str, float]],
 def render_three_fields(links: pd.DataFrame,
                         titles: Sequence[str] = ("Authors", "Keywords", "Sources"),
                         fmt: str = "png", dpi: int = 200) -> bytes:
-    """Diagramme à trois champs, depuis le résultat de `Corpus.three_fields`."""
-    # Un nœud est identifié par sa colonne ET son nom : un mot-clé et une
-    # revue peuvent porter le même nom (« Energies ») et ne doivent pas
-    # fusionner. Le préfixe « colonne: » est retiré à l'affichage.
+    """Three-field plot, from the result of `Corpus.three_fields`."""
+    # A node is identified by its column AND its name: a keyword and a journal
+    # can carry the same name ("Energies") and must not merge. The "column:"
+    # prefix is removed for display.
     first, second = links[links["depth"] == 0], links[links["depth"] == 1]
     tag = lambda col, names: [f"{col}: {v}" for v in names]
     columns = [list(dict.fromkeys(tag(0, first["source"]))),
@@ -238,8 +238,8 @@ def render_three_fields(links: pd.DataFrame,
 
 def render_thematic_evolution(evolution: Dict[str, Any], fmt: str = "png",
                               dpi: int = 200) -> bytes:
-    """Évolution thématique, depuis le résultat de `Corpus.thematic_evolution`.
-    Un thème sans successeur garde la hauteur de ses occurrences."""
+    """Thematic evolution, from the result of `Corpus.thematic_evolution`.
+    A theme without a successor keeps the height of its occurrences."""
     periods = [p["label"] for p in evolution.get("periods", [])]
     nodes = pd.DataFrame(evolution.get("nodes", []))
     if nodes.empty:
@@ -254,7 +254,7 @@ def render_thematic_evolution(evolution: Dict[str, Any], fmt: str = "png",
 # -- dendrogramme ------------------------------------------------------------
 
 def render_dendrogram(dendrogram: Dict[str, Any], fmt: str = "png", dpi: int = 200) -> bytes:
-    """Dendrogramme des mots-clés, depuis `Corpus.topic_dendrogram`."""
+    """Keyword dendrogram, from `Corpus.topic_dendrogram`."""
     tree = dendrogram.get("tree")
     if not tree:
         raise ValueError("dendrogram without tree")
@@ -284,13 +284,13 @@ def render_dendrogram(dendrogram: Dict[str, Any], fmt: str = "png", dpi: int = 2
     return _bytes(plt, fig, fmt)
 
 
-# -- carte de densité --------------------------------------------------------
+# -- density map -------------------------------------------------------------
 
 def render_density_map(density: Dict[str, Any], graph: Dict[str, Any], labels: int = 15,
                        fmt: str = "png", dpi: int = 200) -> bytes:
-    """Carte de densité à la VOSviewer, depuis `Corpus.network_density` ;
-    ``graph`` doit porter les positions (`Corpus.attach_layout`) pour écrire
-    les termes principaux à leur place."""
+    """Density map, from `Corpus.network_density`; ``graph`` must carry the
+    positions (`Corpus.attach_layout`) to write the main terms in their
+    place."""
     import numpy as np
     xs, ys = density["x"], density["y"]
     if not xs:

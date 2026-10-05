@@ -1,19 +1,19 @@
-"""Le profil d'AFFILIATION d'un corpus : combien d'institutions par article,
-et quels auteurs en portent plusieurs.
+"""The AFFILIATION profile of a corpus: how many institutions per article,
+and which authors carry several.
 
-Trois questions qu'un lecteur pose devant un corpus, et auxquelles le nombre
-de signataires ne répond pas :
+Three questions a reader asks about a corpus, which the number of authors
+does not answer:
 
-  - combien d'articles ne portent QU'UNE seule affiliation, une équipe
-    seule, contre deux, trois, davantage ;
-  - combien d'articles sont signés par un auteur SEUL ;
-  - quels auteurs sont rattachés à plusieurs institutions, sur un même
-    article (double rattachement déclaré) ou d'un article à l'autre
-    (mobilité, ou affiliation secondaire).
+  - how many articles carry ONLY ONE affiliation, a single team, against
+    two, three, more;
+  - how many articles are signed by a SINGLE author;
+  - which authors are attached to several institutions, on the same
+    article (declared double affiliation) or from one article to the next
+    (mobility, or secondary affiliation).
 
-Le double rattachement est compté en **comptage entier** : un auteur à deux
-institutions compte pour chacune, comme un article co-signé compte pour
-chaque pays. C'est la convention du reste du paquet.
+Double affiliation is counted with **full counting**: an author with two
+institutions counts for each, as a co-signed article counts for each
+country. It is the convention of the rest of the package.
 """
 
 from __future__ import annotations
@@ -25,13 +25,13 @@ import pandas as pd
 
 
 def _author_key(authors: pd.DataFrame) -> pd.Series:
-    """L'identité d'un auteur : son identifiant Scopus, sinon son nom, la
-    MÊME clé que `top_authors` et `n_authors`."""
+    """The identity of an author: their Scopus identifier, otherwise their name,
+    the SAME key as `top_authors` and `n_authors`."""
     return authors["scopus_id"].fillna("name:" + authors["name"].map(str))
 
 
 def _links(corpus) -> pd.DataFrame:
-    """(document, auteur, affiliation), une ligne par rattachement déclaré."""
+    """(document, author, affiliation), one row per declared affiliation."""
     link = corpus.author_affiliations
     cols = ["eid", "position", "aff_pos", "key", "name", "institution", "city",
             "country"]
@@ -51,17 +51,17 @@ def _links(corpus) -> pd.DataFrame:
     out["institution"] = out.get("parent1")
     if "institution" not in out.columns:
         out["institution"] = None
-    # Une affiliation sans institution nommée reste un rattachement : on la
-    # garde sous son rang, sinon les corpus bruts compteraient zéro partout.
+    # An affiliation without a named institution is still an affiliation: it is
+    # kept under its rank, otherwise raw corpora would count zero everywhere.
     out["institution"] = out["institution"].fillna(
         "aff#" + out["aff_pos"].astype("string").fillna("?"))
     return out[[c for c in cols if c in out.columns]]
 
 
 def documents_by_affiliation_count(corpus) -> pd.DataFrame:
-    """Répartition des documents par nombre d'affiliations DISTINCTES.
+    """Distribution of documents by number of DISTINCT affiliations.
 
-    Colonnes : ``affiliations``, ``documents``, ``share``.
+    Columns: ``affiliations``, ``documents``, ``share``.
     """
     cols = ["affiliations", "documents", "share"]
     aff = corpus.affiliations
@@ -71,8 +71,8 @@ def documents_by_affiliation_count(corpus) -> pd.DataFrame:
     key = "parent1" if "parent1" in aff.columns else "raw"
     named = aff[aff[key].notna() & (aff[key].map(str).str.strip() != "")]
     per_doc = named.groupby("eid")[key].nunique()
-    # Un document sans aucune affiliation exploitable compte pour zéro : le
-    # taire ferait croire que tout le corpus est renseigné.
+    # A document without any usable affiliation counts as zero: hiding it would
+    # suggest that the whole corpus is filled in.
     missing = set(corpus.documents["eid"]) - set(per_doc.index)
     per_doc = pd.concat([per_doc, pd.Series(0, index=sorted(missing), dtype=int)])
     if per_doc.empty:
@@ -86,15 +86,15 @@ def documents_by_affiliation_count(corpus) -> pd.DataFrame:
 
 
 def authors_by_affiliation_count(corpus, n: Optional[int] = 20) -> pd.DataFrame:
-    """Auteurs rattachés à PLUSIEURS institutions, les plus rattachés d'abord.
+    """Authors attached to SEVERAL institutions, the most attached first.
 
-    Colonnes : ``author``, ``scopus_id``, ``documents``, ``institutions``,
+    Columns: ``author``, ``scopus_id``, ``documents``, ``institutions``,
     ``max_in_one_document``, ``affiliations``.
 
-    ``institutions`` compte les institutions distinctes sur TOUT le corpus ;
-    ``max_in_one_document`` le maximum porté sur un SEUL article, c'est
-    celui-là qui est un double rattachement déclaré, l'autre pouvant n'être
-    qu'un changement d'institution au fil des années.
+    ``institutions`` counts the distinct institutions over the WHOLE corpus;
+    ``max_in_one_document`` the maximum carried on a SINGLE article. That one
+    is a declared double affiliation; the other may only be a change of
+    institution over the years.
     """
     cols = ["author", "scopus_id", "documents", "institutions",
             "max_in_one_document", "affiliations"]
@@ -129,13 +129,13 @@ def authors_by_affiliation_count(corpus, n: Optional[int] = 20) -> pd.DataFrame:
 
 
 def affiliation_profile(corpus) -> Dict[str, Any]:
-    """Les chiffres clés du profil d'affiliation, pour une fiche.
+    """The key figures of the affiliation profile, for a summary sheet.
 
-    Clés : ``documents``, ``single_author_documents``,
+    Keys: ``documents``, ``single_author_documents``,
     ``single_affiliation_documents``, ``two_affiliation_documents``,
-    ``many_affiliation_documents``, leurs parts en pourcentage,
-    ``authors``, ``authors_with_several_affiliations`` et
-    ``authors_with_double_affiliation`` (sur un même article).
+    ``many_affiliation_documents``, their percentage shares, ``authors``,
+    ``authors_with_several_affiliations`` and
+    ``authors_with_double_affiliation`` (on the same article).
     """
     from .collaboration import _authors_per_doc
 

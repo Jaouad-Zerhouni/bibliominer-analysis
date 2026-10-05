@@ -1,9 +1,10 @@
-"""Le catalogue : chaque figure de l'interface, produite en Python.
+"""The catalogue: every figure of the interface, produced in Python.
 
-L'interface et le paquet doivent offrir les mêmes figures, avec les mêmes
-options. Le test de couverture (toutes les figures de l'écran ont une entrée)
-vit côté API, là où se trouve le code de l'interface ; ici, on vérifie que le
-catalogue tient ses promesses : défauts de l'écran, options, formats, filtres.
+The interface and the package must offer the same figures, with the same
+options. The coverage test (every figure on screen has an entry) lives on
+the API side, where the interface code is; here we check that the
+catalogue keeps its promises: the screen's defaults, options, formats,
+filters.
 """
 
 from __future__ import annotations
@@ -64,8 +65,8 @@ def test_le_catalogue_est_decrit(corpus):
 
 
 def test_chaque_figure_se_dessine_ou_dit_pourquoi(corpus):
-    """Sur un petit corpus, certaines figures n'ont pas de données (SCImago,
-    accès ouvert…) : elles le DISENT (ValueError), elles ne plantent pas."""
+    """On a small corpus some figures have no data (SCImago, open access...):
+    they SAY so (ValueError), they do not crash."""
     drawn = 0
     for name in CATALOG:
         try:
@@ -78,7 +79,7 @@ def test_chaque_figure_se_dessine_ou_dit_pourquoi(corpus):
 
 def test_defauts_de_l_ecran_et_options(corpus):
     assert len(corpus.figure_spec("top-authors").categories) <= 20
-    assert len(corpus.figure_spec("top_authors", n=2).categories) == 2    # snake_case accepté
+    assert len(corpus.figure_spec("top_authors", n=2).categories) == 2    # snake_case accepted
     with pytest.raises(TypeError, match="accepted: n"):
         corpus.figure("top-authors", top=10)
     with pytest.raises(KeyError):
@@ -105,12 +106,12 @@ def test_figure_spec_seulement_pour_les_figures_simples(corpus):
 
 
 def test_haute_resolution_par_defaut(corpus):
-    """300 dpi par défaut : la même figure est plus grande qu'à 100 dpi."""
+    """300 dpi by default: the same figure is larger than at 100 dpi."""
     assert len(corpus.figure("documents-per-year")) > len(corpus.figure("documents-per-year", dpi=100))
 
 
 def test_a_catalog_figure_takes_the_style_of_the_export_dialog(corpus):
-    """Ce que la boîte d'export de l'interface règle, Python le règle aussi."""
+    """What the interface's export dialog sets, Python sets too."""
     svg = corpus.figure("documents-per-year", fmt="svg",
                         style={"kind": "pie", "show_title": True,
                                "subtitle": "Years 2016-2024", "value_labels": True})

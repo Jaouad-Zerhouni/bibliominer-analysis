@@ -1,4 +1,4 @@
-"""Diagramme à trois champs : double co-occurrence."""
+"""Three-field plot: double co-occurrence."""
 
 import pandas as pd
 import pytest
@@ -25,7 +25,7 @@ def corpus():
 
 
 def test_liens_et_poids(corpus):
-    """A -> alpha porte 2 documents ; alpha -> J1 aussi."""
+    """A -> alpha carries 2 documents; alpha -> J1 too."""
     t = corpus.three_fields()
     w = {(r["source"], r["target"]): r["value"] for _, r in t.iterrows()}
     assert w[("A.", "alpha")] == 2
@@ -34,7 +34,7 @@ def test_liens_et_poids(corpus):
 
 
 def test_profondeur_des_colonnes(corpus):
-    """La profondeur aligne les noeuds ; sans elle le rendu les place mal."""
+    """Depth aligns the nodes; without it the rendering misplaces them."""
     t = corpus.three_fields()
     gauche = t[t["depth"] == 0]
     milieu = t[t["depth"] == 1]
@@ -50,7 +50,7 @@ def test_limite_par_colonne():
 
 
 def test_meme_dimension_deux_fois_est_desambiguisee():
-    """Sans préfixe, un noeud apparaîtrait dans deux colonnes et bouclerait."""
+    """Without a prefix, a node would appear in two columns and loop."""
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, "1:A.", "alpha", "J1")]))
     t = c.three_fields(left="authors", middle="keywords", right="authors")
     assert any(str(v).startswith("3\u00b7 ") for v in t["target"])

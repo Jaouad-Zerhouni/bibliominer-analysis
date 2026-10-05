@@ -1,4 +1,4 @@
-"""Revues, chronologies, RPYS, analyse factorielle, réseaux annotés."""
+"""Journals, timelines, RPYS, factorial analysis, annotated networks."""
 
 import numpy as np
 import pandas as pd
@@ -37,19 +37,19 @@ def test_m_index_absent_sans_annee():
 
 
 def test_m_index_utilise_la_derniere_annee_du_corpus():
-    """Un corpus arrêté en 2020 ne doit pas voir son m baisser chaque janvier."""
+    """A corpus that stops in 2020 must not see its m drop every January."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, 2018, cited="5"), _doc(2, 2020, cited="5"),
     ]))
     row = src.sources_impact(c).iloc[0]
-    # h = 2 sur 2018-2020, soit 3 années : 2/3 = 0,67
+    # h = 2 over 2018-2020, i.e. 3 years: 2/3 = 0.67
     assert row["m_index"] == pytest.approx(0.67, abs=0.01)
 
 
 # ---------------------------------------------------------------- revues ----
 
 def test_sources_over_time_remplit_les_annees_creuses():
-    """Sans les zéros, la courbe cumulée serait fausse."""
+    """Without the zeros, the cumulative curve would be wrong."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, 2018, source="J1"), _doc(2, 2021, source="J1"),
     ]))
@@ -70,7 +70,7 @@ def test_word_dynamics_est_cumulatif_et_sans_trou():
 
 
 def test_authors_over_time_omet_les_annees_sans_publication():
-    """Ici l'absence de point EST l'information : une interruption."""
+    """Here the absence of a point IS the information: an interruption."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, 2018, authors="1:A."), _doc(2, 2021, authors="1:A."),
     ]))
@@ -83,7 +83,7 @@ def test_citations_moyennes_corrigees_de_l_anciennete():
         _doc(1, 2020, cited="10"), _doc(2, 2024, cited="10"),
     ]))
     t = tl.average_citations_per_year(c).set_index("year")
-    # 2020 a eu 5 ans pour accumuler, 2024 une seule
+    # 2020 had 5 years to accumulate, 2024 only one
     assert t.loc[2020, "citable_years"] == 5
     assert t.loc[2020, "mean_citations_per_year"] == 2.0
     assert t.loc[2024, "mean_citations_per_year"] == 10.0
@@ -92,7 +92,7 @@ def test_citations_moyennes_corrigees_de_l_anciennete():
 # ------------------------------------------------------------------ RPYS ----
 
 def test_rpys_detecte_un_pic():
-    """Une année sur-citée doit ressortir par son écart, pas par son total."""
+    """An over-cited year must stand out through its deviation, not its total."""
     refs = ";".join(
         ["ref%d |  | 1990 | X | title %d" % (i, i) for i in range(20)] +
         ["ref%d |  | %d | X | title %d" % (i, 1988 + (i % 5), i) for i in range(20, 30)]
@@ -114,7 +114,7 @@ def test_rpys_ecarte_les_annees_aberrantes():
 
 @pytest.fixture
 def themed():
-    """Deux familles de termes disjointes : l'AFC doit les séparer."""
+    """Two disjoint families of terms: the CA must separate them."""
     rows = []
     for i in range(6):
         rows.append(_doc(i, 2020, kws="alpha;beta;gamma"))
@@ -153,11 +153,11 @@ def test_corpus_trop_petit_renvoie_vide():
     assert r["terms"].empty and r["clusters"] == []
 
 
-# ------------------------------------------------------ réseaux : mesures ----
+# ------------------------------------------------------ networks: measures ----
 
 @pytest.fixture
 def bridge_graph():
-    """Deux triangles reliés par un seul nœud : B est le PONT."""
+    """Two triangles joined by a single node: B is the BRIDGE."""
     return {
         "nodes": [{"id": x, "label": x, "occurrences": 3, "degree": 2}
                   for x in ("A", "B", "C", "D", "E")],
@@ -179,7 +179,7 @@ def test_intermediarite_trouve_le_pont(bridge_graph):
 
 
 def test_pagerank_varie_et_somme_a_un(bridge_graph):
-    """Un PageRank uniforme signalerait un calcul de secours, donc un bug."""
+    """A uniform PageRank would signal a fallback computation, hence a bug."""
     g = netan.annotate(bridge_graph)
     pr = [n["pagerank"] for n in g["nodes"]]
     assert len(set(pr)) > 1, "PageRank uniforme = calcul non effectué"
@@ -221,10 +221,10 @@ def test_superposition_par_annee():
 # ------------------------------------------------------- e / i10 / groupes ---
 
 def test_e_index_capture_l_exces_du_noyau():
-    """Deux h identiques, des exces tres differents : e doit les separer."""
+    """Two identical h, very different excesses: e must separate them."""
     from bibliominer_analysis.metrics.impact import e_index, h_index
 
-    regulier = [3, 3, 3]        # h = 3, somme du noyau = 9 = h^2 -> e = 0
+    regulier = [3, 3, 3]        # h = 3, sum of the core = 9 = h^2 -> e = 0
     porte = [100, 100, 100]     # h = 3, somme = 300 -> e = sqrt(291)
     assert h_index(regulier) == h_index(porte) == 3
     assert e_index(regulier) == 0.0
@@ -232,7 +232,7 @@ def test_e_index_capture_l_exces_du_noyau():
 
 
 def test_e_index_jamais_negatif():
-    """Chaque article du noyau a au moins h citations : la somme atteint h^2."""
+    """Every article of the core has at least h citations: the sum reaches h^2."""
     from bibliominer_analysis.metrics.impact import e_index
     for cites in ([], [0], [1], [5, 4, 3, 2, 1], [7, 7, 7, 1]):
         assert e_index(cites) >= 0.0
@@ -247,12 +247,12 @@ def test_indices_par_auteur_complets():
     row = c.authors_impact(1).iloc[0]
     for col in ("h_index", "g_index", "i10_index", "e_index", "m_index"):
         assert col in row.index, col
-    assert row["i10_index"] == 2          # 30 et 12 depassent 10
+    assert row["i10_index"] == 2          # 30 and 12 exceed 10
     assert row["h_index"] == 2
 
 
 def test_groupes_de_signataires_toujours_quatre_lignes():
-    """Une categorie absente doit valoir 0, pas disparaitre."""
+    """A missing category must be 0, not disappear."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, 2020, authors="1:A."),
         _doc(2, 2020, authors="1:A.; 2:B.; 3:C.; 4:D.; 5:E."),
@@ -276,7 +276,7 @@ def test_groupes_agregent_bien_au_dela_de_quatre():
 
 
 def test_rangs_de_signature_somment_aux_documents():
-    """L'invariant qui rend le tableau verifiable a l'oeil."""
+    """The invariant that makes the table checkable by eye."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, 2020, authors="1:A.; 2:B."),
         _doc(2, 2020, authors="1:B.; 2:A."),
@@ -297,7 +297,7 @@ def test_rangs_de_signature_somment_aux_documents():
 
 
 def test_profil_d_encadrant_visible():
-    """Jamais premier ni deuxieme : c'est ce que la colonne unique masquait."""
+    """Never first nor second: that is what the single column hid."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(i, 2020, authors="1:X.; 2:Y.; 3:Senior.") for i in range(5)
     ]))

@@ -1,4 +1,4 @@
-"""Institutions : production dans le temps et répartition par pays."""
+"""Institutions: production over time and distribution by country."""
 
 import pandas as pd
 
@@ -19,7 +19,7 @@ def _aff(parent, country="Morocco"):
 
 
 def test_institutions_over_time_serie_complete():
-    """Chaque institution doit avoir TOUTES les années, même à zéro."""
+    """Every institution must have ALL the years, even at zero."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, 2020, _aff("Univ A")),
         _doc(2, 2022, _aff("Univ A")),
@@ -27,7 +27,7 @@ def test_institutions_over_time_serie_complete():
     ]))
     t = c.institutions_over_time()
     assert sorted(t["year"].unique()) == [2020, 2021, 2022]
-    # 2 institutions x 3 annees = 6 lignes, sans trou
+    # 2 institutions x 3 years = 6 rows, without gaps
     assert len(t) == 6
     a = t[t["institution"] == "Univ A"].set_index("year")
     assert list(a["documents"]) == [1, 0, 1]

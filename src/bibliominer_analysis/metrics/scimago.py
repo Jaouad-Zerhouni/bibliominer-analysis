@@ -1,22 +1,22 @@
-"""Enrichissement des revues par **SCImago** (SJR, quartile, et le reste).
+"""Enriching journals with **SCImago** (SJR, quartile, and the rest).
 
-Le corpus dit combien un article a été cité. Il ne dit rien du **support** :
-publier dans une revue Q1 et dans une revue Q4 ne se compare pas, et cette
-information n'existe nulle part dans un export Scopus. SCImago la fournit, avec
-bien plus que le seul quartile.
+The corpus says how many times an article was cited. It says nothing
+about the **venue**: publishing in a Q1 journal and in a Q4 journal are
+not comparable, and this information exists nowhere in a Scopus export.
+SCImago provides it, with much more than the quartile alone.
 
-L'appariement se fait en deux temps, du plus sûr au moins sûr :
+Matching is done in two steps, from the safest to the least safe:
 
-  1. **par ISSN**, un identifiant, donc sans ambiguïté. SCImago en liste
-     souvent plusieurs par revue (imprimé et électronique) : on les indexe tous.
-  2. **par titre normalisé**, quand l'ISSN manque ou ne correspond à rien.
-     Moins sûr, donc la méthode retenue est TOUJOURS renvoyée dans la colonne
-     ``matched_by`` : un lecteur doit pouvoir écarter les rapprochements
-     faibles lui-même.
+  1. **by ISSN**, an identifier, hence unambiguous. SCImago often lists
+     several per journal (print and electronic): all are indexed.
+  2. **by normalised title**, when the ISSN is missing or matches nothing.
+     Less safe, so the method used is ALWAYS returned in the
+     ``matched_by`` column: a reader must be able to discard weak matches
+     themselves.
 
-Ce qui n'est pas trouvé reste **vide**, jamais deviné. Une revue absente de
-SCImago (actes de conférence non indexés, revue trop récente) n'a pas de
-quartile, écrire « Q4 » par défaut serait une invention.
+What is not found stays **empty**, never guessed. A journal absent from
+SCImago (unindexed conference proceedings, a journal too recent) has no
+quartile; writing "Q4" by default would be an invention.
 """
 
 from __future__ import annotations
@@ -29,16 +29,16 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-#: Emplacements fouillés dans l'ordre. Le premier est celui livré avec le
-#: package ; les suivants permettent à une application de fournir sa propre
-#: version sans réinstaller.
+#: Locations searched in order. The first is the one shipped with the
+#: package; the following ones let an application provide its own version
+#: without reinstalling.
 _SEARCH_PATHS = (
     Path(__file__).resolve().parent.parent / "data_ref" / "scimagojr_2025.csv",
 )
 
-#: Colonnes conservées, avec leur nom de sortie. Tout ce que SCImago publie
-#: n'est pas utile ici : on garde ce qui décrit la revue, pas ce qui décrit le
-#: fichier.
+#: Columns kept, with their output name. Not everything SCImago publishes is
+#: useful here: what describes the journal is kept, not what describes the
+#: file.
 _COLUMNS = {
     "Sourceid": "scimago_id",
     "Title": "scimago_title",
@@ -51,7 +51,7 @@ _COLUMNS = {
     "Areas": "areas",
 }
 
-#: Colonnes numériques, SCImago écrit les décimales à la VIRGULE.
+#: Numeric columns: SCImago writes decimals with a COMMA.
 _NUMERIC = {
     "SJR": "sjr",
     "H index": "source_h_index",
@@ -84,7 +84,7 @@ def default_path() -> Optional[Path]:
 
 
 def normalize_issn(raw: Any) -> str:
-    """ISSN réduit à ses huit caractères, mêmes règles que le cleaning."""
+    """ISSN reduced to its eight characters, same rules as the cleaning."""
     if raw is None:
         return ""
     s = re.sub(r"[^0-9Xx]", "", str(raw)).upper()
@@ -92,7 +92,7 @@ def normalize_issn(raw: Any) -> str:
 
 
 def _split_issn_field(cell: Any) -> List[str]:
-    """SCImago liste plusieurs ISSN par revue, séparés par des virgules."""
+    """SCImago lists several ISSNs per journal, separated by commas."""
     if not isinstance(cell, str):
         return []
     out = []
@@ -113,7 +113,7 @@ def normalize_title(value: Any) -> str:
 
 
 def _to_number(series: pd.Series) -> pd.Series:
-    """Décimales à la virgule, séparateur de milliers absent."""
+    """Decimal commas, no thousands separator."""
     return pd.to_numeric(
         series.map(str).str.replace(".", "", regex=False)
                           .str.replace(",", ".", regex=False)
@@ -122,10 +122,10 @@ def _to_number(series: pd.Series) -> pd.Series:
 
 
 def load_scimago(path: Optional[Any] = None, force: bool = False) -> pd.DataFrame:
-    """Charge le référentiel SCImago. Le résultat est mis en cache.
+    """Loads the SCImago reference table. The result is cached.
 
-    Renvoie un DataFrame vide si le fichier est absent : l'absence du
-    référentiel doit dégrader l'analyse, jamais l'interrompre.
+    Returns an empty DataFrame if the file is missing: the absence of the
+    reference table must degrade the analysis, never stop it.
     """
     global _cache, _index_cache
     if _cache is not None and not force and path is None:
@@ -141,8 +141,8 @@ def load_scimago(path: Optional[Any] = None, force: bool = False) -> pd.DataFram
 
     df = pd.read_csv(target, sep=";", dtype=str, encoding="utf-8",
                      on_bad_lines="skip")
-    # « Publisher » apparaît DEUX fois dans le fichier ; pandas suffixe la
-    # seconde. On garde la première et on ignore le doublon.
+    # "Publisher" appears TWICE in the file; pandas suffixes the second one.
+    # The first is kept and the duplicate ignored.
     df = df.loc[:, ~df.columns.duplicated()]
 
     out = pd.DataFrame(index=df.index)
@@ -169,7 +169,7 @@ def load_scimago(path: Optional[Any] = None, force: bool = False) -> pd.DataFram
 
 
 def _index(path: Optional[Any] = None) -> Dict[str, Any]:
-    """Index ISSN → ligne et titre normalisé → ligne."""
+    """Index ISSN -> row and normalised title -> row."""
     global _index_cache
     if _index_cache is not None and path is None:
         return _index_cache
@@ -182,7 +182,7 @@ def _index(path: Optional[Any] = None) -> Dict[str, Any]:
             for issn in issns or []:
                 by_issn.setdefault(issn, pos)
             t = normalize_title(title)
-            # Un titre court est trop ambigu pour servir de clé.
+            # A short title is too ambiguous to serve as a key.
             if len(t) >= 8:
                 by_title.setdefault(t, pos)
 
@@ -204,14 +204,14 @@ _OUT_COLS = ["source", "documents", "citations", "matched_by", "quartile", "sjr"
 
 
 def enrich_sources(corpus, path: Optional[Any] = None) -> pd.DataFrame:
-    """Chaque revue du corpus, enrichie de ce que SCImago en sait.
+    """Every journal of the corpus, enriched with what SCImago knows about it.
 
-    Colonnes : celles du corpus (``source``, ``documents``, ``citations``),
-    puis ``matched_by`` (« issn », « title » ou vide) et les mesures SCImago.
+    Columns: those of the corpus (``source``, ``documents``, ``citations``),
+    then ``matched_by`` ("issn", "title" or empty) and the SCImago measures.
 
-    Une revue non trouvée garde ses colonnes SCImago **vides**. C'est le cas
-    normal pour les actes de conférence, que SCImago n'indexe que
-    partiellement, et le dire vaut mieux que de le masquer.
+    A journal that is not found keeps its SCImago columns **empty**. That is
+    the normal case for conference proceedings, which SCImago only partly
+    indexes, and saying so is better than hiding it.
     """
     docs = corpus.documents
     if docs.empty or "source" not in docs.columns:
@@ -264,14 +264,14 @@ def enrich_sources(corpus, path: Optional[Any] = None) -> pd.DataFrame:
 
 
 def quartile_distribution(corpus, path: Optional[Any] = None) -> pd.DataFrame:
-    """Documents répartis par quartile SCImago de leur revue.
+    """Documents distributed by the SCImago quartile of their journal.
 
-    Colonnes : ``quartile``, ``sources``, ``documents``, ``share``,
+    Columns: ``quartile``, ``sources``, ``documents``, ``share``,
     ``citations``, ``citations_per_document``.
 
-    Les cinq lignes sont toujours présentes, ``Not indexed`` compris. C'est la
-    ligne la plus importante du tableau : elle dit quelle part du corpus échappe
-    au classement, et donc à quel point les quatre autres sont représentatives.
+    The five rows are always present, ``Not indexed`` included. It is the most
+    important row of the table: it says what share of the corpus escapes the
+    ranking, and therefore how representative the other four are.
     """
     cols = ["quartile", "sources", "documents", "share", "citations",
             "citations_per_document"]
@@ -304,19 +304,19 @@ def quartile_distribution(corpus, path: Optional[Any] = None) -> pd.DataFrame:
 
 
 def quartile_over_time(corpus, path: Optional[Any] = None) -> pd.DataFrame:
-    """Évolution annuelle du profil de publication par quartile.
+    """Yearly evolution of the publication profile by quartile.
 
-    Colonnes : ``year``, ``quartile``, ``documents``, ``share``.
+    Columns: ``year``, ``quartile``, ``documents``, ``share``.
 
-    C'est la lecture qui montre une **montée en gamme** : un laboratoire qui
-    passe de Q3 à Q1 en cinq ans, ou l'inverse. Un total par quartile ne le dit
-    pas.
+    It is the reading that shows **moving up the ranks**: a laboratory going
+    from Q3 to Q1 in five years, or the reverse. A total per quartile does not
+    say it.
 
-    **Réserve à énoncer avec la figure** : le quartile vient d'UNE édition de
-    SCImago (celle du fichier chargé) et s'applique à toutes les années. Une
-    revue Q1 aujourd'hui pouvait être Q2 lors de la publication. La courbe
-    montre donc dans quelles revues, classées selon leur rang ACTUEL, le
-    corpus a publié chaque année, pas le quartile qu'elles avaient à l'époque.
+    **Caveat to state with the figure**: the quartile comes from ONE edition
+    of SCImago (the one of the loaded file) and applies to all years. A
+    journal that is Q1 today may have been Q2 at the time of publication. The
+    curve therefore shows in which journals, ranked by their CURRENT rank, the
+    corpus published each year, not the quartile they had at the time.
     """
     cols = ["year", "quartile", "documents", "share"]
     enriched = enrich_sources(corpus, path)
@@ -349,10 +349,10 @@ def quartile_over_time(corpus, path: Optional[Any] = None) -> pd.DataFrame:
 
 
 def scimago_coverage(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
-    """Ce que l'appariement a réussi à faire, et ce qu'il a manqué.
+    """What the matching managed to do, and what it missed.
 
-    Un tableau enrichi sans ce compte se lit comme s'il couvrait tout le
-    corpus. Il ne le couvre jamais entièrement.
+    An enriched table without this count reads as if it covered the whole
+    corpus. It never covers it entirely.
     """
     enriched = enrich_sources(corpus, path)
     available = default_path() is not None or not load_scimago(path).empty
@@ -377,15 +377,15 @@ def scimago_coverage(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Interdisciplinarite, possible seulement grace au referentiel
+# Interdisciplinarity, only possible thanks to the reference table
 # ---------------------------------------------------------------------------
 
 def _split_areas(cell: Any) -> List[str]:
-    """« Business, Management and Accounting; Computer Science » -> deux domaines.
+    """"Business, Management and Accounting; Computer Science" -> two areas.
 
-    Le point-virgule separe les domaines ; la virgule appartient au NOM du
-    domaine. Decouper sur la virgule casserait « Biochemistry, Genetics and
-    Molecular Biology » en trois faux domaines.
+    The semicolon separates the areas; the comma belongs to the area's NAME.
+    Splitting on the comma would break "Biochemistry, Genetics and Molecular
+    Biology" into three false areas.
     """
     if not isinstance(cell, str) or not cell.strip():
         return []
@@ -393,18 +393,18 @@ def _split_areas(cell: Any) -> List[str]:
 
 
 def _strip_quartile(label: str) -> str:
-    """« Oncology (Q1) » -> « Oncology » : la categorie, sans son rang."""
+    """"Oncology (Q1)" -> "Oncology": the category, without its rank."""
     return re.sub(r"\s*\(Q[1-4]\)\s*$", "", label).strip()
 
 
 def subject_areas(corpus, path: Optional[Any] = None) -> pd.DataFrame:
-    """Domaines scientifiques du corpus, d'apres les revues.
+    """Subject areas of the corpus, according to the journals.
 
-    Colonnes : ``area``, ``sources``, ``documents``, ``share``, ``citations``.
+    Columns: ``area``, ``sources``, ``documents``, ``share``, ``citations``.
 
-    Un document dont la revue couvre trois domaines compte pour chacun : la
-    somme depasse donc volontairement le nombre de documents. C'est cette
-    multi-appartenance qui FAIT l'interdisciplinarite.
+    A document whose journal covers three areas counts for each: the sum
+    therefore deliberately exceeds the number of documents. It is this
+    multiple membership that MAKES interdisciplinarity.
     """
     cols = ["area", "sources", "documents", "share", "citations"]
     enriched = enrich_sources(corpus, path)
@@ -433,9 +433,10 @@ def subject_areas(corpus, path: Optional[Any] = None) -> pd.DataFrame:
 
 def subject_categories(corpus, n: Optional[int] = 25,
                        path: Optional[Any] = None) -> pd.DataFrame:
-    """Categories fines, plus precises que les domaines, avec leur quartile.
+    """Fine-grained categories, more precise than the areas, with their
+    quartile.
 
-    Colonnes : ``category``, ``sources``, ``documents``, ``best_quartile``.
+    Columns: ``category``, ``sources``, ``documents``, ``best_quartile``.
     """
     cols = ["category", "sources", "documents", "best_quartile"]
     enriched = enrich_sources(corpus, path)
@@ -456,8 +457,8 @@ def subject_categories(corpus, n: Optional[int] = 25,
     out = (df.groupby("category")
              .agg(sources=("source", "nunique"),
                   documents=("documents", "sum"),
-                  # Le MEILLEUR quartile atteint : « Q1 » se trie avant « Q4 »,
-                  # d'ou le min sur la chaine.
+                  # The BEST quartile reached: "Q1" sorts before "Q4", hence the min on the
+                  # string.
                   best_quartile=("quartile",
                                  lambda x: x.dropna().min() if x.notna().any() else None))
              .reset_index())
@@ -467,17 +468,17 @@ def subject_categories(corpus, n: Optional[int] = 25,
 
 
 def interdisciplinarity(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
-    """Diversite disciplinaire du corpus.
+    """Disciplinary diversity of the corpus.
 
-    Retour : ``areas``, ``shannon``, ``simpson``, ``evenness``, ``top_area``,
+    Returns: ``areas``, ``shannon``, ``simpson``, ``evenness``, ``top_area``,
     ``top_area_share``, ``coverage``.
 
-    - **Simpson** : probabilite que deux documents tires au hasard relevent de
-      domaines differents. Directement interpretable.
-    - **Shannon** : entropie de la distribution.
-    - **Regularite** : Shannon rapporte a son maximum. C'est la mesure a
-      comparer entre corpus, parce qu'elle ne depend pas du NOMBRE de domaines,
-      l'entropie brute, elle, monte mecaniquement avec.
+    - **Simpson**: probability that two documents drawn at random belong to
+      different areas. Directly interpretable.
+    - **Shannon**: entropy of the distribution.
+    - **Evenness**: Shannon relative to its maximum. It is the measure to
+      compare between corpora, because it does not depend on the NUMBER of
+      areas; raw entropy, on the other hand, rises mechanically with it.
     """
     areas = subject_areas(corpus, path)
     base = {"areas": 0, "shannon": None, "simpson": None, "evenness": None,
@@ -501,20 +502,20 @@ def interdisciplinarity(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
         "evenness": round(shannon / np.log(k), 3) if k > 1 else 0.0,
         "top_area": str(areas.iloc[0]["area"]),
         "top_area_share": float(areas.iloc[0]["share"]),
-        # La diversite ne se lit QUE sur la part appariee : sans ce chiffre on
-        # croirait qu'elle decrit tout le corpus.
+        # Diversity only reads on the matched share: without this figure one would
+        # believe it describes the whole corpus.
         "coverage": cov["document_share"],
     }
 
 
 def journal_open_access(corpus, path: Optional[Any] = None) -> pd.DataFrame:
-    """Documents selon l'acces de leur REVUE (propriete du support).
+    """Documents by the access of their JOURNAL (a property of the venue).
 
-    A distinguer de `access.access_status`, qui porte sur l'ARTICLE. Un article
-    ouvert dans une revue sur abonnement existe, c'est l'hybride.
+    To be distinguished from `access.access_status`, which is about the
+    ARTICLE. An open article in a subscription journal exists: that is hybrid.
 
-    « Inconnu » n'est pas « payant » : une revue absente du referentiel n'a pas
-    de statut connu.
+    "Unknown" is not "paid": a journal absent from the reference table has no
+    known status.
     """
     cols = ["access", "sources", "documents", "share", "citations",
             "citations_per_document"]
@@ -527,8 +528,8 @@ def journal_open_access(corpus, path: Optional[Any] = None) -> pd.DataFrame:
                             columns=cols)
 
     def bucket(v) -> str:
-        # `is True` echoue sur un booleen numpy : np.bool_(True) n'EST pas le
-        # singleton True. Toutes les revues tombaient donc dans « Inconnu ».
+        # `is True` fails on a numpy boolean: np.bool_(True) IS not the True
+        # singleton. All journals therefore fell into "Unknown".
         if v is None or (isinstance(v, float) and pd.isna(v)):
             return "Unknown"
         try:

@@ -1,12 +1,12 @@
-"""Les figures se rejouent à l'identique, et ne dérèglent pas la session.
+"""Figures replay identically, and do not disturb the session.
 
-Deux défauts corrigés :
+Two defects fixed:
 
-  - les barres, lignes et nuages exportés en SVG ou PDF portaient la DATE
-    d'export : deux exports des mêmes données différaient à chaque fois ;
-  - importer le package posait `matplotlib.use("Agg")` et changeait les
-    polices de TOUTE la session, dans un notebook, les `plt.show()` de
-    l'utilisateur cessaient de s'afficher.
+  - bars, lines and scatters exported to SVG or PDF carried the export
+    DATE: two exports of the same data differed every time;
+  - importing the package called `matplotlib.use("Agg")` and changed the
+    fonts of the WHOLE session; in a notebook, the user's `plt.show()`
+    stopped displaying anything.
 """
 
 import pytest

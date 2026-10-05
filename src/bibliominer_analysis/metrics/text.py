@@ -1,22 +1,23 @@
-"""Fouille de texte : les termes des **titres et résumés**.
+"""Text mining: the terms of **titles and abstracts**.
 
-Les mots-clés sont choisis par les auteurs ou ajoutés par la base. Ils
-décrivent ce que les auteurs *déclarent* étudier. Les titres et surtout les
-résumés disent ce qu'ils écrivent réellement, et les deux divergent souvent :
-un sujet peut traverser tout un corpus sans jamais apparaître comme mot-clé.
+Keywords are chosen by the authors or added by the database. They
+describe what the authors *declare* they study. Titles, and above all
+abstracts, say what they actually write, and the two often diverge: a
+subject can run through a whole corpus without ever appearing as a
+keyword.
 
-On extrait des **n-grammes** (1, 2 ou 3 mots). Les bigrammes sont presque
-toujours plus informatifs que les unigrammes en bibliométrie : « machine » et
-« learning » séparés ne disent rien, « machine learning » dit tout.
+**n-grams** (1, 2 or 3 words) are extracted. Bigrams are almost always
+more informative than unigrams in bibliometrics: "machine" and "learning"
+apart say nothing, "machine learning" says everything.
 
-Deux précautions qui décident de la qualité du résultat :
+Two precautions decide the quality of the result:
 
-  - les **mots vides** sont retirés, y compris le vocabulaire de rédaction
-    scientifique (« paper », « results », « proposed »), qui sinon occupe
-    toutes les premières places sans rien apprendre ;
-  - un n-gramme n'est retenu que s'il ne **commence ni ne finit** par un mot
-    vide : « of the model » et « the model of » seraient sinon comptés comme
-    des termes distincts du seul « model ».
+  - **stop words** are removed, including the vocabulary of scientific
+    writing ("paper", "results", "proposed"), which otherwise takes all
+    the top places without teaching anything;
+  - an n-gram is kept only if it **neither starts nor ends** with a stop
+    word: "of the model" and "the model of" would otherwise be counted as
+    terms distinct from "model" alone.
 """
 
 from __future__ import annotations
@@ -30,9 +31,9 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 import pandas as pd
 
-#: Mots vides de l'anglais, et vocabulaire de rédaction scientifique. Ce
-#: second bloc est le plus important : sans lui, « results », « study » et
-#: « paper » trustent le haut de tous les classements.
+#: English stop words, and the vocabulary of scientific writing. The second
+#: block is the most important: without it, "results", "study" and "paper"
+#: monopolise the top of every ranking.
 STOPWORDS = frozenset("""
 a about above after again against all also am an and any are as at be because
 been before being below between both but by can cannot could did do does doing
@@ -61,7 +62,7 @@ levels order set sets part parts problem problems solution solutions
 
 _WORD = re.compile(r"[a-z][a-z0-9\-]+")
 
-#: Champs de texte exploitables.
+#: Usable text fields.
 FIELDS = ("abstract", "title", "both")
 
 
@@ -78,7 +79,7 @@ def _tokens(text: str) -> List[str]:
 
 
 def _ngrams(tokens: Sequence[str], size: int) -> List[str]:
-    """n-grammes dont ni le premier ni le dernier mot n'est un mot vide."""
+    """n-grams whose first and last words are not stop words."""
     if size == 1:
         return [t for t in tokens if t not in STOPWORDS and len(t) > 2]
     out = []
@@ -86,8 +87,8 @@ def _ngrams(tokens: Sequence[str], size: int) -> List[str]:
         window = tokens[i:i + size]
         if window[0] in STOPWORDS or window[-1] in STOPWORDS:
             continue
-        # Un n-gramme entièrement composé de mots vides internes n'apprend rien
-        # non plus : on exige au moins deux mots pleins.
+        # An n-gram made entirely of internal stop words teaches nothing either: at
+        # least two content words are required.
         if sum(1 for w in window if w not in STOPWORDS) < 2:
             continue
         if any(len(w) < 3 for w in window):
@@ -96,21 +97,21 @@ def _ngrams(tokens: Sequence[str], size: int) -> List[str]:
     return out
 
 
-#: Mention de copyright en fin de résumé Scopus. On coupe le texte à partir de
-#: là, et on remonte sur un « Copyright » qui précéderait le symbole.
+#: Copyright notice at the end of a Scopus abstract. The text is cut from
+#: there, going back to a "Copyright" that would precede the symbol.
 _COPYRIGHT = re.compile(r"(?:\bcopyright\s*)?[©ⓒ]", re.I)
 
 
 def strip_copyright(text: Any) -> str:
-    """Retire la mention d'éditeur qui clôt presque tous les résumés Scopus.
+    """Removes the publisher notice that ends almost every Scopus abstract.
 
-    Sans cela « springer nature », « elsevier » ou « rights reserved » montent
-    dans les tout premiers termes du corpus, où ils ne décrivent évidemment
-    aucun sujet.
+    Without it, "springer nature", "elsevier" or "rights reserved" climb into
+    the very first terms of the corpus, where they obviously describe no
+    subject.
 
-    On coupe au symbole plutôt que de mettre « nature » ou « science » sur une
-    liste noire : ce sont des mots parfaitement légitimes ailleurs, et les
-    interdire ferait disparaître de vrais thèmes.
+    The text is cut at the symbol rather than putting "nature" or "science"
+    on a blacklist: these are perfectly legitimate words elsewhere, and
+    banning them would make real themes disappear.
     """
     if not isinstance(text, str):
         return ""
@@ -133,9 +134,9 @@ def _text_series(corpus, field: str) -> pd.Series:
 
 def _per_document(corpus, field: str, ngram: int,
                   extra_stopwords: Optional[Iterable[str]] = None) -> Dict[str, set]:
-    """Ensemble des termes de chaque document. Un terme compte UNE fois par
-    document, quel que soit le nombre de répétitions : sinon un résumé bavard
-    pèserait autant que dix articles."""
+    """Set of the terms of each document. A term counts ONCE per document,
+    however many times it is repeated: otherwise a wordy abstract would weigh
+    as much as ten articles."""
     stop = set(STOPWORDS)
     if extra_stopwords:
         stop |= {str(w).strip().lower() for w in extra_stopwords if str(w).strip()}
@@ -144,7 +145,7 @@ def _per_document(corpus, field: str, ngram: int,
     for eid, text in _text_series(corpus, field).items():
         toks = _tokens(text)
         if stop is not STOPWORDS:
-            # On refiltre avec la liste enrichie fournie par l'appelant.
+            # Filtered again with the extended list supplied by the caller.
             terms = [g for g in _ngrams(toks, ngram)
                      if not any(w in stop and w not in STOPWORDS for w in g.split())]
         else:
@@ -157,12 +158,12 @@ def _per_document(corpus, field: str, ngram: int,
 def top_terms(corpus, field: str = "abstract", ngram: int = 1,
               n: Optional[int] = 50, min_documents: int = 2,
               extra_stopwords: Optional[Iterable[str]] = None) -> pd.DataFrame:
-    """Termes les plus fréquents des titres ou résumés.
+    """Most frequent terms of titles or abstracts.
 
-    Colonnes : ``term``, ``documents``, ``share``.
+    Columns: ``term``, ``documents``, ``share``.
 
-    ``documents`` est un nombre de DOCUMENTS, pas d'occurrences : c'est la
-    mesure qui résiste à un résumé qui répéterait vingt fois le même mot.
+    ``documents`` is a number of DOCUMENTS, not of occurrences: it is the
+    measure that resists an abstract repeating the same word twenty times.
     """
     per_doc = _per_document(corpus, field, ngram, extra_stopwords)
     empty = pd.DataFrame(columns=["term", "documents", "share"])
@@ -188,10 +189,10 @@ def text_co_occurrence(corpus, field: str = "abstract", ngram: int = 2,
                        top_n: int = 50, min_weight: int = 2,
                        min_documents: int = 2,
                        extra_stopwords: Optional[Iterable[str]] = None) -> Dict[str, Any]:
-    """Réseau de co-occurrence des termes du texte.
+    """Co-occurrence network of the text terms.
 
-    Même structure que les autres réseaux du paquet, donc directement
-    compatible avec les centralités et les normalisations de
+    Same structure as the package's other networks, therefore directly
+    compatible with the centralities and normalisations of
     `networks.analysis`.
     """
     per_doc = _per_document(corpus, field, ngram, extra_stopwords)
@@ -222,12 +223,12 @@ def text_co_occurrence(corpus, field: str = "abstract", ngram: int = 2,
 def text_trend(corpus, field: str = "abstract", ngram: int = 2,
                n: int = 20, min_documents: int = 2,
                extra_stopwords: Optional[Iterable[str]] = None) -> pd.DataFrame:
-    """Position dans le temps des termes du texte.
+    """Position in time of the text terms.
 
-    Colonnes : ``term``, ``documents``, ``year_q1``, ``year_median``,
-    ``year_q3``. Même lecture que `trend_topics`, mais sur le texte plutôt que
-    sur les mots-clés, et c'est souvent là qu'on voit un sujet monter avant
-    qu'il ne devienne un mot-clé déclaré.
+    Columns: ``term``, ``documents``, ``year_q1``, ``year_median``,
+    ``year_q3``. Same reading as `trend_topics`, but on the text rather than
+    the keywords, and that is often where a subject is seen rising before it
+    becomes a declared keyword.
     """
     import numpy as np
 

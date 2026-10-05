@@ -1,14 +1,12 @@
-"""Un classeur Excel (.xlsx), écrit sans aucune dépendance.
+"""An Excel workbook (.xlsx), written without any dependency.
 
-Pourquoi ne pas passer par ``DataFrame.to_excel`` ? Parce qu'il exige
-openpyxl ou xlsxwriter : une dépendance de plus pour tout utilisateur du
-paquet, rien que pour écrire des tableaux. Un .xlsx n'est qu'un ZIP de
-quelques fichiers XML ; on en écrit le strict nécessaire, des feuilles,
-une ligne d'en-tête en gras et figée, des largeurs de colonnes lisibles.
+Why not go through ``DataFrame.to_excel``? Because it requires openpyxl
+or xlsxwriter: one more dependency for every user of the package, only to
+write tables. An .xlsx is only a ZIP of a few XML files; we write the
+strict minimum: sheets, a bold frozen header row, readable column widths.
 
-Le fichier est DÉTERMINISTE : aucune date de création, des entrées ZIP
-datées du 1er janvier 1980. Deux exports des mêmes tableaux donnent les
-mêmes octets.
+The file is DETERMINISTIC: no creation date, ZIP entries dated 1 January
+1980. Two exports of the same tables give the same bytes.
 """
 
 from __future__ import annotations
@@ -31,17 +29,17 @@ _PKG = "http://schemas.openxmlformats.org/package/2006/relationships"
 _HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
 _EPOCH = (1980, 1, 1, 0, 0, 0)
 
-#: Caractères interdits dans un XML 1.0, un titre copié d'un PDF en contient.
+#: Characters forbidden in XML 1.0; a title copied from a PDF contains some.
 _ILLEGAL = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f￾￿]")
-#: Excel refuse ces caractères dans un nom de feuille.
+#: Excel refuses these characters in a sheet name.
 _SHEET_FORBIDDEN = re.compile(r"[\[\]:*?/\\]")
-#: Limite d'Excel pour le texte d'une cellule.
+#: Excel's limit for the text of a cell.
 _CELL_MAX = 32767
 
 
 def sheet_name(name: str, taken: set) -> str:
-    """Un nom de feuille valide et unique : 31 caractères au plus, sans
-    ``[]:*?/\\``, jamais deux fois le même (Excel ignore la casse)."""
+    r"""A valid and unique sheet name: at most 31 characters, without
+    ``[]:*?/\``, never the same twice (Excel ignores case)."""
     base = _SHEET_FORBIDDEN.sub(" ", _ILLEGAL.sub("", str(name))).strip().strip("'")
     base = (base or "Sheet")[:31]
     candidate, n = base, 2
@@ -68,7 +66,7 @@ def _missing(value: Any) -> bool:
         return True
     try:
         return bool(pd.isna(value))
-    except (TypeError, ValueError):          # listes, tableaux : pas « manquants »
+    except (TypeError, ValueError):          # lists, arrays: not "missing"
         return False
 
 
@@ -102,7 +100,7 @@ def _sheet_xml(frame: pd.DataFrame) -> str:
               for k, name in enumerate(columns)]
 
     out = [_HEAD, f'<worksheet xmlns="{_MAIN}">',
-           # En-tête figé : il reste visible quand on fait défiler 2 000 lignes.
+           # Frozen header: it stays visible when scrolling through 2,000 rows.
            '<sheetViews><sheetView workbookViewId="0">'
            '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>'
            '</sheetView></sheetViews>']
@@ -136,7 +134,7 @@ _STYLES = (
 
 
 def workbook_bytes(sheets: Sequence[Tuple[str, pd.DataFrame]]) -> bytes:
-    """Un classeur : une feuille par ``(nom, tableau)``, dans cet ordre."""
+    """A workbook: one sheet per ``(name, table)``, in that order."""
     if not sheets:
         sheets = [("Sheet", pd.DataFrame())]
     taken: set = set()

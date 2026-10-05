@@ -1,29 +1,30 @@
-"""Indicateurs de croissance et taille d'échantillon.
+"""Growth indicators and sample size.
 
-Les formules sont celles de la littérature, écrites explicitement pour qu'on
-puisse les vérifier :
+The formulas are those of the literature, written out explicitly so that
+they can be checked:
 
-  - **CAGR**, croissance annuelle composée
-        ``((N_fin / N_début)^(1/n) − 1) × 100``   (n = nombre d'intervalles)
+  - **CAGR**, compound annual growth
+        ``((N_end / N_start)^(1/n) - 1) × 100``   (n = number of intervals)
 
-  - **AGR**, croissance annuelle simple, d'une année sur l'autre
-        ``(N_t − N_{t−1}) / N_{t−1} × 100``
+  - **AGR**, simple annual growth, from one year to the next
+        ``(N_t - N_{t-1}) / N_{t-1} × 100``
 
-  - **RGR**, taux de croissance relatif (Mahapatra, 1985)
-        ``R = (ln W₂ − ln W₁) / (T₂ − T₁)``
-    où W est le nombre **cumulé** de publications. Le RGR décroît
-    mécaniquement avec le temps : un corpus mûr croît moins vite en relatif.
+  - **RGR**, relative growth rate (Mahapatra, 1985)
+        ``R = (ln W₂ - ln W₁) / (T₂ - T₁)``
+    where W is the **cumulative** number of publications. RGR mechanically
+    decreases over time: a mature corpus grows more slowly in relative
+    terms.
 
-  - **Temps de doublement**, durée nécessaire pour doubler le stock
-        ``Dt = ln(2) / RGR = 0,693 / RGR``
+  - **Doubling time**, the time needed to double the stock
+        ``Dt = ln(2) / RGR = 0.693 / RGR``
 
-  - **Cochran**, taille d'échantillon représentatif
-        ``n₀ = Z²·p·q / e²``  puis correction pour population finie
-        ``n = n₀ / (1 + (n₀ − 1)/N)``
+  - **Cochran**, representative sample size
+        ``n₀ = Z²·p·q / e²``  then the finite population correction
+        ``n = n₀ / (1 + (n₀ - 1)/N)``
 
-CAGR et AGR répondent à deux questions différentes : le premier lisse toute la
-période, le second montre les à-coups. Les donner ensemble évite de conclure à
-une croissance régulière là où il n'y a qu'une bonne année.
+CAGR and AGR answer two different questions: the first smooths the whole
+period, the second shows the jolts. Giving them together avoids
+concluding to steady growth where there is only one good year.
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ import pandas as pd
 
 
 def _docs_per_year(corpus) -> pd.Series:
-    """Documents par année, sans trou dans la série."""
+    """Documents per year, with no gap in the series."""
     years = pd.to_numeric(corpus.documents["year"], errors="coerce").dropna()
     if years.empty:
         return pd.Series(dtype=int)
@@ -47,10 +48,10 @@ def _docs_per_year(corpus) -> pd.Series:
 
 
 def cagr(corpus) -> Optional[float]:
-    """Croissance annuelle composée, en pourcentage.
+    """Compound annual growth, as a percentage.
 
-    Renvoie ``None`` si le corpus couvre moins de deux ans ou si la première
-    année est vide, le taux serait alors infini, ce qui n'a aucun sens.
+    Returns ``None`` if the corpus covers less than two years or if the first
+    year is empty: the rate would then be infinite, which makes no sense.
     """
     per_year = _docs_per_year(corpus)
     if len(per_year) < 2:
@@ -63,11 +64,11 @@ def cagr(corpus) -> Optional[float]:
 
 
 def agr(corpus) -> pd.DataFrame:
-    """Croissance annuelle simple, année par année.
+    """Simple annual growth, year by year.
 
-    La première année n'a pas de taux (pas d'année précédente), et une année
-    qui suit une année vide non plus, diviser par zéro donnerait un infini
-    qu'on préfère laisser vide plutôt que d'afficher un nombre faux.
+    The first year has no rate (no previous year), nor does a year following
+    an empty year: dividing by zero would give an infinity, which is better
+    left empty than shown as a wrong number.
     """
     per_year = _docs_per_year(corpus)
     empty = pd.DataFrame(columns=["year", "documents", "agr", "cumulative"])
@@ -85,13 +86,14 @@ def agr(corpus) -> pd.DataFrame:
 
 
 def rgr_doubling_time(corpus) -> pd.DataFrame:
-    """RGR et temps de doublement, année par année.
+    """RGR and doubling time, year by year.
 
-    Colonnes : ``year``, ``documents``, ``cumulative``, ``ln_cumulative``,
+    Columns: ``year``, ``documents``, ``cumulative``, ``ln_cumulative``,
     ``rgr``, ``doubling_time``.
 
-    Le RGR d'une année se calcule entre le cumul de l'année précédente et
-    celui de l'année courante. La première année n'en a donc pas.
+    The RGR of a year is computed between the cumulative count of the
+    previous year and that of the current year. The first year therefore has
+    none.
     """
     per_year = _docs_per_year(corpus)
     empty = pd.DataFrame(columns=["year", "documents", "cumulative",
@@ -102,15 +104,14 @@ def rgr_doubling_time(corpus) -> pd.DataFrame:
     df = pd.DataFrame({"year": per_year.index.astype(int),
                        "documents": per_year.to_numpy(dtype=int)})
     df["cumulative"] = df["documents"].cumsum()
-    # ln(0) n'existe pas : une année initiale vide reste sans valeur.
+    # ln(0) does not exist: an empty first year stays without a value.
     df["ln_cumulative"] = np.where(df["cumulative"] > 0,
                                    np.log(df["cumulative"].replace(0, np.nan)),
                                    np.nan)
     prev_ln = df["ln_cumulative"].shift(1)
-    # Le temps de doublement se calcule sur le RGR EXACT. Arrondi d'abord à
-    # 4 décimales, un RGR de 0,00004 devenait 0 et le temps de doublement
-    # disparaissait ; un RGR de 0,00015 arrondi à 0,0001 donnait 6 931 ans au
-    # lieu de 4 621.
+    # The doubling time is computed on the EXACT RGR. Rounded first to 4
+    # decimals, an RGR of 0.00004 became 0 and the doubling time disappeared;
+    # an RGR of 0.00015 rounded to 0.0001 gave 6,931 years instead of 4,621.
     rgr = df["ln_cumulative"] - prev_ln
     df["rgr"] = rgr
     df["doubling_time"] = np.where(rgr > 0, math.log(2) / rgr, np.nan)
@@ -123,14 +124,14 @@ def rgr_doubling_time(corpus) -> pd.DataFrame:
 def cochran_sample_size(corpus, confidence: float = 0.95,
                         margin: float = 0.05,
                         proportion: float = 0.5) -> Dict[str, Any]:
-    """Taille d'échantillon représentatif du corpus (Cochran, 1977).
+    """Representative sample size of the corpus (Cochran, 1977).
 
-    Combien de documents faut-il lire pour que les conclusions valent pour
-    tout le corpus ? ``proportion = 0,5`` est le choix le plus prudent : c'est
-    la valeur qui maximise la variance, donc la taille requise.
+    How many documents must be read for the conclusions to hold for the whole
+    corpus? ``proportion = 0.5`` is the most cautious choice: it is the value
+    that maximises the variance, hence the required size.
 
-    Les niveaux de confiance courants sont tabulés ; en dehors, on approche le
-    quantile de la loi normale sans dépendre de SciPy.
+    The usual confidence levels are tabulated; outside them, the quantile of
+    the normal distribution is approximated without depending on SciPy.
     """
     n_pop = int(len(corpus.documents))
     z = _z_score(confidence)
@@ -138,8 +139,8 @@ def cochran_sample_size(corpus, confidence: float = 0.95,
     q = 1.0 - p
 
     n0 = (z ** 2) * p * q / (margin ** 2)
-    # Correction pour population finie : sans elle, on demanderait parfois
-    # plus de documents que le corpus n'en contient.
+    # Finite population correction: without it, we would sometimes ask for more
+    # documents than the corpus contains.
     n = n0 / (1 + (n0 - 1) / n_pop) if n_pop > 0 else n0
 
     required = int(math.ceil(min(n, n_pop))) if n_pop else 0
@@ -155,21 +156,21 @@ def cochran_sample_size(corpus, confidence: float = 0.95,
     }
 
 
-#: Quantiles usuels de la loi normale centrée réduite (bilatéral).
+#: Usual quantiles of the standard normal distribution (two-sided).
 _Z = {0.80: 1.2816, 0.85: 1.4395, 0.90: 1.6449, 0.95: 1.9600,
       0.98: 2.3263, 0.99: 2.5758}
 
 
 def _z_score(confidence: float) -> float:
     confidence = float(confidence)
-    # Table seulement pour une valeur EXACTEMENT tabulée. Arrondir d'abord
-    # envoyait 0,975 sur 0,97 (l'arrondi flottant de Python), et donnait
-    # z = 2,1705 au lieu de 2,2414.
+    # Table only for an EXACTLY tabulated value. Rounding first sent 0.975 to
+    # 0.97 (Python's floating-point rounding), and gave z = 2.1705 instead of
+    # 2.2414.
     for key, z in _Z.items():
         if abs(confidence - key) < 1e-9:
             return z
-    # Approximation rationnelle d'Abramowitz & Stegun (26.2.23), erreur
-    # < 4,5·10⁻⁴, suffisante ici et sans SciPy.
+    # Rational approximation from Abramowitz & Stegun (26.2.23), error
+    # < 4.5·10⁻⁴, sufficient here and without SciPy.
     p = 1 - (1 - confidence) / 2
     t = math.sqrt(-2.0 * math.log(1 - p)) if p > 0.5 else math.sqrt(-2.0 * math.log(p))
     num = 2.515517 + 0.802853 * t + 0.010328 * t * t
@@ -180,32 +181,33 @@ def _z_score(confidence: float) -> float:
 
 def trend_forecast(corpus, horizon: int = 5,
                    model: str = "linear") -> Dict[str, Any]:
-    """Analyse de tendance par moindres carrés, et projection.
+    """Least-squares trend analysis, and projection.
 
-    Deux modèles :
+    Two models:
 
-      - **linéaire** : ``N = a + b·t``, ajusté directement sur les effectifs.
-        ``b`` se lit comme « publications supplémentaires par an ».
-      - **exponentiel** : ``ln N = a + b·t``, soit ``N = e^a · e^(b·t)``.
-        Ajusté sur les logarithmes, il convient à une croissance qui
-        s'accélère. Les années vides en sont exclues (ln 0 n'existe pas).
+      - **linear**: ``N = a + b·t``, fitted directly on the counts. ``b``
+        reads as "additional publications per year".
+      - **exponential**: ``ln N = a + b·t``, i.e. ``N = e^a · e^(b·t)``.
+        Fitted on the logarithms, it suits accelerating growth. Empty years
+        are excluded (ln 0 does not exist).
 
-    Le **R² est calculé sur l'échelle d'origine dans les deux cas**, sinon on
-    comparerait un R² de logarithmes à un R² d'effectifs, et l'exponentiel
-    paraîtrait toujours meilleur.
+    **R² is computed on the original scale in both cases**, otherwise an R²
+    of logarithms would be compared with an R² of counts, and the exponential
+    would always look better.
 
-    La dernière année est souvent **incomplète** (indexation en cours) : elle
-    tire la tendance vers le bas. `last_year_partial` la signale, mais on ne
-    l'écarte pas d'office, c'est à l'utilisateur de trancher.
+    The last year is often **incomplete** (indexing in progress): it pulls the
+    trend down. `last_year_partial` flags it, but it is not removed
+    automatically: the user decides.
 
-    Renvoie ``{"table": DataFrame, "fit": {...}}`` où la table porte les années
-    observées **et** projetées, avec ``kind`` valant « observed » ou « forecast ».
+    Returns ``{"table": DataFrame, "fit": {...}}`` where the table carries the
+    observed **and** projected years, with ``kind`` set to "observed" or
+    "forecast".
     """
     per_year = _docs_per_year(corpus)
     empty = pd.DataFrame(columns=["year", "documents", "fitted", "kind"])
     if len(per_year) < 3:
-        # Deux points donnent toujours un R² de 1 : une tendance n'a de sens
-        # qu'à partir de trois observations.
+        # Two points always give an R² of 1: a trend only makes sense from three
+        # observations on.
         return {"table": empty, "fit": None,
                 "message": "At least three years are needed."}
 
@@ -232,7 +234,7 @@ def trend_forecast(corpus, horizon: int = 5,
     ss_res = float(np.sum((counts - fitted) ** 2))
     ss_tot = float(np.sum((counts - counts.mean()) ** 2))
     r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
-    # Erreur type de l'estimation : 2 paramètres consommés (pente, ordonnée).
+    # Standard error of the estimate: 2 parameters consumed (slope, intercept).
     dof = max(len(counts) - 2, 1)
     rmse = float(np.sqrt(ss_res / dof))
 
@@ -243,7 +245,7 @@ def trend_forecast(corpus, horizon: int = 5,
     last = int(years[-1])
     for k in range(1, horizon + 1):
         x = float(last + k - years[0])
-        # Un effectif prédit négatif n'a pas de sens : on plancher à zéro.
+        # A negative predicted count makes no sense: it is floored at zero.
         rows.append({"year": last + k, "documents": None,
                      "fitted": round(max(float(predict(x)), 0.0), 2),
                      "kind": "forecast"})
@@ -259,16 +261,16 @@ def trend_forecast(corpus, horizon: int = 5,
             "rmse": round(rmse, 2),
             "years_used": int(len(counts)),
             "last_year": last,
-            # Vrai quand la dernière année est l'année en cours (ou future) :
-            # son indexation n'est pas terminée. Valait toujours None, alors
-            # que la docstring promettait de le signaler.
+            # True when the last year is the current (or a future) year: its indexing
+            # is not finished. It was always None, while the docstring promised to flag
+            # it.
             "last_year_partial": bool(last >= date.today().year),
         },
     }
 
 
 def growth_summary(corpus) -> Dict[str, Any]:
-    """Résumé des indicateurs de croissance, pour les tuiles de l'interface."""
+    """Summary of the growth indicators, for the interface tiles."""
     a = agr(corpus)
     r = rgr_doubling_time(corpus)
     mean_agr = float(a["agr"].dropna().mean()) if not a.empty else float("nan")

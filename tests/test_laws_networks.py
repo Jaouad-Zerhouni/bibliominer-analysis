@@ -1,7 +1,7 @@
-"""Tests des lois bibliométriques et des réseaux.
+"""Tests of the bibliometric laws and of the networks.
 
-Les corpus de test sont construits pour que la réponse soit calculable À LA
-MAIN : c'est la seule façon de détecter une régression dans un indicateur.
+The test corpora are built so that the answer can be computed BY HAND:
+that is the only way to detect a regression in an indicator.
 """
 
 import numpy as np
@@ -25,7 +25,7 @@ def _doc(i, authors, keywords="", refs="", source="J1", cites=0):
 # ---------------------------------------------------------------------------
 
 def test_lotka_distribution():
-    """3 auteurs à 1 doc, 1 auteur à 3 docs -> distribution {1: 3, 3: 1}."""
+    """3 authors with 1 doc, 1 author with 3 docs -> distribution {1: 3, 3: 1}."""
     rows = [
         _doc(1, "1:A.; 2:X."),
         _doc(2, "1:A.; 2:Y."),
@@ -40,7 +40,7 @@ def test_lotka_distribution():
 
 
 def test_lotka_part_theorique():
-    """La part théorique de Lotka pour x=1 vaut 1/zeta(2) = 6/pi^2 ≈ 0.6079."""
+    """Lotka's theoretical share for x=1 is 1/zeta(2) = 6/pi^2 ≈ 0.6079."""
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, "1:A."), _doc(2, "1:B.")]))
     row = c.lotka()["table"].iloc[0]
     assert row["documents_written"] == 1
@@ -57,10 +57,11 @@ def test_lotka_corpus_vide():
 # ---------------------------------------------------------------------------
 
 def test_bradford_zones_couvrent_tout():
-    """Chaque source appartient à une zone, et les zones somment au total."""
+    """Every source belongs to a zone, and the zones add up to the total."""
     rows = []
     i = 0
-    # 1 source à 6 docs, 2 sources à 2 docs, 6 sources à 1 doc = 16 documents
+    # 1 source with 6 docs, 2 sources with 2 docs, 6 sources with 1 doc = 16
+    # documents
     for src, n in [("Core", 6), ("B1", 2), ("B2", 2)] + [("S%d" % k, 1) for k in range(6)]:
         for _ in range(n):
             i += 1
@@ -72,7 +73,7 @@ def test_bradford_zones_couvrent_tout():
     assert res["total_sources"] == 9
     assert res["zones"]["documents"].sum() == 16
     assert res["zones"]["sources"].sum() == 9
-    # La source la plus productive est en zone 1, et en tête du classement.
+    # The most productive source is in zone 1, and at the top of the ranking.
     top = res["table"].iloc[0]
     assert top["source"] == "Core" and top["zone"] == 1
 
@@ -103,7 +104,7 @@ def test_zipf_rangs_et_frequences():
 
 
 def test_zipf_ajustement_sur_loi_parfaite():
-    """Sur une distribution exactement en 1/rang, l'exposant doit valoir 1."""
+    """On a distribution exactly in 1/rank, the exponent must be 1."""
     rows = []
     i = 0
     for rank, freq in enumerate([12, 6, 4, 3], start=1):   # ~ 12/rang
@@ -117,11 +118,11 @@ def test_zipf_ajustement_sur_loi_parfaite():
 
 
 # ---------------------------------------------------------------------------
-# Réseaux
+# Networks
 # ---------------------------------------------------------------------------
 
 def test_co_word_poids():
-    """alpha et beta ensemble dans 2 documents -> lien de poids 2."""
+    """alpha and beta together in 2 documents -> an edge of weight 2."""
     rows = [
         _doc(1, "1:A.", keywords="alpha; beta"),
         _doc(2, "1:A.", keywords="alpha; beta"),
@@ -140,7 +141,7 @@ def test_co_word_filtre_les_liens_faibles():
     c = Corpus.from_dataframe(pd.DataFrame(rows))
     g = c.co_word(min_weight=2)
     assert g["n_edges"] == 0
-    assert g["n_nodes"] == 0        # aucun nœud isolé ne subsiste
+    assert g["n_nodes"] == 0        # no isolated node is left
 
 
 def test_co_authorship():
@@ -153,7 +154,7 @@ def test_co_authorship():
 
 
 def test_co_citation_par_doi():
-    """Deux références partagées par deux documents -> lien de poids 2."""
+    """Two references shared by two documents -> an edge of weight 2."""
     r = ("ref1 | 10.1/x | 2015 | Doe J. | Paper X ; "
          "ref2 | 10.1/y | 2016 | Roe R. | Paper Y")
     c = Corpus.from_dataframe(pd.DataFrame([
@@ -165,7 +166,7 @@ def test_co_citation_par_doi():
 
 
 def test_co_citation_ignore_les_refs_non_identifiables():
-    """Sans DOI ni titre exploitable, une référence ne peut pas être rapprochée."""
+    """Without a DOI or a usable title, a reference cannot be matched."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "1:A.", refs="ref1 | | | | ab ; ref2 | | | | cd")]))
     assert c.co_citation(min_weight=1)["n_nodes"] == 0
@@ -178,12 +179,12 @@ def test_reseaux_corpus_vide():
 
 
 # ---------------------------------------------------------------------------
-# Carte des pays
+# Country map
 # ---------------------------------------------------------------------------
 
 def test_country_map_collaboration_internationale():
     rows = [
-        _doc(1, "1:A."),                                    # Maroc seul
+        _doc(1, "1:A."),                                    # Morocco alone
         dict(_doc(2, "1:B."),
              Affiliations=("parent 1: Univ A, city: Rabat, country: Morocco; "
                            "parent 1: Univ B, city: Madrid, country: Spain")),
@@ -192,6 +193,6 @@ def test_country_map_collaboration_internationale():
     m = c.country_map().set_index("country")
     assert m.loc["Morocco", "documents"] == 2
     assert m.loc["Morocco", "sca"] == 1      # doc 1 seulement
-    assert m.loc["Morocco", "mca"] == 1      # doc 2, co-signé
+    assert m.loc["Morocco", "mca"] == 1      # doc 2, co-signed
     assert m.loc["Spain", "mca"] == 1
     assert m.loc["Spain", "mca_ratio"] == 100.0

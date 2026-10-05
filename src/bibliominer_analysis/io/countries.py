@@ -1,15 +1,15 @@
-"""Les pays : les reconnaître, les nommer comme le fond de carte, les placer.
+"""Countries: recognising them, naming them like the base map, placing them.
 
-Utilisé à la LECTURE d'un fichier brut (le dernier segment d'une affiliation
-Scopus n'est un pays que s'il est reconnu ici) et par les cartes du monde.
-Aucune dépendance graphique : ce module se charge sans matplotlib.
+Used when READING a raw file (the last segment of a Scopus affiliation is
+a country only if it is recognised here) and by the world maps. No
+graphics dependency: this module loads without matplotlib.
 
-Sources, dans ``data_ref`` :
-  - ``countries-110m.json``, le fond de carte de l'interface (world-atlas,
-    Natural Earth, licence ISC) ;
-  - ``countries.csv``, les 249 pays et territoires ISO 3166-1 (+ Kosovo),
-    avec leur nom sur le fond de carte, ou la position de leur capitale
-    quand ils sont trop petits pour y figurer.
+Sources, in ``data_ref``:
+  - ``countries-110m.json``, the interface's base map (world-atlas,
+    Natural Earth, ISC licence);
+  - ``countries.csv``, the 249 ISO 3166-1 countries and territories
+    (+ Kosovo), with their name on the base map, or the position of their
+    capital when they are too small to appear on it.
 """
 
 from __future__ import annotations
@@ -21,12 +21,12 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
 _ATLAS = Path(__file__).resolve().parent.parent / "data_ref" / "countries-110m.json"
-#: Les pays et territoires ISO 3166-1 (+ Kosovo) : noms officiel et courant,
-#: nom sur le fond de carte, et position (lon, lat) de la capitale pour ceux
-#: que le fond au 1:110 m ne dessine pas (Singapour, Bahreïn, Malte…).
+#: ISO 3166-1 countries and territories (+ Kosovo): official and common
+#: names, name on the base map, and position (lon, lat) of the capital for
+#: those the 1:110 m map does not draw (Singapore, Bahrain, Malta...).
 _COUNTRIES = Path(__file__).resolve().parent.parent / "data_ref" / "countries.csv"
 
-#: Graphie du corpus (sans accents, minuscules) -> nom du fond de carte.
+#: Corpus spelling (without accents, lower case) -> base-map name.
 ATLAS_ALIASES: Dict[str, str] = {
     "united states": "United States of America",
     "usa": "United States of America",
@@ -92,7 +92,7 @@ def _key(name: object) -> str:
 
 @lru_cache(maxsize=1)
 def _atlas() -> Tuple[Dict[str, List[List[Tuple[float, float]]]], Dict[str, str]]:
-    """{nom -> anneaux (lon, lat)} et {clé normalisée -> nom}."""
+    """{name -> rings (lon, lat)} and {normalised key -> name}."""
     topo = json.loads(_ATLAS.read_text(encoding="utf-8"))
     sx, sy = topo["transform"]["scale"]
     tx, ty = topo["transform"]["translate"]
@@ -119,16 +119,16 @@ def _atlas() -> Tuple[Dict[str, List[List[Tuple[float, float]]]], Dict[str, str]
         if not name or "arcs" not in geo:
             continue
         polygons = geo["arcs"] if geo["type"] == "MultiPolygon" else [geo["arcs"]]
-        # L'anneau extérieur de chaque polygone ; les trous (lacs) sont
-        # négligeables à cette échelle.
+        # The outer ring of each polygon; holes (lakes) are negligible at this
+        # scale.
         shapes[name] = [_unwrap(ring(poly[0])) for poly in polygons]
     return shapes, {_key(n): n for n in shapes}
 
 
 def _unwrap(ring_: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
-    """Un anneau qui franchit la ligne des 180° (Russie orientale, Fidji)
-    saute de +180 à -180 : dessiné tel quel, il barre toute la carte d'une
-    bande horizontale. On le recolle d'un seul côté."""
+    """A ring that crosses the 180° line (eastern Russia, Fiji) jumps from +180
+    to -180: drawn as is, it strikes a horizontal band across the whole map.
+    It is joined back on one side."""
     out = [ring_[0]]
     for x, y in ring_[1:]:
         px = out[-1][0]
@@ -145,7 +145,7 @@ def _unwrap(ring_: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
 
 @lru_cache(maxsize=1)
 def _countries() -> Dict[str, Dict[str, str]]:
-    """{nom normalisé -> ligne de la table des pays}, pour tous ses noms."""
+    """{normalised name -> row of the country table}, for all of its names."""
     import csv
     out: Dict[str, Dict[str, str]] = {}
     with _COUNTRIES.open(encoding="utf-8", newline="") as fh:
@@ -169,16 +169,16 @@ def _country_row(country: object) -> Optional[Dict[str, str]]:
 
 
 def is_country(name: object) -> bool:
-    """Ce texte est-il un pays (ou un territoire) ? Tous les noms ISO,
-    officiels et courants, les graphies Scopus connues et ceux du fond de
-    carte sont reconnus, sans tenir compte de la casse ni des accents."""
+    """Is this text a country (or a territory)? Every ISO name, official and
+    common, the known Scopus spellings and those of the base map are
+    recognised, regardless of case and accents."""
     k = _key(name)
     return bool(k) and (k in _countries() or k in ATLAS_ALIASES or k in _atlas()[1])
 
 
 def atlas_name(country: object) -> Optional[str]:
-    """Le nom du fond de carte pour un pays du corpus, ou None s'il n'y est pas
-    (un micro-État, par exemple, absent de l'échelle 1:110 m)."""
+    """The base-map name for a country of the corpus, or None if it is not on it
+    (a micro-state, for example, absent at the 1:110 m scale)."""
     shapes, by_key = _atlas()
     k = _key(country)
     if k in by_key:
@@ -191,8 +191,8 @@ def atlas_name(country: object) -> Optional[str]:
 
 
 def position(country: object) -> Optional[Tuple[float, float]]:
-    """(lon, lat) où placer un pays : le centre de son territoire sur le fond
-    de carte, ou sa capitale s'il est trop petit pour y figurer."""
+    """(lon, lat) where to place a country: the centre of its territory on the
+    base map, or its capital if it is too small to appear on it."""
     name = atlas_name(country)
     if name:
         return centroids()[name]
@@ -203,8 +203,8 @@ def position(country: object) -> Optional[Tuple[float, float]]:
 
 
 def _centroid(rings: List[List[Tuple[float, float]]]) -> Tuple[float, float]:
-    """Centre du plus grand polygone (aire signée de la formule du lacet) :
-    la France se place en métropole, pas entre Paris et la Guyane."""
+    """Centre of the largest polygon (signed area from the shoelace formula):
+    France is placed on the mainland, not between Paris and French Guiana."""
     best, best_area = rings[0], -1.0
     for r in rings:
         area = abs(sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(r, r[1:] + r[:1]))) / 2
@@ -224,5 +224,5 @@ def _centroid(rings: List[List[Tuple[float, float]]]) -> Tuple[float, float]:
 
 @lru_cache(maxsize=1)
 def centroids() -> Dict[str, Tuple[float, float]]:
-    """{nom du fond de carte -> (lon, lat)}."""
+    """{base-map name -> (lon, lat)}."""
     return {n: _centroid(r) for n, r in _atlas()[0].items()}

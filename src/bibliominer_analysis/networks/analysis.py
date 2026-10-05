@@ -1,25 +1,25 @@
-"""Mesures sur les réseaux : centralités, regroupement, normalisations.
+"""Network measures: centralities, clustering, normalisations.
 
-Un réseau bibliométrique brut se lit mal : tout le monde voit le gros nœud au
-centre, personne ne voit le nœud discret qui relie deux communautés. Ce module
-calcule ce que l'œil ne voit pas.
+A raw bibliometric network reads badly: everyone sees the big node in the
+centre, nobody sees the discreet node that links two communities. This
+module computes what the eye does not see.
 
-**Les centralités ne disent pas la même chose**, et les confondre est l'erreur
-classique :
+**The centralities do not say the same thing**, and confusing them is the
+classic mistake:
 
-  - **degré**, le nombre de liens. Qui est le plus actif.
-  - **intermédiarité**, la fréquence à laquelle un nœud se trouve sur le
-    chemin le plus court entre deux autres. Qui fait le **pont** entre des
-    groupes qui ne se parlent pas. Un nœud peut avoir un degré médiocre et une
-    intermédiarité énorme : c'est souvent le plus intéressant du corpus.
-  - **proximité**, la distance moyenne au reste. Qui atteint tout le monde vite.
-  - **PageRank**, être cité par des nœuds eux-mêmes centraux compte davantage
-    qu'être cité par des nœuds isolés.
+  - **degree**: the number of links. Who is the most active.
+  - **betweenness**: how often a node lies on the shortest path between
+    two others. Who **bridges** groups that do not talk to each other. A
+    node can have a mediocre degree and a huge betweenness: it is often
+    the most interesting one of the corpus.
+  - **closeness**: the mean distance to the rest. Who reaches everyone
+    quickly.
+  - **PageRank**: being cited by nodes that are themselves central counts
+    more than being cited by isolated nodes.
 
-**Les normalisations** viennent de VOSviewer : un lien brut favorise
-mécaniquement les entités fréquentes. Rapporter la co-occurrence à ce qu'on
-attendrait par hasard (*force d'association*) corrige ce biais, et change
-réellement la carte.
+**Normalisations**: a raw link mechanically favours frequent entities.
+Relating the co-occurrence to what chance would produce (*association
+strength*) corrects this bias, and really changes the map.
 """
 
 from __future__ import annotations
@@ -27,14 +27,14 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, List, Optional
 
-#: Graine fixe pour Louvain : une carte publiée doit être reproductible.
+#: Fixed seed for Louvain: a published map must be reproducible.
 SEED = 20240101
 
 NORMALIZATIONS = ("none", "association", "jaccard", "salton", "inclusion", "equivalence")
 
 
 def _adjacency(G, order):
-    """Matrice d'adjacence pondérée, dense, nos réseaux tiennent en mémoire."""
+    """Weighted adjacency matrix, dense: our networks fit in memory."""
     import numpy as np
 
     index = {n: i for i, n in enumerate(order)}
@@ -47,12 +47,12 @@ def _adjacency(G, order):
 
 
 def _pagerank(A, alpha: float = 0.85, iters: int = 200, tol: float = 1e-10):
-    """PageRank pondéré par itération de la puissance.
+    """Weighted PageRank by power iteration.
 
-    Écrit ici plutôt qu'appelé à networkx : depuis la version 3, `nx.pagerank`
-    passe par scipy. Sans scipy il lève, et un bloc de secours renverrait 1/n
-    pour tout le monde, une colonne d'apparence normale mais entièrement
-    vide de sens, donc pire qu'une colonne absente.
+    Written here rather than calling networkx: since version 3, `nx.pagerank`
+    goes through scipy. Without scipy it raises, and a fallback block would
+    return 1/n for everyone, a column that looks normal but is entirely
+    meaningless, hence worse than a missing column.
     """
     import numpy as np
 
@@ -78,14 +78,13 @@ def _pagerank(A, alpha: float = 0.85, iters: int = 200, tol: float = 1e-10):
 
 
 def _eigenvector(A, iters: int = 2000, tol: float = 1e-12):
-    """Centralité de vecteur propre par itération de la puissance.
+    """Eigenvector centrality by power iteration.
 
-    On itère sur **A + I**, pas sur A. Les deux ont les mêmes vecteurs propres,
-    mais sur un graphe BIPARTI (une étoile, un arbre, fréquents en
-    co-signature) A a deux valeurs propres dominantes opposées, +λ et −λ :
-    l'itération simple oscille alors entre deux vecteurs sans jamais converger,
-    et renvoyait celui où elle s'arrêtait. Le décalage de +1 rend la valeur
-    propre dominante unique.
+    The iteration is on **A + I**, not on A. Both have the same eigenvectors,
+    but on a BIPARTITE graph (a star, a tree, frequent in co-authorship) A has
+    two opposite dominant eigenvalues, +λ and -λ: the plain iteration then
+    oscillates between two vectors without ever converging, and returned the
+    one where it stopped. The +1 shift makes the dominant eigenvalue unique.
     """
     import numpy as np
 
@@ -104,33 +103,33 @@ def _eigenvector(A, iters: int = 2000, tol: float = 1e-12):
             x = y
             break
         x = y
-    # Le vecteur propre dominant d'une matrice à coefficients positifs est de
-    # signe constant (Perron-Frobenius) : on le rend positif.
+    # The dominant eigenvector of a matrix with positive coefficients has a
+    # constant sign (Perron-Frobenius): it is made positive.
     return np.abs(x)
 
 
 def _to_networkx(graph: Dict[str, Any]):
     from .._stable import ordered_graph
 
-    # Ordre d'insertion fixe : Louvain, même avec sa graine, en dépend.
+    # Fixed insertion order: Louvain, even with its seed, depends on it.
     return ordered_graph(graph.get("nodes", []), graph.get("edges", []))
 
 
 def normalize(graph: Dict[str, Any], method: str = "association") -> Dict[str, Any]:
-    """Repondère les liens selon une mesure de similarité.
+    """Reweights the links according to a similarity measure.
 
-    Avec ``c_ij`` la co-occurrence et ``s_i`` le total de l'entité *i* :
+    With ``c_ij`` the co-occurrence and ``s_i`` the total of entity *i*:
 
-      - ``association`` : c_ij / (s_i · s_j), la force d'association de
-        VOSviewer, proportionnelle au rapport entre observé et attendu.
-      - ``jaccard``      : c_ij / (s_i + s_j − c_ij)
+      - ``association``: c_ij / (s_i · s_j), the association strength,
+        proportional to the ratio between observed and expected.
+      - ``jaccard``      : c_ij / (s_i + s_j - c_ij)
       - ``salton``       : c_ij / √(s_i · s_j)
       - ``inclusion``    : c_ij / min(s_i, s_j)
       - ``equivalence``  : c_ij² / (s_i · s_j)
 
-    Les poids normalisés sont des réels ; le poids brut reste disponible dans
-    ``raw_weight``, parce qu'un lecteur veut souvent savoir « combien de
-    documents » derrière une valeur de 0,043.
+    Normalised weights are real numbers; the raw weight stays available in
+    ``raw_weight``, because a reader often wants to know "how many documents"
+    lie behind a value of 0.043.
     """
     if method == "none" or not graph.get("edges"):
         return graph
@@ -166,16 +165,15 @@ def normalize(graph: Dict[str, Any], method: str = "association") -> Dict[str, A
 def annotate(graph: Dict[str, Any], communities: bool = True,
              overlay: Optional[Dict[str, float]] = None,
              resolution: float = 1.0) -> Dict[str, Any]:
-    """Ajoute centralités, communauté et superposition temporelle aux nœuds.
+    """Adds centralities, community and time overlay to the nodes.
 
-    Chaque nœud reçoit ``degree_centrality``, ``betweenness``, ``closeness``,
-    ``pagerank``, ``eigenvector``, ``clustering``, et si demandé ``community``
-    et ``overlay_year``.
+    Every node receives ``degree_centrality``, ``betweenness``,
+    ``closeness``, ``pagerank``, ``eigenvector``, ``clustering``, and if
+    requested ``community`` and ``overlay_year``.
 
-    ``overlay`` associe un identifiant de nœud à son année moyenne : c'est la
-    vue « overlay » de VOSviewer, qui montre d'un coup quelles zones du réseau
-    sont récentes et lesquelles sont anciennes, information qu'aucune taille
-    de nœud ne peut porter.
+    ``overlay`` maps a node identifier to its mean year: it is the overlay
+    view, which shows at once which areas of the network are recent and which
+    are old, information that no node size can carry.
     """
     if not graph.get("nodes"):
         return graph
@@ -186,9 +184,9 @@ def annotate(graph: Dict[str, Any], communities: bool = True,
 
     degree = nx.degree_centrality(G)
     clustering = nx.clustering(G, weight="weight")
-    # Les poids sont des SIMILARITÉS : plus c'est fort, plus c'est proche. Les
-    # chemins les plus courts raisonnent en DISTANCES, d'où l'inversion, sans
-    # elle, l'intermédiarité passerait par les liens les plus faibles.
+    # The weights are SIMILARITIES: the stronger, the closer. Shortest paths
+    # reason in DISTANCES, hence the inversion; without it, betweenness would
+    # go through the weakest links.
     for _, _, d in G.edges(data=True):
         w = float(d.get("weight", 1)) or 1e-9
         d["distance"] = 1.0 / w
@@ -202,17 +200,16 @@ def annotate(graph: Dict[str, Any], communities: bool = True,
 
     membership = {}
     if communities and G.number_of_edges():
-        # `resolution` est le paramètre de VOSviewer : au-dessus de 1 on
-        # obtient des groupes plus nombreux et plus petits, en dessous des
-        # groupes plus larges. Il n'a pas de valeur « juste », c'est un choix
-        # de granularité, qui doit donc rester entre les mains du lecteur.
+        # `resolution` is the modularity resolution: above 1 there are more and
+        # smaller groups, below 1 larger groups. It has no "right" value; it is a
+        # choice of granularity, which must therefore stay in the reader's hands.
         try:
             groups = nx.community.louvain_communities(
                 G, weight="weight", seed=SEED, resolution=float(resolution))
         except Exception:
             groups = nx.community.greedy_modularity_communities(G, weight="weight")
-        # Les groupes sont numérotés du plus grand au plus petit : le numéro
-        # devient lisible au lieu d'être arbitraire.
+        # Groups are numbered from the largest to the smallest: the number becomes
+        # readable instead of arbitrary.
         from .._stable import ordered_communities
         for i, members in enumerate(ordered_communities(groups), start=1):
             for m in members:
@@ -234,12 +231,12 @@ def annotate(graph: Dict[str, Any], communities: bool = True,
 
 
 def _communities_on_nodes(graph: Dict[str, Any]) -> Optional[List[set]]:
-    """La partition déjà posée par `annotate`, si les nœuds la portent.
+    """The partition already set by `annotate`, if the nodes carry it.
 
-    La modularité du résumé doit être celle des communautés AFFICHÉES. Elle
-    était recalculée par un Louvain à résolution 1 : dès que l'utilisateur
-    choisissait une autre résolution, le chiffre ne décrivait plus les groupes
-    qu'il voyait.
+    The modularity of the summary must be that of the DISPLAYED communities.
+    It used to be recomputed by a Louvain at resolution 1: as soon as the user
+    chose another resolution, the figure no longer described the groups they
+    saw.
     """
     nodes = graph.get("nodes") or []
     if not nodes or any("community" not in n for n in nodes):
@@ -251,14 +248,15 @@ def _communities_on_nodes(graph: Dict[str, Any]) -> Optional[List[set]]:
 
 
 def graph_summary(graph: Dict[str, Any]) -> Dict[str, Any]:
-    """Indicateurs de forme du réseau entier.
+    """Shape indicators of the whole network.
 
-    ``density``, part des liens possibles réellement présents.
-    ``transitivity``, probabilité que deux voisins d'un nœud soient voisins.
-    ``components``, nombre de morceaux disjoints ; plus d'un signale un
-    domaine fragmenté, ce qu'un dessin de réseau masque souvent.
-    ``mean_path_length`` et ``diameter`` portent sur la **plus grande**
-    composante : sur un graphe non connexe ils seraient infinis.
+    ``density``: share of the possible links actually present.
+    ``transitivity``: probability that two neighbours of a node are
+    neighbours.
+    ``components``: number of disjoint pieces; more than one signals a
+    fragmented field, which a network drawing often hides.
+    ``mean_path_length`` and ``diameter`` cover the **largest** component: on
+    a disconnected graph they would be infinite.
     """
     if not graph.get("nodes"):
         return {"nodes": 0, "edges": 0, "density": 0.0, "transitivity": 0.0,
@@ -306,15 +304,14 @@ def graph_summary(graph: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def overlay_years(corpus, unit: str, level: str = "parent") -> Dict[str, float]:
-    """Année moyenne de publication associée à chaque nœud d'un réseau.
+    """Mean publication year associated with each node of a network.
 
-    C'est la donnée de la vue « overlay » : elle colore le réseau par le temps,
-    et fait apparaître d'un coup les zones récentes et les zones anciennes.
-    Aucune taille de nœud ne peut porter cette information, parce que la taille
-    est déjà prise par la fréquence.
+    It is the data of the overlay view: it colours the network by time, and
+    reveals at once the recent and the old areas. No node size can carry this
+    information, because size is already taken by frequency.
 
-    Les identifiants renvoyés suivent EXACTEMENT ceux de `networks.build`,
-    sinon la jointure serait silencieusement vide.
+    The returned identifiers follow EXACTLY those of `networks.build`,
+    otherwise the join would be silently empty.
     """
     import pandas as pd
 
@@ -352,15 +349,15 @@ def overlay_years(corpus, unit: str, level: str = "parent") -> Dict[str, float]:
 
 
 # ---------------------------------------------------------------------------
-# Disposition et carte de densité (la vue « density » de VOSviewer)
+# Layout and density map
 # ---------------------------------------------------------------------------
 
 def _shortest_paths(G, index: Dict[str, int]):
-    """Tous les plus courts chemins (poids ``distance``), en matrice.
+    """All shortest paths (``distance`` weights), as a matrix.
 
-    Floyd-Warshall vectorisé : les mêmes longueurs que Dijkstra depuis chaque
-    nœud, mais calculées par numpy. Sur un réseau de 250 références (7 000
-    liens), Dijkstra en Python pur prenait 8 s, l'écran attendait.
+    Vectorised Floyd-Warshall: the same lengths as Dijkstra from every node,
+    but computed by numpy. On a network of 250 references (7,000 links),
+    Dijkstra in pure Python took 8 s while the screen waited.
     """
     import numpy as np
 
@@ -378,10 +375,10 @@ def _shortest_paths(G, index: Dict[str, int]):
 
 
 def _mds_component(G, nodes: list) -> Dict[str, list]:
-    """Place les nœuds d'UNE composante connexe, par MDS sur ses chemins.
+    """Places the nodes of ONE connected component, by MDS on its paths.
 
-    Une composante seule n'a que des distances finies : le MDS y travaille
-    sur des écarts qui veulent tous dire quelque chose.
+    A single component only has finite distances: there, the MDS works on
+    gaps that all mean something.
     """
     if len(nodes) == 1:
         return {nodes[0]: [0.0, 0.0]}
@@ -400,25 +397,25 @@ def _mds_component(G, nodes: list) -> Dict[str, list]:
     return _readable(G.subgraph(nodes), start)
 
 
-#: Graine FIXE : la disposition à ressorts est déterministe, la carte ne
-#: bouge pas d'une ouverture à l'autre, ni entre l'écran et la figure.
+#: FIXED seed: the spring layout is deterministic, the map does not move from
+#: one opening to the next, nor between the screen and the figure.
 _LAYOUT_SEED = 7
 
 
 def _readable(G, start: Dict[str, list]) -> Dict[str, list]:
-    """Du MDS à une carte LISIBLE.
+    """From MDS to a READABLE map.
 
-    Le MDS classique écrase un groupe très lié sur un seul point : quand
-    toutes les distances d'un groupe sont presque égales (des co-auteurs qui
-    signent tous ensemble), ses nœuds tombent au même endroit. Constaté sur
-    un vrai corpus : un réseau de co-auteurs dessiné comme une colonne de
-    disques empilés, noms superposés.
+    Classical MDS crushes a tightly linked group onto a single point: when all
+    the distances of a group are almost equal (co-authors who all sign
+    together), its nodes fall in the same place. Found on a real corpus: a
+    co-authorship network drawn as a column of stacked discs, with
+    overlapping names.
 
-    Deux passes, toutes deux déterministes :
-      1. une disposition à ressorts PARTANT du MDS (graine fixe), elle garde
-         la forme d'ensemble et desserre les groupes ;
-      2. un écartement des paires trop proches, jusqu'à une distance minimale
-         qui dépend du nombre de nœuds, aucun disque ne cache un autre.
+    Two passes, both deterministic:
+      1. a spring layout STARTING from the MDS (fixed seed): it keeps the
+         overall shape and loosens the groups;
+      2. spreading of pairs that are too close, up to a minimum distance that
+         depends on the number of nodes: no disc hides another.
     """
     import networkx as nx
     import numpy as np
@@ -434,12 +431,12 @@ def _readable(G, start: Dict[str, list]) -> Dict[str, list]:
 
 
 def _spread(xy, passes: int = 80):
-    """Écarte les points trop proches, sans rien déplacer d'autre.
+    """Pushes apart points that are too close, without moving anything else.
 
-    Coordonnées ramenées à [-1, 1], distance minimale 1.6/√n : assez pour
-    qu'un disque ne recouvre pas son voisin, assez peu pour garder la forme.
-    Deux points confondus sont séparés selon une direction fixée par leur
-    rang, jamais au hasard.
+    Coordinates brought to [-1, 1], minimum distance 1.6/√n: enough for a
+    disc not to cover its neighbour, little enough to keep the shape. Two
+    coincident points are separated along a direction fixed by their rank,
+    never at random.
     """
     import numpy as np
 
@@ -447,7 +444,7 @@ def _spread(xy, passes: int = 80):
     span = np.ptp(xy, axis=0).max() or 1.0
     xy = (xy - xy.mean(axis=0)) / span * 2.0
     min_d = 1.6 / np.sqrt(n)
-    angles = np.arange(n) * 2.399963          # angle d'or : directions fixes
+    angles = np.arange(n) * 2.399963          # golden angle: fixed directions
     fallback = np.stack([np.cos(angles), np.sin(angles)], axis=1)
     for _ in range(passes):
         diff = xy[:, None, :] - xy[None, :, :]
@@ -465,30 +462,29 @@ def _spread(xy, passes: int = 80):
     return xy
 
 
-#: Le cadre visé par la disposition : le format d'une carte à l'écran
-#: (≈ 1100 × 600 px) et d'une figure exportée, un peu plus large que haute.
+#: The frame targeted by the layout: the shape of a map on screen
+#: (≈ 1100 × 600 px) and of an exported figure, a little wider than tall.
 LAYOUT_WIDTH, LAYOUT_HEIGHT = 860.0, 480.0
 
 
 def _pack(blocks: List[Dict[str, list]], gap: float = 0.6) -> Dict[str, list]:
-    """Range les composantes en RANGÉES, au format de la carte.
+    """Arranges the components in ROWS, in the shape of the map.
 
-    Entre deux composantes DÉCONNECTÉES, la distance n'a aucun sens : aucun
-    chemin ne les relie. Les faire entrer dans un même MDS revenait à lui
-    demander de coder une distance qui n'existe pas, et il y dépensait son
-    premier axe, repliant la vraie structure sur une droite. On les place
-    donc côte à côte, ce qui n'affirme rien de plus qu'un voisinage
-    graphique.
+    Between two DISCONNECTED components, distance makes no sense: no path
+    links them. Putting them in the same MDS meant asking it to encode a
+    distance that does not exist, and it spent its first axis on it, folding
+    the real structure onto a line. They are therefore placed side by side,
+    which asserts nothing more than a graphical neighbourhood.
 
-    Côte à côte, mais pas sur UNE ligne : un réseau de co-auteurs compte
-    souvent quinze ou vingt petits groupes. Alignés, ils formaient une bande
-    vingt fois plus large que haute ; cadrée à l'écran, la bande devenait
-    un chapelet de disques empilés, noms illisibles (constaté sur un vrai
-    corpus). Les composantes remplissent donc des rangées successives, de la
-    plus grande à la plus petite, jusqu'au format de la carte.
+    Side by side, but not on ONE line: a co-authorship network often has
+    fifteen or twenty small groups. Aligned, they formed a band twenty times
+    wider than tall; framed on screen, the band became a string of stacked
+    discs with unreadable names (found on a real corpus). The components
+    therefore fill successive rows, from the largest to the smallest, up to
+    the shape of the map.
 
-    Chaque bloc est mis à l'échelle en √n : une composante de trois nœuds
-    n'occupe pas la largeur d'une de vingt.
+    Each block is scaled by √n: a three-node component does not take the
+    width of a twenty-node one.
     """
     import math
 
@@ -499,8 +495,8 @@ def _pack(blocks: List[Dict[str, list]], gap: float = 0.6) -> Dict[str, list]:
         ids = list(block)
         xy = np.array([block[i] for i in ids], dtype=float)
         span = max(float(np.ptp(xy[:, 0])), float(np.ptp(xy[:, 1])), 1e-9)
-        # Une composante isolée (tous les nœuds au même endroit) doit rester
-        # visible : on lui donne une largeur minimale plutôt qu'un point.
+        # An isolated component (all nodes at the same place) must stay visible: it
+        # gets a minimum width rather than a point.
         scale = math.sqrt(len(ids)) / span if len(ids) > 1 else 1.0
         xy = (xy - xy.min(axis=0)) * scale
         width = max(float(xy[:, 0].max()), 0.4)
@@ -525,31 +521,31 @@ def _pack(blocks: List[Dict[str, list]], gap: float = 0.6) -> Dict[str, list]:
     for row in rows:
         height = max(box[3] for box in row)
         total = sum(box[2] for box in row) + gap * (len(row) - 1)
-        x = (row_width - total) / 2              # rangée centrée
+        x = (row_width - total) / 2              # centred row
         for ids, xy, width, box_height in row:
             offset = top - (height - box_height) / 2 - box_height
             for node, (px, py) in zip(ids, xy):
                 placed[node] = [x + float(px), offset + float(py)]
             x += width + gap
-        top -= height + gap                      # l'axe y monte
+        top -= height + gap                      # the y axis goes up
     return placed
 
 
 def _declutter(graph: Dict[str, Any], coords: Dict[str, list],
                rounds: int = 4, passes: int = 150, gap: float = 4.0) -> Dict[str, list]:
-    """Aucun disque sur un autre, à la taille où la carte est DESSINÉE.
+    """No disc on top of another, at the size at which the map is DRAWN.
 
-    L'écartement de `_readable` travaille à l'intérieur d'une composante,
-    avec une distance minimale identique pour tous les nœuds. Or un nœud
-    très cité est dessiné quatre fois plus large qu'un petit : deux gros
-    disques voisins se recouvraient quand même (« Nassif » sur « Hosni »).
+    The spreading of `_readable` works inside a component, with the same
+    minimum distance for all nodes. Yet a highly cited node is drawn four
+    times wider than a small one: two large neighbouring discs still
+    overlapped ("Nassif" on "Hosni").
 
-    Les coordonnées sont ramenées au cadre de la carte (`LAYOUT_WIDTH` ×
-    `LAYOUT_HEIGHT`, en pixels d'écran) ; chaque nœud y reçoit le rayon que
-    l'interface lui donne (10 + 26·√(occurrences / max) px de diamètre), et
-    les paires trop proches sont écartées, symétriquement, de ce qui leur
-    manque. Déterministe : deux points confondus s'écartent selon une
-    direction fixée par leur rang.
+    The coordinates are brought to the map frame (`LAYOUT_WIDTH` ×
+    `LAYOUT_HEIGHT`, in screen pixels); each node there gets the radius the
+    interface gives it (10 + 26·√(occurrences / max) px of diameter), and
+    pairs that are too close are pushed apart, symmetrically, by what they
+    lack. Deterministic: two coincident points move apart along a direction
+    fixed by their rank.
     """
     import numpy as np
 
@@ -563,15 +559,14 @@ def _declutter(graph: Dict[str, Any], coords: Dict[str, list],
     radius = np.array([(10.0 + 26.0 * np.sqrt(occurrences.get(i, 1.0) / top)) / 2.0
                        for i in ids])
     need = radius[:, None] + radius[None, :] + gap
-    # Chaque paire une seule fois (triangle supérieur) : les autres ne sont
-    # jamais regardées.
+    # Each pair only once (upper triangle): the others are never looked at.
     upper = np.triu(np.ones((len(ids), len(ids)), dtype=bool), 1)
-    angles = np.arange(len(ids)) * 2.399963       # angle d'or : directions fixes
+    angles = np.arange(len(ids)) * 2.399963       # golden angle: fixed directions
     fallback = np.stack([np.cos(angles), np.sin(angles)], axis=1)
 
     for _ in range(rounds):
-        # Recadrer à chaque tour : écarter agrandit la carte, et c'est la
-        # carte RECADRÉE qui sera dessinée.
+        # Reframe at every round: spreading enlarges the map, and it is the
+        # REFRAMED map that will be drawn.
         span = np.ptp(xy, axis=0)
         span[span == 0] = 1.0
         xy = (xy - xy.min(axis=0)) * min(LAYOUT_WIDTH / span[0], LAYOUT_HEIGHT / span[1])
@@ -587,7 +582,7 @@ def _declutter(graph: Dict[str, Any], coords: Dict[str, list],
             unit = diff[i, j] / np.where(dist == 0, 1.0, dist)[:, None]
             same = dist == 0
             unit[same] = (fallback[i] - fallback[j])[same]
-            # Chacun des deux fait la moitié du chemin qui manque.
+            # Each of the two covers half of the missing distance.
             push = unit * ((need[i, j] - dist) / 2.0)[:, None]
             np.add.at(xy, i, push)
             np.add.at(xy, j, -push)
@@ -598,25 +593,25 @@ def _declutter(graph: Dict[str, Any], coords: Dict[str, list],
 
 
 def layout(graph: Dict[str, Any]) -> Dict[str, list]:
-    """Coordonnées 2D des nœuds, par MDS sur les plus courts chemins.
+    """2D coordinates of the nodes, by MDS on the shortest paths.
 
-    Pourquoi ne pas laisser le navigateur placer les nœuds par simulation de
-    forces ? Parce qu'une simulation est **stochastique** : deux ouvertures de
-    la même page donnent deux dessins différents, et une carte qu'on publie ne
-    peut pas bouger d'une exécution à l'autre. Le MDS est déterministe.
+    Why not let the browser place the nodes by force simulation? Because a
+    simulation is **stochastic**: two openings of the same page give two
+    different drawings, and a published map cannot move from one run to the
+    next. MDS is deterministic.
 
-    Les poids sont des similarités ; les chemins raisonnent en distances, d'où
-    l'inversion.
+    The weights are similarities; paths reason in distances, hence the
+    inversion.
 
-    **Chaque composante connexe est placée séparément, puis juxtaposée.**
-    Les faire entrer dans un seul MDS demandait de donner une distance à des
-    paires qu'aucun chemin ne relie : on leur en attribuait une, grande, et
-    ce contraste artificiel devenait le fait le plus saillant du nuage. Le
-    MDS y consacrait son premier axe, et la structure réelle, celle qu'on
-    vient de calculer, se repliait sur une droite. Voir `_pack`.
+    **Each connected component is placed separately, then placed side by
+    side.** Putting them all into a single MDS required giving a distance to
+    pairs that no path connects: a large one was assigned, and this artificial
+    contrast became the most salient fact of the cloud. The MDS devoted its
+    first axis to it, and the real structure, the one just computed, folded
+    onto a line. See `_pack`.
 
-    Les coordonnées sont en pixels d'une carte de `LAYOUT_WIDTH` ×
-    `LAYOUT_HEIGHT` : aucun disque n'y recouvre un autre (`_declutter`).
+    The coordinates are in pixels of a `LAYOUT_WIDTH` × `LAYOUT_HEIGHT` map:
+    no disc covers another there (`_declutter`).
     """
     import networkx as nx
 
@@ -628,8 +623,8 @@ def layout(graph: Dict[str, Any]) -> Dict[str, list]:
         w = float(d.get("weight", 1)) or 1e-9
         d["distance"] = 1.0 / w
 
-    # Ordre STABLE : les composantes sont triées sur leur plus petit nœud,
-    # sinon deux exécutions pourraient les juxtaposer dans un autre ordre.
+    # STABLE order: components are sorted on their smallest node, otherwise two
+    # runs could place them side by side in another order.
     components = sorted((sorted(c) for c in nx.connected_components(G)),
                         key=lambda c: (-len(c), c[0]))
     packed = _pack([_mds_component(G, nodes) for nodes in components])
@@ -637,16 +632,16 @@ def layout(graph: Dict[str, Any]) -> Dict[str, list]:
 
 
 def attach_layout(graph: Dict[str, Any]) -> Dict[str, Any]:
-    """Le réseau, chaque nœud portant ses coordonnées ``x`` et ``y``.
+    """The network, each node carrying its ``x`` and ``y`` coordinates.
 
-    Ce sont exactement celles de `layout`, donc celles de `render_network` :
-    l'interface web dessine le réseau à ces positions au lieu de lancer sa
-    propre simulation de forces. Sans cela, la carte affichée à l'écran et la
-    figure produite par le package avaient deux formes différentes, et la
-    carte de l'écran changeait à chaque ouverture.
+    They are exactly those of `layout`, hence those of `render_network`: the
+    web interface draws the network at these positions instead of running its
+    own force simulation. Without this, the map shown on screen and the
+    figure produced by the package had two different shapes, and the on-screen
+    map changed at every opening.
 
-    L'axe ``y`` suit la convention mathématique (vers le haut), comme
-    matplotlib ; un rendu d'écran, dont l'axe descend, doit l'inverser.
+    The ``y`` axis follows the mathematical convention (upwards), like
+    matplotlib; a screen rendering, whose axis goes down, must invert it.
     """
     if not graph.get("nodes"):
         return graph
@@ -661,15 +656,15 @@ def attach_layout(graph: Dict[str, Any]) -> Dict[str, Any]:
 
 def density_grid(graph: Dict[str, Any], coords: Dict[str, list],
                  size: int = 48, bandwidth: Optional[float] = None) -> Dict[str, Any]:
-    """Carte de densité : où le réseau est-il dense, et de quoi ?
+    """Density map: where is the network dense, and with what?
 
-    La vue « density » de VOSviewer. Chaque nœud diffuse son poids autour de lui
-    selon un noyau gaussien ; on somme, et on obtient une surface. Elle répond à
-    une question que le graphe ne montre pas : quelles **zones** du domaine sont
-    saturées et lesquelles sont désertes.
+    Each node spreads its weight around it according to a Gaussian kernel;
+    the contributions are summed into a surface. It answers a question the
+    graph does not show: which **areas** of the field are saturated and which
+    are deserted.
 
-    Retour ``{"x": [...], "y": [...], "cells": [[i, j, valeur], ...], "max"}``,
-    directement consommable par une carte de chaleur.
+    Returns ``{"x": [...], "y": [...], "cells": [[i, j, value], ...], "max"}``,
+    directly usable by a heat map.
     """
     import numpy as np
 
@@ -682,17 +677,17 @@ def density_grid(graph: Dict[str, Any], coords: Dict[str, list],
 
     lo, hi = P.min(axis=0), P.max(axis=0)
     span = np.maximum(hi - lo, 1e-9)
-    # Une marge : sans elle les nœuds du bord sont coupés en deux par le cadre.
+    # A margin: without it, the nodes at the edge are cut in half by the frame.
     lo, hi = lo - 0.08 * span, hi + 0.08 * span
 
     xs = np.linspace(lo[0], hi[0], size)
     ys = np.linspace(lo[1], hi[1], size)
     if bandwidth is None:
-        # L'écart typique entre voisins : un noyau trop étroit rend une carte
-        # de points, trop large une tache unie. L'ancienne règle (un huitième
-        # de la plus grande étendue) dépendait de la place des petits îlots
-        # posés en marge : sur un réseau en plusieurs composantes, l'étendue
-        # gonflait et tout le groupe principal fondait en une seule tache.
+        # The typical gap between neighbours: too narrow a kernel gives a map of
+        # dots, too wide a plain blob. The old rule (an eighth of the largest
+        # extent) depended on where the small islands placed in the margin were: on
+        # a network in several components, the extent swelled and the whole main
+        # group melted into a single blob.
         if len(P) > 1:
             d = np.sqrt(((P[:, None, :] - P[None, :, :]) ** 2).sum(-1))
             np.fill_diagonal(d, np.inf)

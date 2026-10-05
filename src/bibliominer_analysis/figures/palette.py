@@ -1,12 +1,12 @@
-"""La MÊME palette que l'interface, recopiée, pas réinventée.
+"""The SAME palette as the interface, copied, not reinvented.
 
-Source de vérité : `analysis_service/frontend/src/theme/palette.ts`, validée
-par `scripts/validate_palette.js` (bande de luminosité, plancher de chroma,
-séparation daltonisme). Une figure exportée qui utiliserait d'autres teintes
-que celles vues à l'écran romprait le lien entre ce que l'utilisateur a lu et
-ce qu'il publie, et re-court le script de validation ici demanderait une
-dépendance Node dans un paquet Python. Recopiée, avec le fichier source cité,
-pour qu'une modification de l'un rappelle de vérifier l'autre.
+Source of truth: `analysis_service/frontend/src/theme/palette.ts`,
+validated by `scripts/validate_palette.js` (lightness band, chroma floor,
+colour-blind separation). An exported figure using other hues than those
+seen on screen would break the link between what the user read and what
+they publish, and re-running the validation script here would need a Node
+dependency in a Python package. Copied, with the source file named, so
+that changing one reminds us to check the other.
 """
 
 from __future__ import annotations
@@ -49,28 +49,28 @@ CHROME: Dict[str, Dict[str, str]] = {
 }
 
 
-#: Tirets typographiques qu'Arial et DejaVu n'ont pas (« Fernández‐Alemán »
-#: s'affichait avec un carré vide) : on les écrit en tiret simple.
+#: Typographic hyphens that Arial and DejaVu lack ("Fernández‐Alemán" was
+#: shown with an empty box): they are written as a plain hyphen.
 _HYPHENS = str.maketrans({"\u2010": "-", "\u2011": "-", "\u2012": "-"})
 
 
 def printable(text: object) -> str:
-    """Un texte que la police sait dessiner."""
+    """A text the font knows how to draw."""
     return str(text if text is not None else "").translate(_HYPHENS)
 
 
 def short_text(text: object, limit: int = 24) -> str:
-    """Un texte court sur une ligne, abrégé par « … »."""
+    """A short text on one line, shortened with "…"."""
     s = printable(text).strip()
     return s if len(s) <= limit else s[: limit - 1].rstrip() + "…"
 
 
 def tick_label(text: object, width: int = 34, lines: int = 2) -> str:
-    """Une étiquette d'axe lisible : coupée aux mots sur ``lines`` lignes de
-    ``width`` caractères au plus, puis abrégée par « … ».
+    """A readable axis label: wrapped at word boundaries on ``lines`` lines of at
+    most ``width`` characters, then shortened with "…".
 
-    Un nom de revue de 120 caractères poussait les barres hors du cadre :
-    matplotlib n'avait plus de place pour les axes et la figure s'écrasait.
+    A 120-character journal name pushed the bars out of the frame: matplotlib
+    had no room left for the axes and the figure collapsed.
     """
     words = printable(text).split()
     out, current = [], ""
@@ -86,7 +86,7 @@ def tick_label(text: object, width: int = 34, lines: int = 2) -> str:
     else:
         out.append(current)
         return "\n".join(line[:width] for line in out)
-    # Il reste du texte : la dernière ligne se termine par « … ».
+    # Some text is left: the last line ends with "…".
     last = out[-1]
     out[-1] = (last[: width - 1].rstrip() + "…") if len(last) >= width else last + " …"
     return "\n".join(out)
@@ -100,34 +100,34 @@ def chrome(mode: str) -> Dict[str, str]:
     return CHROME["dark"] if mode == "dark" else CHROME["light"]
 
 
-#: Réglages matplotlib appliqués LE TEMPS D'UN RENDU, jamais à la session.
+#: matplotlib settings applied FOR THE DURATION OF ONE RENDERING, never to
+#: the session.
 #:
-#: Une PILE de repli, jamais un seul nom : "Inter" peut manquer sans que
-#: matplotlib échoue -- il descend la liste jusqu'à une police installée,
-#: DejaVu Sans en dernier recours (toujours livrée avec matplotlib).
+#: A fallback STACK, never a single name: "Inter" may be missing without
+#: matplotlib failing -- it walks down the list to an installed font, DejaVu
+#: Sans as a last resort (always shipped with matplotlib).
 #:
-#: Ils étaient posés sur `plt.rcParams` à l'import, avec `matplotlib.use("Agg")` :
-#: importer le package changeait les polices et le moteur d'affichage de TOUTE
-#: la session. Dans un notebook, les `plt.show()` de l'utilisateur cessaient
-#: alors de s'afficher.
+#: They used to be set on `plt.rcParams` at import time, with
+#: `matplotlib.use("Agg")`: importing the package changed the fonts and the
+#: display backend of the WHOLE session. In a notebook, the user's
+#: `plt.show()` then stopped displaying anything.
 #:
-#: `svg.hashsalt` : en SVG, matplotlib tire au hasard les identifiants de ses
-#: éléments (`<g id="...">`). On fixe le grain, sans quoi deux rendus
-#: identiques donneraient deux fichiers différents.
+#: `svg.hashsalt`: in SVG, matplotlib draws the identifiers of its elements
+#: at random (`<g id="...">`). The seed is fixed, otherwise two identical
+#: renderings would give two different files.
 RENDER_RC = {
     "font.sans-serif": ["Inter", "Helvetica Neue", "Arial", "DejaVu Sans"],
     "svg.hashsalt": "bibliominer-analysis",
 }
 
-#: matplotlib horodate ses fichiers : deux rendus des MÊMES données donnaient
-#: deux octets différents. On retire la date (et la version du logiciel, qui
-#: changerait le fichier à chaque mise à jour de matplotlib) : une figure
-#: publiée doit pouvoir se rejouer et se comparer octet pour octet. JPEG
-#: n'accepte pas de métadonnées dans matplotlib : rien à retirer.
+#: matplotlib timestamps its files: two renderings of the SAME data gave
+#: different bytes. The date is removed (and the software version, which
+#: would change the file at every matplotlib update): a published figure must
+#: be reproducible and comparable byte for byte. JPEG accepts no metadata in
+#: matplotlib: nothing to remove.
 #:
-#: Défaut corrigé : seuls les RÉSEAUX en profitaient. Les barres, lignes et
-#: nuages exportés en SVG ou PDF portaient la date, et changeaient à chaque
-#: export.
+#: Fixed defect: only NETWORKS benefited from it. Bars, lines and scatters
+#: exported to SVG or PDF carried the date, and changed at every export.
 NO_TIMESTAMP = {
     "png": {"Software": None, "Date": None},
     "svg": {"Date": None},
@@ -136,12 +136,12 @@ NO_TIMESTAMP = {
 
 
 def no_timestamp(fmt: str) -> dict:
-    """Les arguments de `savefig` qui retirent la date, rien pour JPEG.
+    """The `savefig` arguments that remove the date; none for JPEG.
 
-    `metadata=None` ne se passe PAS : matplotlib 3.6 (le minimum déclaré)
-    refuse tout argument `metadata` pour un JPEG, `None` compris, et
-    l'export JPG échouait. Les versions récentes l'ignorent, d'où une panne
-    que seule l'installation aux versions minimales révélait.
+    `metadata=None` is NOT passed: matplotlib 3.6 (the declared minimum)
+    rejects any `metadata` argument for a JPEG, `None` included, and the JPG
+    export failed. Recent versions ignore it, hence a failure that only an
+    installation at the minimum versions revealed.
     """
     meta = NO_TIMESTAMP.get(fmt)
     return {"metadata": meta} if meta else {}

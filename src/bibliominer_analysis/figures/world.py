@@ -1,18 +1,19 @@
-"""Cartes du monde publiables : carte des pays (choroplèthe) et carte des
-collaborations internationales.
+"""Publishable world maps: country map (choropleth) and map of international
+collaborations.
 
-Le fond de carte est celui de l'interface web, `world-atlas`
-(countries-110m, Natural Earth, licence ISC dans ``data_ref``), pour que la
-figure du package et la carte de l'écran montrent les mêmes frontières. Le
-TopoJSON est décodé ici, sans dépendance cartographique (ni geopandas, ni
-cartopy) : projection équirectangulaire, simple et lisible.
+The base map is the web interface's one, `world-atlas` (countries-110m,
+Natural Earth, ISC licence in ``data_ref``), so that the package figure
+and the map on screen show the same borders. The TopoJSON is decoded here,
+without any mapping dependency (neither geopandas nor cartopy):
+equirectangular projection, simple and readable.
 
-Les noms de pays du corpus ne sont pas ceux du fond de carte : Scopus écrit
-« United States », « Russian Federation », « Viet Nam » ; la carte « United
-States of America », « Russia », « Vietnam ». Sans table de correspondance,
-ces pays restaient BLANCS sur la carte. `atlas_name` fait ce passage (voir
-`io.countries`) ; l'interface le reçoit tout fait de `country_map`
-(``map_name``, ``lon``, ``lat``), sans table à maintenir de son côté.
+The country names of the corpus are not those of the base map: Scopus
+writes "United States", "Russian Federation", "Viet Nam"; the map "United
+States of America", "Russia", "Vietnam". Without a correspondence table,
+these countries stayed WHITE on the map. `atlas_name` does the conversion
+(see `io.countries`); the interface receives it ready-made from
+`country_map` (``map_name``, ``lon``, ``lat``), with no table to maintain
+on its side.
 """
 
 from __future__ import annotations
@@ -24,13 +25,13 @@ from ..io.countries import (ATLAS_ALIASES, _atlas, _key, atlas_name, centroids, 
                             is_country, position)
 from .palette import RENDER_RC, no_timestamp
 
-#: Couleur des pays au-delà des huit teintes de la palette.
+#: Colour of the countries beyond the eight hues of the palette.
 _OTHER = "#9aa0a6"
 
 
 def _locate(country: object) -> Optional[Tuple[str, Tuple[float, float], bool]]:
-    """(clé, position, est-un-point) d'un pays : son territoire sur le fond de
-    carte, ou un point à sa capitale s'il est trop petit pour y figurer."""
+    """(key, position, is-a-point) of a country: its territory on the base map,
+    or a point at its capital if it is too small to appear on it."""
     name = atlas_name(country)
     if name:
         return name, centroids()[name], False
@@ -62,8 +63,8 @@ def _base(ax, fills: Dict[str, str], empty: str, edge: str) -> None:
 
 
 class _Countries:
-    """Les pays d'une carte, rangés : clé (nom du fond de carte, ou « point:… »
-    pour un petit pays), valeur cumulée, nom affiché, position."""
+    """The countries of a map, sorted: key (base-map name, or "point:..." for a
+    small country), cumulative value, displayed name, position."""
 
     def __init__(self, values: Dict[str, float]):
         self.value: Dict[str, float] = {}
@@ -101,8 +102,8 @@ def _tint(color: str) -> str:
 
 
 def _arc(ax, start: Tuple[float, float], end: Tuple[float, float], width: float) -> None:
-    """Un arc plutôt qu'un segment : les liens qui se superposent restent
-    distincts. Arc neutre : la couleur désigne les pays, pas les liens."""
+    """An arc rather than a segment: overlapping links stay distinct. A neutral
+    arc: colour designates the countries, not the links."""
     (x0, y0), (x1, y1) = start, end
     mx, my = (x0 + x1) / 2, (y0 + y1) / 2 + 0.15 * abs(x1 - x0)
     steps = [i / 30 for i in range(31)]
@@ -116,7 +117,7 @@ def _fmt(v: float) -> str:
 
 
 def _choropleth(fig, ax, countries: _Countries, value_label: str) -> None:
-    """Carte des pays : une seule teinte, du clair au foncé."""
+    """Country map: a single hue, from light to dark."""
     import matplotlib
     from matplotlib import cm, colors as mcolors
     cmap = matplotlib.colormaps["Blues"]
@@ -136,13 +137,13 @@ def _choropleth(fig, ax, countries: _Countries, value_label: str) -> None:
 
 def _collaboration(ax, countries: _Countries, links: List[Tuple[str, str, float]],
                    value_label: str) -> None:
-    """Carte des collaborations.
+    """Collaboration map.
 
-    Une couleur par pays, sur son territoire (ou sur un point pour un petit
-    pays), définie dans la légende sous la carte : les noms écrits sur la
-    carte se chevauchaient dès que des pays voisins collaborent. La palette
-    validée a huit teintes distinguables ; au-delà, les pays partagent le
-    gris « Other » plutôt qu'une neuvième couleur illisible.
+    One colour per country, on its territory (or on a point for a small
+    country), defined in the legend below the map: names written on the map
+    overlapped as soon as neighbouring countries collaborated. The validated
+    palette has eight distinguishable hues; beyond that, countries share the
+    "Other" grey rather than an unreadable ninth colour.
     """
     from .palette import categorical
     palette = categorical("light")
@@ -197,18 +198,17 @@ def _legend(ax, countries: _Countries, ranked: List[Tuple[str, float]],
 def render_world_map(values: Dict[str, float], value_label: str = "Documents",
                      links: Optional[Iterable[Tuple[str, str, float]]] = None,
                      fmt: str = "png", dpi: int = 200) -> bytes:
-    """Carte du monde.
+    """World map.
 
-    ``values`` : {pays du corpus -> valeur}. Sans ``links``, carte des pays :
-    chaque pays est coloré selon sa valeur (une seule teinte, du clair au
-    foncé ; gris clair = absent du corpus). Avec ``links``, des triplets
-    (pays, pays, poids), carte des collaborations : chaque pays a sa
-    couleur, définie en légende, et un arc relie chaque paire, d'autant plus
-    épais que le poids est fort.
+    ``values``: {corpus country -> value}. Without ``links``, country map:
+    each country is coloured by its value (a single hue, from light to dark;
+    light grey = absent from the corpus). With ``links``, triples (country,
+    country, weight), collaboration map: each country has its colour, defined
+    in the legend, and an arc joins each pair, thicker as the weight grows.
 
-    Un pays trop petit pour le fond de carte (Singapour, Bahreïn, Malte…) est
-    dessiné par un point à sa capitale. Un nom qui n'est pas un pays connu
-    n'est pas perdu en silence : il est listé sous la carte.
+    A country too small for the base map (Singapore, Bahrain, Malta...) is
+    drawn as a point at its capital. A name that is not a known country is
+    not silently lost: it is listed below the map.
     """
     import matplotlib
     matplotlib.use("Agg")
@@ -222,8 +222,8 @@ def render_world_map(values: Dict[str, float], value_label: str = "Documents",
     else:
         _collaboration(ax, countries, list(links), value_label)
     buf = io.BytesIO()
-    # Graine des identifiants SVG, comme les autres figures (`RENDER_RC`) :
-    # sans elle, deux exports de la même carte différaient d'octets.
+    # Seed of the SVG identifiers, like the other figures (`RENDER_RC`):
+    # without it, two exports of the same map differed in their bytes.
     with matplotlib.rc_context({"svg.hashsalt": RENDER_RC["svg.hashsalt"]}):
         fig.savefig(buf, format=fmt, bbox_inches="tight", facecolor="white",
                     **no_timestamp(fmt))

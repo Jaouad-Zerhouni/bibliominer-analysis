@@ -1,22 +1,20 @@
-"""Rendu matplotlib, barres, lignes, aires, sucettes, secteurs, nuages.
+"""matplotlib rendering: bars, lines, areas, lollipops, pies, scatters.
 
-Une figure exportée ou versée au rapport doit se lire SEULE, hors de
-l'écran : titre et sous-titre (la période) écrits dessus, axes nommés,
-couleurs qui portent un sens (dégradé selon la valeur, une teinte par
-catégorie) et, au choix, la valeur au bout de chaque barre. L'utilisateur
-choisit aussi la FORME : un classement se lit en barres, une part d'un tout
-en secteurs.
+A figure exported or added to the report must read ON ITS OWN, away from
+the screen: title and subtitle (the period) written on it, named axes,
+colours that carry a meaning (a gradient by value, one hue per category)
+and, optionally, the value at the end of each bar. The user also chooses
+the FORM: a ranking reads as bars, a share of a whole as a pie.
 
-Portée VOLONTAIREMENT limitée pour l'instant : ce sont les trois formes les
-plus utilisées de l'application (barres/lignes : plus de cinquante graphiques
-à elles deux) et les plus fidèlement reproductibles telles quelles. Les
-formes plus riches, réseaux à disposition de forces, carte géographique,
-sankey, nuage de points à bulles multi-dimensionnelles (taille ET couleur
-portant chacune une variable), ne sont PAS couvertes : les reproduire
-fidèlement demande un rendu dédié par forme, pas un mécanisme générique.
-Un nuage de points dont les données ne sont qu'une liste de paires (x, y)
-EST couvert ; un nuage de points à bulles ne l'est pas et lève `FigureError`
-plutôt que de produire une figure qui mentirait sur les données.
+Scope DELIBERATELY limited for now: these are the three most used forms of
+the application (bars/lines: more than fifty charts between them) and the
+most faithfully reproducible as they are. Richer forms (force-directed
+networks, geographic maps, Sankey diagrams, multi-dimensional bubble
+scatters where size AND colour each carry a variable) are NOT covered:
+reproducing them faithfully requires a dedicated rendering per form, not a
+generic mechanism. A scatter whose data is only a list of (x, y) pairs IS
+covered; a bubble scatter is not, and raises `FigureError` rather than
+producing a figure that would lie about the data.
 """
 
 from __future__ import annotations
@@ -33,45 +31,44 @@ from matplotlib.figure import Figure
 from .palette import RENDER_RC, categorical, chrome, no_timestamp
 
 _SUPPORTED_KINDS = {"bar", "line", "scatter", "area", "lollipop", "pie", "donut"}
-#: Formes qui n'ont qu'une série et pas d'axes : des PARTS d'un tout.
+#: Forms with a single series and no axes: the SHARES of a whole.
 _PART_KINDS = {"pie", "donut"}
-#: Au-delà, les plus petites parts se regroupent en « Other » : huit teintes
-#: se distinguent, pas davantage (palette validée à huit).
+#: Beyond this, the smallest shares are grouped into "Other": eight hues can
+#: be told apart, no more (palette validated at eight).
 _MAX_SLICES = 8
 _PALETTES = {"series", "gradient", "category"}
 _SUPPORTED_FORMATS = {"png", "jpg", "svg", "pdf"}
-# matplotlib ne connaît que "jpeg", pas "jpg" -- alias résolu au moment
-# d'écrire le fichier, jamais avant : le NOM de fichier reste "jpg" partout
-# ailleurs (extension, en-tête HTTP), ce que l'utilisateur reconnaît.
+# matplotlib only knows "jpeg", not "jpg" -- an alias resolved when writing
+# the file, never before: the file NAME stays "jpg" everywhere else
+# (extension, HTTP header), which is what users recognise.
 _MPL_FORMAT = {"jpg": "jpeg"}
 
-# `family="sans-serif"` est un GROUPE : c'est la liste `RENDER_RC` (palette)
-# que matplotlib consulte pour savoir laquelle du groupe utiliser.
+# `family="sans-serif"` is a GROUP: it is the `RENDER_RC` list (palette)
+# that matplotlib consults to know which member of the group to use.
 _FONT_STACK = "sans-serif"
 
 
 class FigureError(ValueError):
-    """Donnée de figure que ce module ne sait PAS rendre fidèlement."""
+    """Figure data that this module CANNOT render faithfully."""
 
 
 @dataclass
 class Series:
     name: str
-    #: barres/lignes : une valeur par catégorie, dans le MÊME ordre.
+    #: bars/lines: one value per category, in the SAME order.
     values: Optional[List[float]] = None
-    #: nuage de points : paires (x, y). Jamais les deux à la fois qu'un
-    #: `values` sur la même série -- une série est l'un OU l'autre.
+    #: scatter: (x, y) pairs. Never both together with a `values` on the same
+    #: series -- a series is one OR the other.
     points: Optional[List[Tuple[float, float]]] = None
-    #: Écrase `FigureSpec.kind` pour CETTE série -- "bar" | "line", jamais
-    #: "scatter" (un nuage mélangé à des barres n'a pas de sens : les axes
-    #: ne se lisent plus de la même façon). `None` = suit le type de la
-    #: figure. Sert le motif le plus courant après les barres et lignes
-    #: pures : un compte (barres) et sa tendance (ligne) sur le même axe
-    #: catégoriel -- voir `_draw_mixed`.
+    #: Overrides `FigureSpec.kind` for THIS series -- "bar" | "line", never
+    #: "scatter" (a scatter mixed with bars makes no sense: the axes no longer
+    #: read the same way). `None` = follows the figure's type. Serves the most
+    #: common pattern after pure bars and lines: a count (bars) and its trend
+    #: (line) on the same categorical axis -- see `_draw_mixed`.
     kind: Optional[str] = None
-    #: nuage de points : un nom par point, écrit à côté (carte thématique,
-    #: structure conceptuelle). Facultatif ; seuls les points les plus
-    #: éloignés du centre sont étiquetés si les noms se chevauchent.
+    #: scatter: one name per point, written next to it (thematic map, conceptual
+    #: structure). Optional; only the points furthest from the centre are
+    #: labelled if the names overlap.
     labels: Optional[List[str]] = None
 
 
@@ -83,28 +80,28 @@ class FigureSpec:
     title: str = ""
     x_label: str = ""
     y_label: str = ""
-    orientation: str = "vertical"  # "vertical" | "horizontal" -- barres seul.
+    orientation: str = "vertical"  # "vertical" | "horizontal" -- bars only.
     mode: str = "light"  # "light" | "dark"
-    #: axes logarithmiques, Zipf (rang/fréquence) et Lotka se LISENT en
-    #: log-log ; en échelle linéaire, la queue écrase tout le graphique.
+    #: logarithmic axes: Zipf (rank/frequency) and Lotka READ in log-log; on a
+    #: linear scale, the tail crushes the whole chart.
     x_log: bool = False
     y_log: bool = False
     width_in: float = 7.2
     height_in: float = 4.2
     dpi: int = 200
-    #: Écrire `title` (et `subtitle`, la période, les filtres) SUR la figure.
-    #: Faux par défaut : `title` nomme aussi le fichier, et une figure
-    #: destinée à un article porte souvent sa légende ailleurs. L'interface
-    #: le propose, titre modifiable.
+    #: Write `title` (and `subtitle`: the period, the filters) ON the figure.
+    #: False by default: `title` also names the file, and a figure meant for an
+    #: article often carries its caption elsewhere. The interface offers it,
+    #: with an editable title.
     show_title: bool = False
     subtitle: str = ""
-    #: "series"   une teinte par série (une seule série : une seule teinte) ;
-    #: "gradient" une série : du clair au foncé selon la VALEUR ;
-    #: "category" une teinte par barre, par catégorie.
+    #: "series"   one hue per series (a single series: a single hue);
+    #: "gradient" one series: from light to dark according to the VALUE;
+    #: "category" one hue per bar, per category.
     palette: str = "series"
-    #: Teinte de base (hex) d'une série unique, "series" ou "gradient".
+    #: Base hue (hex) of a single series, "series" or "gradient".
     color: str = ""
-    #: La valeur écrite au bout de chaque barre, ou sur chaque part.
+    #: The value written at the end of each bar, or on each share.
     value_labels: bool = False
 
 
@@ -129,12 +126,12 @@ def _render(spec: FigureSpec, fmt: str) -> bytes:
     c = chrome(spec.mode)
     colors = categorical(spec.mode)
 
-    # `constrained_layout` -- pas `tight_layout` : il recalcule à CHAQUE
-    # ajout (légende, rotation d'étiquette), `tight_layout` ne le fait
-    # qu'une fois et coupe régulièrement un nom d'axe long.
-    # Une `Figure` avec son canevas Agg, jamais `pyplot` : aucune fenêtre,
-    # aucun moteur d'affichage global à changer, le rendu marche sur un
-    # serveur sans écran comme dans un notebook, sans rien y dérégler.
+    # `constrained_layout` -- not `tight_layout`: it recomputes on EVERY
+    # addition (legend, label rotation); `tight_layout` does it only once and
+    # regularly cuts a long axis name.
+    # A `Figure` with its Agg canvas, never `pyplot`: no window, no global
+    # display backend to change; rendering works on a server without a screen
+    # as in a notebook, without disturbing anything.
     fig = Figure(figsize=(spec.width_in, spec.height_in), dpi=spec.dpi,
                  constrained_layout=True)
     FigureCanvasAgg(fig)
@@ -150,8 +147,8 @@ def _render(spec: FigureSpec, fmt: str) -> bytes:
     series_kinds = {s.kind or spec.kind for s in spec.series}
     if len(series_kinds) > 1:
         if not series_kinds <= {"bar", "line"}:
-            # Un nuage de points ne peut pas se mélanger à des barres/lignes
-            # -- les axes ne se liraient plus de la même façon.
+            # A scatter cannot be mixed with bars/lines -- the axes would no longer read
+            # the same way.
             raise FigureError(
                 "A scatter plot cannot be mixed with bars or lines on the "
                 "same figure."
@@ -182,19 +179,19 @@ def _save(fig, fmt: str) -> bytes:
     buf = io.BytesIO()
     fig.savefig(
         buf, format=_MPL_FORMAT.get(fmt, fmt), facecolor=fig.get_facecolor(),
-        bbox_inches=None,  # `constrained_layout` gère déjà les marges.
+        bbox_inches=None,  # `constrained_layout` already handles the margins.
         **no_timestamp(fmt),
     )
     return buf.getvalue()
 
 
 def _write_title(fig, ax, spec: FigureSpec, c: Dict[str, str]) -> None:
-    """Titre et sous-titre, calés à gauche au-dessus du tracé.
+    """Title and subtitle, aligned left above the plot.
 
-    Seulement si `show_title` : `spec.title` nomme aussi le fichier (voir
-    `figures.py::_slug`), et une figure d'article porte souvent sa légende
-    hors de l'image. Le sous-titre dit le PÉRIMÈTRE (période, filtres) : une
-    figure sans lui se cite avec le mauvais chiffre.
+    Only if `show_title`: `spec.title` also names the file (see
+    `figures.py::_slug`), and an article figure often carries its caption
+    outside the image. The subtitle states the SCOPE (period, filters): a
+    figure without it gets cited with the wrong number.
     """
     if not spec.show_title:
         return
@@ -211,12 +208,12 @@ def _write_title(fig, ax, spec: FigureSpec, c: Dict[str, str]) -> None:
 
 
 def _align_heading(fig, ax) -> None:
-    """Cale le sous-titre sur le bord gauche de la FIGURE, sous le titre.
+    """Aligns the subtitle on the left edge of the FIGURE, below the title.
 
-    Posé au-dessus du tracé, il commençait au bord de la zone de tracé :
-    décalé à droite du titre de toute la largeur des noms d'auteurs. La mise
-    en page est calculée une fois, puis figée, pour que l'enregistrement ne
-    la déplace plus sous le sous-titre recalé."""
+    Placed above the plot, it started at the edge of the plotting area:
+    shifted to the right of the title by the whole width of the author names.
+    The layout is computed once, then frozen, so that saving does not move it
+    again under the realigned subtitle."""
     subtitle = getattr(ax, "_bibliominer_subtitle", None)
     if subtitle is None:
         return
@@ -227,10 +224,10 @@ def _align_heading(fig, ax) -> None:
 
 
 def _apply_chrome(ax, spec: FigureSpec, c: Dict[str, str]) -> None:
-    """La grille et les axes, communs aux formes à axes.
+    """The grid and the axes, common to the forms with axes.
 
-    Le titre n'est écrit que sur demande (`_write_title`) : `spec.title`
-    nomme aussi le fichier téléchargé.
+    The title is only written on request (`_write_title`): `spec.title` also
+    names the downloaded file.
     """
     font = {"family": _FONT_STACK}
 
@@ -244,24 +241,24 @@ def _apply_chrome(ax, spec: FigureSpec, c: Dict[str, str]) -> None:
         label.set_fontfamily(_FONT_STACK)
         label.set_color(c["text_secondary"])
 
-    # Filet fin, jamais de cadre plein : la donnée porte le poids visuel, pas
-    # la boîte qui la contient.
+    # A thin rule, never a full frame: the data carries the visual weight, not
+    # the box that holds it.
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
     for side in ("left", "bottom"):
         ax.spines[side].set_color(c["axis"])
         ax.spines[side].set_linewidth(0.8)
 
-    # Le filet suit l'axe des VALEURS, pour aider à lire une hauteur/longueur
-    # de barre, sur des barres horizontales, c'est l'axe X qui porte les
-    # valeurs, Y n'étant plus qu'une liste de catégories.
+    # The rule follows the VALUES axis, to help read a bar's height/length; on
+    # horizontal bars, the X axis carries the values, Y being only a list of
+    # categories.
     grid_axis = "x" if (spec.kind in ("bar", "lollipop")
                         and spec.orientation == "horizontal") else "y"
     ax.grid(axis=grid_axis, color=c["grid"], linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
 
-    # Un COMPTE (documents, citations) n'a pas de graduation « 2,5 » : entre
-    # deux documents il n'y en a pas un demi.
+    # A COUNT (documents, citations) has no "2.5" tick: there is no half
+    # document between two documents.
     counts = [v for s in spec.series for v in (s.values or [p[1] for p in s.points or []])
               if v is not None and not math.isnan(float(v))]
     value_log = spec.x_log if grid_axis == "x" else spec.y_log
@@ -270,9 +267,9 @@ def _apply_chrome(ax, spec: FigureSpec, c: Dict[str, str]) -> None:
         (ax.xaxis if grid_axis == "x" else ax.yaxis).set_major_locator(MaxNLocator(integer=True))
 
     if len(spec.series) > 1:
-        # Des noms de revues de 120 caractères poussaient la légende hors de
-        # l'image et écrasaient le graphique à rien. Chaque nom est coupé à
-        # 40 caractères ; une légende large ou longue passe SOUS le tracé.
+        # 120-character journal names pushed the legend out of the image and
+        # crushed the chart to nothing. Each name is cut at 40 characters; a wide
+        # or long legend goes BELOW the plot.
         from .palette import short_text
         handles, labels = ax.get_legend_handles_labels()
         labels = [short_text(label, _LEGEND_CHARS) for label in labels]
@@ -287,18 +284,18 @@ def _apply_chrome(ax, spec: FigureSpec, c: Dict[str, str]) -> None:
             text.set_fontfamily(_FONT_STACK)
 
 
-#: Longueur maximale d'un nom dans une légende.
+#: Maximum length of a name in a legend.
 _LEGEND_CHARS = 40
 
 
-#: au-delà, une graduation sur deux (trois, ...) : 77 rangs de Bradford
-#: écrits côte à côte se chevauchaient en une bande illisible.
+#: beyond this, one tick out of two (three, ...): 77 Bradford ranks written
+#: side by side overlapped into an unreadable band.
 _MAX_X_TICKS = 25
 
 
 def _category_ticks(ax, cats: List[str], width: int = 18) -> None:
-    """Graduations catégorielles de l'axe x, clairsemées si elles sont trop
-    nombreuses pour être lues (la première et la dernière restent)."""
+    """Categorical ticks of the x axis, thinned out if they are too many to be
+    read (the first and the last stay)."""
     from .palette import tick_label
     step = max(1, -(-len(cats) // _MAX_X_TICKS))
     shown = list(range(0, len(cats), step))
@@ -339,25 +336,25 @@ def _draw_bars(ax, spec: FigureSpec, colors: List[str]) -> None:
     if horizontal:
         ax.set_yticks(list(positions))
         ax.set_yticklabels([tick_label(c, 34) for c in cats])
-        ax.invert_yaxis()  # la première catégorie en haut, comme à l'écran.
+        ax.invert_yaxis()  # the first category at the top, as on screen.
     else:
         _category_ticks(ax, cats)
 
 
 def _base_color(spec: FigureSpec, index: int, colors: List[str]) -> str:
-    """La teinte d'une série : celle choisie pour une série unique, sinon
-    celle de son rang dans la palette."""
+    """The hue of a series: the one chosen for a single series, otherwise that of
+    its rank in the palette."""
     if spec.color and len(spec.series) == 1:
         return spec.color
     return colors[index % len(colors)]
 
 
 def _spread(colors: List[str], n: int) -> List[str]:
-    """``n`` teintes distinctes, dans l'ORDRE de la palette validée.
+    """``n`` distinct hues, in the ORDER of the validated palette.
 
-    Jusqu'à huit, la palette telle quelle. Au-delà, des teintes intermédiaires
-    entre deux couleurs voisines de la palette, jamais un recyclage : deux
-    barres de même couleur se liraient comme la même catégorie.
+    Up to eight, the palette as it is. Beyond that, intermediate hues between
+    two neighbouring colours of the palette, never recycling: two bars of the
+    same colour would read as the same category.
     """
     if n <= len(colors):
         return colors[:n]
@@ -374,10 +371,10 @@ def _spread(colors: List[str], n: int) -> List[str]:
 
 
 def _gradient(base: str, values: List[float], surface: str = "#ffffff") -> List[str]:
-    """Une teinte, du clair (petite valeur) au foncé (grande valeur).
+    """One hue, from light (small value) to dark (large value).
 
-    Le plus clair garde 35 % de la teinte : une barre presque blanche sur
-    fond blanc disparaîtrait."""
+    The lightest keeps 35 % of the hue: an almost white bar on a white
+    background would disappear."""
     from matplotlib.colors import to_hex, to_rgb
     b, s = to_rgb(base), to_rgb(surface)
     finite = [v for v in values if _finite(v)]
@@ -391,9 +388,9 @@ def _gradient(base: str, values: List[float], surface: str = "#ffffff") -> List[
 
 
 def _bar_colors(spec: FigureSpec, s: Series, index: int, colors: List[str]):
-    """Les couleurs d'une série de barres : une, un dégradé, ou une par
-    catégorie. Dégradé et « une par catégorie » ne valent que pour une
-    série seule : à plusieurs séries, la couleur désigne la SÉRIE."""
+    """The colours of a bar series: one, a gradient, or one per category.
+    Gradient and "one per category" only apply to a single series: with
+    several series, colour designates the SERIES."""
     base = _base_color(spec, index, colors)
     if len(spec.series) > 1 or spec.palette == "series":
         return base
@@ -403,7 +400,7 @@ def _bar_colors(spec: FigureSpec, s: Series, index: int, colors: List[str]):
 
 
 def _finite(v) -> bool:
-    """Une valeur présente : ni None ni NaN."""
+    """A present value: neither None nor NaN."""
     return v is not None and not math.isnan(float(v))
 
 
@@ -418,7 +415,8 @@ def _num_list(values) -> List[float]:
 
 
 def _fmt(value) -> str:
-    """Un nombre écrit sur la figure : entier sans décimale, sinon deux."""
+    """A number written on the figure: an integer without decimals, otherwise
+    two."""
     try:
         v = float(value)
     except (TypeError, ValueError):
@@ -433,15 +431,15 @@ def _fmt(value) -> str:
 def _label_bars(ax, bars, values, color: str) -> None:
     ax.bar_label(bars, labels=[_fmt(v) for v in values], padding=3, fontsize=8,
                  color=color, fontfamily=_FONT_STACK)
-    # La valeur la plus grande ne doit pas sortir du cadre.
+    # The largest value must not go out of the frame.
     ax.margins(x=0.08, y=0.08)
 
 
 def _draw_lollipops(ax, spec: FigureSpec, colors: List[str]) -> None:
-    """Une « sucette » par catégorie : une tige fine, un point au bout.
+    """One "lollipop" per category: a thin stem, a dot at the end.
 
-    Même lecture qu'une barre (la longueur), avec moins d'encre : un
-    classement de trente noms reste léger."""
+    Same reading as a bar (the length), with less ink: a ranking of thirty
+    names stays light."""
     cats = spec.categories or []
     if len(spec.series) != 1:
         raise FigureError("A lollipop chart shows a single series.")
@@ -482,12 +480,12 @@ def _draw_lollipops(ax, spec: FigureSpec, colors: List[str]) -> None:
 
 
 def _draw_parts(ax, spec: FigureSpec, colors: List[str], c: Dict[str, str]) -> None:
-    """Secteurs (« pie ») ou anneau (« donut ») : les PARTS d'un tout.
+    """Pie or donut: the SHARES of a whole.
 
-    Une seule série, des valeurs positives. Au-delà de huit parts, les plus
-    petites se regroupent en « Other » : une neuvième teinte ne se
-    distinguerait plus. La part en % est toujours écrite (un secteur sans
-    son pourcentage ne se lit pas) ; la valeur, sur demande."""
+    A single series, positive values. Beyond eight shares, the smallest are
+    grouped into "Other": a ninth hue would no longer be distinguishable. The
+    share in % is always written (a slice without its percentage cannot be
+    read); the value, on request."""
     if len(spec.series) != 1:
         raise FigureError("A pie or donut chart shows a single series.")
     s = spec.series[0]
@@ -526,8 +524,8 @@ def _draw_parts(ax, spec: FigureSpec, colors: List[str], c: Dict[str, str]) -> N
                     **({"width": 0.42} if donut else {})},
         textprops={"fontsize": 8.5, "color": "#ffffff", "fontweight": "semibold"},
     )
-    # Blanc sur une part foncée, noir sur une part claire (le jaune) : un
-    # pourcentage illisible ne sert à rien.
+    # White on a dark slice, black on a light one (the yellow): an unreadable
+    # percentage is useless.
     from matplotlib.colors import to_rgb
     for wedge, text in zip(wedges, autotexts):
         r, g, b = to_rgb(wedge.get_facecolor())
@@ -555,17 +553,17 @@ def _draw_lines(ax, spec: FigureSpec, colors: List[str], fill: bool = False) -> 
                 f"{len(cats)} categorie(s), the two must match."
             )
         color = _base_color(spec, i, colors)
-        # Un marqueur par point se lit jusqu'à une quarantaine de points ; au-
-        # delà (138 auteurs de la loi de Price), la courbe devient un chapelet
-        # épais. Une série de quelques points seulement garde les siens, sinon
-        # elle serait invisible.
+        # A marker per point reads up to about forty points; beyond that (138
+        # authors for Price's law), the curve becomes a thick string of beads. A
+        # series of only a few points keeps its markers, otherwise it would be
+        # invisible.
         finite = sum(1 for v in s.values if v is not None and v == v)
         marker = "o" if len(cats) <= 40 or finite <= 3 else None
         ax.plot(x, s.values, color=color, linewidth=2, marker=marker,
                 markersize=5 if len(cats) <= 40 else 7, label=s.name, zorder=3)
         if fill:
-            # L'aire se lit comme un VOLUME : transparente, pour que deux
-            # séries superposées restent visibles l'une sous l'autre.
+            # An area reads as a VOLUME: transparent, so that two overlapping series
+            # stay visible one under the other.
             ax.fill_between(list(x), [v if _finite(v) else 0 for v in _num_list(s.values)],
                             color=color, alpha=0.18 if len(spec.series) > 1 else 0.28,
                             linewidth=0, zorder=2)
@@ -578,14 +576,13 @@ def _draw_lines(ax, spec: FigureSpec, colors: List[str], fill: bool = False) -> 
 
 
 def _draw_mixed(ax, spec: FigureSpec, colors: List[str]) -> None:
-    """Barres et lignes sur le MÊME axe catégoriel.
+    """Bars and lines on the SAME categorical axis.
 
-    Le motif le plus courant après les barres et lignes pures : un compte
-    (barres) et sa tendance -- médiane glissante, moyenne mobile -- en
-    ligne par-dessus. Les barres se partagent leur largeur ENTRE ELLES
-    seulement ; une ligne n'occupe pas de créneau de largeur, elle trace
-    juste au centre de chaque catégorie, exactement comme ECharts la
-    positionne à l'écran.
+    The most common pattern after pure bars and lines: a count (bars) and its
+    trend -- rolling median, moving average -- as a line on top. The bars
+    share their width AMONG THEMSELVES only; a line takes no width slot, it
+    just draws at the centre of each category, exactly as ECharts positions it
+    on screen.
     """
     cats = spec.categories or []
     bar_series = [s for s in spec.series if (s.kind or spec.kind) == "bar"]
@@ -612,8 +609,8 @@ def _draw_mixed(ax, spec: FigureSpec, colors: List[str]) -> None:
                 f"'{s.name}': {len(s.values or [])} value(s) for "
                 f"{len(cats)} categorie(s), the two must match."
             )
-        # zorder au-dessus des barres : la tendance reste lisible par-dessus
-        # les colonnes, comme à l'écran.
+        # zorder above the bars: the trend stays readable on top of the columns, as
+        # on screen.
         ax.plot(list(x), s.values, color=colors[color_i % len(colors)], linewidth=2,
                 marker="o", markersize=4, label=s.name, zorder=4)
         color_i += 1
@@ -622,20 +619,19 @@ def _draw_mixed(ax, spec: FigureSpec, colors: List[str]) -> None:
 
 
 def _point_labels(ax) -> list:
-    """Les étiquettes de points de ce graphique, à trier après le rendu."""
+    """The point labels of this chart, to be sorted out after rendering."""
     if not hasattr(ax, "_bibliominer_labels"):
         ax._bibliominer_labels = []
     return ax._bibliominer_labels
 
 
 def _declutter(fig, ax) -> None:
-    """Retire les étiquettes de points qui en chevauchent une autre.
+    """Removes the point labels that overlap another one.
 
-    Les points les plus éloignés du centre gardent leur nom en priorité :
-    au centre d'une carte factorielle, les termes s'entassent et se lisent
-    mal de toute façon, alors que les termes excentrés sont ceux qui
-    donnent leur sens aux axes. Se fait APRÈS les échelles (log) et la mise
-    en page, quand les positions à l'écran sont définitives.
+    The points furthest from the centre keep their name first: at the centre
+    of a factorial map, terms pile up and read badly anyway, while the
+    off-centre terms are the ones that give the axes their meaning. Done AFTER
+    the scales (log) and the layout, when the on-screen positions are final.
     """
     labels = getattr(ax, "_bibliominer_labels", [])
     if len(labels) < 2:
@@ -649,7 +645,7 @@ def _declutter(fig, ax) -> None:
     fig.canvas.draw()
     renderer = fig.canvas.get_renderer()
     legend = ax.get_legend()
-    # La légende compte comme déjà placée : une étiquette ne passe pas dessous.
+    # The legend counts as already placed: a label does not go under it.
     kept = [legend.get_window_extent(renderer)] if legend is not None else []
     for label, _, _ in order:
         box = label.get_window_extent(renderer).expanded(1.05, 1.15)
@@ -671,13 +667,13 @@ def _draw_scatter(ax, spec: FigureSpec, colors: List[str]) -> None:
         ax.scatter(xs, ys, color=_base_color(spec, i, colors), s=42,
                    alpha=0.85, edgecolors="none", label=s.name, zorder=3)
         if s.labels:
-            # Des points au même endroit (thèmes de même centralité et
-            # densité) écrivaient leurs noms l'un sur l'autre : une seule
-            # étiquette par position, « premier nom +n ».
+            # Points at the same place (themes with the same centrality and density)
+            # wrote their names on top of each other: a single label per position,
+            # "first name +n".
             from .palette import short_text
             at: Dict[Tuple[float, float], List[str]] = {}
             for (px, py), text in zip(s.points, s.labels):
-                # Une étiquette vide : ce point-là n'est pas nommé.
+                # An empty label: this point is not named.
                 if text is not None and str(text).strip():
                     at.setdefault((round(px, 6), round(py, 6)), []).append(str(text))
             for (px, py), names in at.items():

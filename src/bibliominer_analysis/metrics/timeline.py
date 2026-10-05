@@ -1,8 +1,8 @@
-"""Chronologies : auteurs, termes et citations moyennes année par année.
+"""Timelines: authors, terms and mean citations year by year.
 
-Un classement dit *qui* domine ; une chronologie dit *quand*. Les deux se
-contredisent souvent, un auteur très bien classé peut n'avoir rien publié
-depuis six ans, et c'est précisément l'écart qui est informatif.
+A ranking says *who* dominates; a timeline says *when*. The two often
+contradict each other: a highly ranked author may have published nothing
+for six years, and that gap is precisely what is informative.
 """
 
 from __future__ import annotations
@@ -13,18 +13,18 @@ import pandas as pd
 
 
 def authors_over_time(corpus, n: int = 12) -> pd.DataFrame:
-    """Production annuelle des `n` auteurs principaux.
+    """Yearly production of the top `n` authors.
 
-    Colonnes : ``author``, ``year``, ``documents``, ``citations``,
+    Columns: ``author``, ``year``, ``documents``, ``citations``,
     ``citations_per_year``, ``cumulative``.
 
-    ``citations_per_year`` rapporte les citations à l'ancienneté du document :
-    sans cela, les premières années paraissent toujours meilleures, puisqu'elles
-    ont eu plus de temps pour accumuler.
+    ``citations_per_year`` relates citations to the age of the document:
+    without it, the early years always look better, since they have had more
+    time to accumulate.
 
-    Seules les années où l'auteur a effectivement publié sont renvoyées : ici
-    l'absence de point EST l'information (une interruption), contrairement à une
-    série cumulée.
+    Only the years in which the author actually published are returned: here
+    the absence of a point IS the information (an interruption), unlike a
+    cumulative series.
     """
     cols = ["author", "year", "documents", "citations", "citations_per_year",
             "cumulative"]
@@ -63,14 +63,14 @@ def authors_over_time(corpus, n: int = 12) -> pd.DataFrame:
 
 def word_dynamics(corpus, n: int = 10, kind: str = "author",
                   cumulative: bool = True) -> pd.DataFrame:
-    """Occurrences des `n` termes principaux, année par année.
+    """Occurrences of the top `n` terms, year by year.
 
-    Colonnes : ``year``, ``keyword``, ``occurrences``, ``cumulative``.
+    Columns: ``year``, ``keyword``, ``occurrences``, ``cumulative``.
 
-    C'est la lecture qui distingue un terme **émergent** d'un terme
-    **installé** : deux mots-clés de même total peuvent avoir des trajectoires
-    opposées. Toutes les années de l'intervalle sont présentes, à zéro si
-    besoin, sinon le cumul serait faux.
+    This is the reading that distinguishes an **emerging** term from an
+    **established** one: two keywords with the same total can have opposite
+    trajectories. Every year of the range is present, at zero if needed,
+    otherwise the cumulative count would be wrong.
     """
     cols = ["year", "keyword", "occurrences", "cumulative"]
     k = corpus.keywords
@@ -108,14 +108,14 @@ def word_dynamics(corpus, n: int = 10, kind: str = "author",
 
 
 def average_citations_per_year(corpus) -> pd.DataFrame:
-    """Citations moyennes par article, selon l'année de publication.
+    """Mean citations per article, by publication year.
 
-    Colonnes : ``year``, ``documents``, ``mean_citations``,
+    Columns: ``year``, ``documents``, ``mean_citations``,
     ``mean_citations_per_year``, ``citable_years``.
 
-    La seconde colonne est la première divisée par l'ancienneté. C'est celle
-    qu'il faut lire : la première décroît toujours vers les années récentes, et
-    ce n'est pas un affaiblissement du corpus, seulement le temps qui manque.
+    The second column is the first divided by the age. It is the one to read:
+    the first always decreases towards recent years, and that is not a
+    weakening of the corpus, only missing time.
     """
     d = corpus.documents[["eid", "year"]].copy()
     d["citations"] = pd.to_numeric(corpus.documents["cited_by"],

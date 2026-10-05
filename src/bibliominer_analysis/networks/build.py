@@ -1,22 +1,23 @@
-"""Réseaux bibliométriques : co-citation, co-mots, co-signature.
+"""Bibliometric networks: co-citation, co-word, co-authorship.
 
-Le principe est le même dans les trois cas : deux entités sont **liées**
-quand elles apparaissent ensemble dans le même document. Seule change
-l'entité, une référence citée, un mot-clé, un auteur.
+The principle is the same in all three cases: two entities are **linked**
+when they appear together in the same document. Only the entity changes:
+a cited reference, a keyword, an author.
 
-    document 1 : [A, B, C]  ->  liens A-B, A-C, B-C
-    document 2 : [A, B]     ->  lien  A-B  (poids 2 au total)
+    document 1: [A, B, C]  ->  links A-B, A-C, B-C
+    document 2: [A, B]     ->  link  A-B  (weight 2 in total)
 
-Deux garde-fous, sans lesquels ces réseaux deviennent inutilisables :
+Two safeguards, without which these networks become unusable:
 
-  - **On limite d'abord les nœuds** aux entités les plus fréquentes. Un corpus
-    de 3 000 documents produit des centaines de milliers de paires : le calcul
-    devient lent et le graphe illisible.
-  - **On filtre les liens faibles** (poids minimal), sinon le graphe est un
-    nuage de liens uniques sans structure.
+  - **Nodes are limited first** to the most frequent entities. A corpus
+    of 3,000 documents produces hundreds of thousands of pairs: the
+    computation becomes slow and the graph unreadable.
+  - **Weak links are filtered** (minimum weight); otherwise the graph is
+    a cloud of single links without structure.
 
-Les fonctions renvoient un dictionnaire `{"nodes": [...], "edges": [...]}`,
-directement affichable, le package ne dessine pas, il fournit la structure.
+The functions return a dictionary `{"nodes": [...], "edges": [...]}`,
+directly displayable: this module does not draw, it provides the
+structure.
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ import pandas as pd
 
 def _pairs_from_groups(groups: Dict[Any, List[str]],
                        keep: Optional[set] = None) -> Counter:
-    """Compte les co-occurrences. `keep` restreint aux entités retenues."""
+    """Counts co-occurrences. `keep` restricts to the retained entities."""
     pairs: Counter = Counter()
     for items in groups.values():
         uniq = sorted({i for i in items if i and (keep is None or i in keep)})
@@ -45,10 +46,10 @@ def _pairs_from_groups(groups: Dict[Any, List[str]],
 
 def _to_graph(counts: Counter, pairs: Counter,
               labels: Dict[str, str], min_weight: int) -> Dict[str, Any]:
-    """Assemble nœuds + liens, et retire les nœuds devenus isolés.
+    """Assembles nodes + links, and removes the nodes that became isolated.
 
-    Un nœud sans aucun lien après filtrage n'apporte rien à la lecture d'un
-    réseau : on le retire plutôt que de laisser des points flottants.
+    A node without any link after filtering adds nothing to the reading of a
+    network: it is removed rather than leaving floating points.
     """
     edges = [{"source": a, "target": b, "weight": int(w)}
              for (a, b), w in pairs.items() if w >= min_weight]
@@ -64,10 +65,10 @@ def _to_graph(counts: Counter, pairs: Counter,
               "occurrences": int(counts[k]),
               "degree": int(degree[k])}
              for k in counts if k in linked]
-    # Ordre COMPLET, ex æquo départagés par l'identifiant : `counts` est
-    # souvent rempli depuis un ensemble, dont Python change l'ordre à chaque
-    # exécution. L'ordre des nœuds décide de l'ordre de dessin et de ceux qui
-    # reçoivent une étiquette, la figure changeait d'un lancement à l'autre.
+    # COMPLETE order, ties broken by the identifier: `counts` is often filled
+    # from a set, whose order Python changes at every run. The order of the
+    # nodes decides the drawing order and which ones get a label: the figure
+    # changed from one launch to the next.
     nodes.sort(key=lambda n: (-n["occurrences"], str(n["id"])))
     edges.sort(key=lambda e: (-e["weight"], str(e["source"]), str(e["target"])))
 
@@ -80,12 +81,11 @@ def _to_graph(counts: Counter, pairs: Counter,
 # ---------------------------------------------------------------------------
 
 def _ref_key(row) -> Optional[str]:
-    """Identité d'une référence citée : son DOI, sinon son titre normalisé.
+    """Identity of a cited reference: its DOI, otherwise its normalised title.
 
-    Le DOI est fiable ; le titre ne l'est qu'après normalisation (casse,
-    ponctuation, espaces). Une référence sans ni l'un ni l'autre est écartée,
-    on ne peut pas la rapprocher d'une autre sans risquer de fusionner des
-    travaux différents.
+    The DOI is reliable; the title only is after normalisation (case,
+    punctuation, spaces). A reference with neither is left out: it cannot be
+    matched with another without risking merging different works.
     """
     doi = row.get("ref_doi")
     if isinstance(doi, str) and doi.strip():
@@ -99,10 +99,10 @@ def _ref_key(row) -> Optional[str]:
 
 
 def co_citation(corpus, top_n: int = 50, min_weight: int = 2) -> Dict[str, Any]:
-    """Réseau de co-citation : deux références citées par les mêmes documents.
+    """Co-citation network: two references cited by the same documents.
 
-    Il révèle les **fondements intellectuels** du corpus : les travaux que les
-    auteurs mobilisent ensemble forment des regroupements thématiques.
+    It reveals the **intellectual foundations** of the corpus: the works that
+    authors draw on together form thematic groupings.
     """
     refs = corpus.references
     if refs.empty:
@@ -117,11 +117,11 @@ def co_citation(corpus, top_n: int = 50, min_weight: int = 2) -> Dict[str, Any]:
     counts = Counter(r.drop_duplicates(subset=["eid", "key"])["key"])
     keep = {k for k, _ in top_by_count(counts, top_n)}
 
-    # Une même référence est écrite différemment d'un article citant à
-    # l'autre (« Minku L.L. » ici, « Mahmood Y. » là). L'étiquette prend
-    # l'écriture la PLUS FRÉQUENTE, à égalité, la première dans l'ordre
-    # alphabétique (`mode` trie), jamais la première rencontrée, qui
-    # dépendait de l'ordre des lignes de l'export.
+    # The same reference is written differently from one citing article to
+    # another ("Minku L.L." here, "Mahmood Y." there). The label takes the MOST
+    # FREQUENT spelling, on a tie the first in alphabetical order (`mode`
+    # sorts), never the first one met, which depended on the order of the
+    # export's rows.
     labels: Dict[str, str] = {}
     for key, g in r[r["key"].isin(keep)].groupby("key"):
         title = g["ref_title"].dropna().mode()
@@ -144,7 +144,7 @@ def co_citation(corpus, top_n: int = 50, min_weight: int = 2) -> Dict[str, Any]:
 
 def co_word(corpus, top_n: int = 50, min_weight: int = 2,
             kind: str = "author") -> Dict[str, Any]:
-    """Réseau de co-occurrence des mots-clés, la **structure thématique**."""
+    """Keyword co-occurrence network, the **thematic structure**."""
     k = corpus.keywords
     if kind != "all":
         k = k[k["kind"] == kind]
@@ -172,10 +172,10 @@ def co_word(corpus, top_n: int = 50, min_weight: int = 2,
 # ---------------------------------------------------------------------------
 
 def co_authorship(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any]:
-    """Réseau de collaboration : deux auteurs signant les mêmes documents.
+    """Collaboration network: two authors signing the same documents.
 
-    `min_weight` vaut 1 par défaut : une seule co-signature est déjà une
-    collaboration réelle, contrairement à une co-citation isolée.
+    `min_weight` is 1 by default: a single co-signature is already a real
+    collaboration, unlike an isolated co-citation.
     """
     a = corpus.authors
     a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
@@ -199,15 +199,15 @@ def co_authorship(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any
 
 def co_institution(corpus, top_n: int = 50, min_weight: int = 1,
                    level: str = "parent") -> Dict[str, Any]:
-    """Collaboration entre ORGANISATIONS présentes sur le même document.
+    """Collaboration between ORGANISATIONS present on the same document.
 
-    `level` vaut « parent » (établissements) ou « subparent » (unités
-    internes). Au niveau unité, le réseau montre quels laboratoires
-    travaillent ensemble, une information que le niveau établissement masque
-    complètement quand deux équipes d'une même université collaborent.
+    `level` is "parent" (institutions) or "subparent" (internal units). At
+    unit level, the network shows which laboratories work together,
+    information that the institution level hides completely when two teams of
+    the same university collaborate.
 
-    Les chercheurs sans rattachement sont écartés : « Independent researcher »
-    n'est pas une organisation et polluerait le centre du réseau.
+    Researchers without an affiliation are left out: "Independent researcher"
+    is not an organisation and would pollute the centre of the network.
     """
     from ..metrics.production import _org_frame
 
@@ -226,9 +226,10 @@ def co_institution(corpus, top_n: int = 50, min_weight: int = 1,
 
 
 def co_country(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any]:
-    """Collaboration entre PAYS : deux pays signataires du même document.
+    """Collaboration between COUNTRIES: two countries signing the same document.
 
-    C'est le réseau qui montre l'insertion internationale du corpus.
+    It is the network that shows the international integration of the
+    corpus.
     """
     aff = corpus.affiliations
     aff = aff[aff["country"].notna() & (aff["country"].map(str).str.strip() != "")]
@@ -247,15 +248,14 @@ def co_country(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any]:
 
 def bibliographic_coupling(corpus, top_n: int = 50,
                            min_weight: int = 2) -> Dict[str, Any]:
-    """Couplage bibliographique : deux DOCUMENTS partageant des références.
+    """Bibliographic coupling: two DOCUMENTS sharing references.
 
-    C'est le miroir de la co-citation. La co-citation regarde en arrière,
-    quels travaux anciens sont cités ensemble, et évolue avec le temps. Le
-    couplage regarde le présent : deux articles qui puisent aux mêmes sources
-    traitent probablement du même sujet, et ce lien est **figé** dès leur
-    publication.
+    It is the mirror of co-citation. Co-citation looks backwards (which older
+    works are cited together) and evolves over time. Coupling looks at the
+    present: two articles drawing on the same sources probably deal with the
+    same subject, and this link is **fixed** as soon as they are published.
 
-    Le poids d'un lien est le nombre de références communes.
+    The weight of a link is the number of shared references.
     """
     refs = corpus.references
     if refs.empty:
@@ -267,9 +267,9 @@ def bibliographic_coupling(corpus, top_n: int = 50,
     if r.empty:
         return {"nodes": [], "edges": [], "n_nodes": 0, "n_edges": 0}
 
-    # On garde les documents ayant le plus de références identifiables : ce
-    # sont eux qui peuvent réellement se coupler. Un document à deux
-    # références n'apporte que du bruit.
+    # The documents with the most identifiable references are kept: they are
+    # the ones that can really couple. A document with two references only
+    # brings noise.
     per_doc = r.groupby("eid")["key"].apply(set)
     keep = set(per_doc.map(len).sort_values(ascending=False, kind="stable").head(top_n).index)
 
@@ -296,28 +296,28 @@ def bibliographic_coupling(corpus, top_n: int = 50,
 
 
 def _first_cited_author(value: Any) -> Optional[str]:
-    """Premier auteur d'une référence citée, normalisé.
+    """First author of a cited reference, normalised.
 
-    L'analyse de co-citation d'auteurs (ACA) se fonde par convention sur le
-    PREMIER auteur cité : les listes d'auteurs des références sont trop
-    hétérogènes d'une base à l'autre pour être découpées entièrement de façon
-    fiable. On assume cette convention plutôt que de produire du bruit.
+    Author co-citation analysis (ACA) is based by convention on the FIRST
+    cited author: the author lists of references are too heterogeneous from
+    one database to another to be split entirely and reliably. This
+    convention is assumed rather than producing noise.
     """
     if not isinstance(value, str) or not value.strip():
         return None
     first = re.split(r"[;,]", value.strip())[0].strip()
-    # « Chen T. » et « Chen, T. » doivent se rejoindre ; on garde le patronyme
-    # et l'initiale quand elle existe.
+    # "Chen T." and "Chen, T." must join; the surname is kept, with the initial
+    # when there is one.
     first = re.sub(r"\s+", " ", first)
     return first.lower() if len(first) >= 2 else None
 
 
 def co_citation_authors(corpus, top_n: int = 50,
                         min_weight: int = 2) -> Dict[str, Any]:
-    """Co-citation d'AUTEURS : deux auteurs cités par les mêmes documents.
+    """AUTHOR co-citation: two authors cited by the same documents.
 
-    Complément du réseau de co-citation de références : là où celui-ci pointe
-    des travaux précis, celui-ci fait apparaître les **écoles de pensée**.
+    A complement to the reference co-citation network: where that one points
+    to specific works, this one reveals **schools of thought**.
     """
     refs = corpus.references
     if refs.empty:
@@ -333,7 +333,7 @@ def co_citation_authors(corpus, top_n: int = 50,
     counts = Counter(r["key"])
     keep = {k for k, _ in top_by_count(counts, top_n)}
 
-    # Libellé : la graphie la plus fréquente parmi celles rencontrées.
+    # Label: the most frequent spelling among those met.
     labels: Dict[str, str] = {}
     for key, g in r[r["key"].isin(keep)].groupby("key"):
         raw = g["ref_authors"].dropna().map(
@@ -346,21 +346,22 @@ def co_citation_authors(corpus, top_n: int = 50,
 
 
 # ---------------------------------------------------------------------------
-# Pays, pour la carte
+# Countries, for the map
 # ---------------------------------------------------------------------------
 
 def country_map(corpus) -> pd.DataFrame:
-    """Production par pays, avec le taux de collaboration internationale.
+    """Production per country, with the international collaboration rate.
 
-    ``sca`` (single country articles) : documents dont TOUTES les affiliations
-    sont du même pays. ``mca`` (multiple country) : les autres. Le rapport
-    mca/total est l'indicateur d'ouverture internationale usuel.
+    ``sca`` (single country articles): documents whose affiliations are ALL
+    from the same country. ``mca`` (multiple country): the others. The
+    mca/total ratio is the usual indicator of international openness.
 
-    ``map_name`` : le nom du pays sur le fond de carte (world-atlas), vide s'il
-    est trop petit pour y figurer ; ``lon``/``lat`` : où le placer (centre du
-    territoire, ou capitale d'un petit pays). Vides pour un nom qui n'est pas
-    un pays reconnu. Ainsi l'interface et les figures placent les pays de la
-    même façon, sans table de noms à maintenir de chaque côté.
+    ``map_name``: the name of the country on the base map (world-atlas), empty
+    if it is too small to appear on it; ``lon``/``lat``: where to place it
+    (centre of the territory, or capital of a small country). Empty for a
+    name that is not a recognised country. So the interface and the figures
+    place countries the same way, without a table of names to maintain on
+    each side.
     """
     aff = corpus.affiliations
     aff = aff[aff["country"].notna() & (aff["country"].map(str).str.strip() != "")]
@@ -396,17 +397,17 @@ def country_map(corpus) -> pd.DataFrame:
 
 
 def co_city(corpus, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any]:
-    """Collaboration entre VILLES présentes sur le même document.
+    """Collaboration between CITIES present on the same document.
 
-    Le réseau des pays montre l'ouverture internationale ; celui-ci montre
-    quelque chose que le pays écrase complètement : la structure INTERNE d'un
-    pays. Un corpus à 90 % marocain peut cacher un réseau Rabat-Meknès-Oujda
-    dense, ou trois équipes qui s'ignorent, même pays, lecture opposée.
+    The country network shows international openness; this one shows
+    something the country completely crushes: the INTERNAL structure of a
+    country. A 90 % Moroccan corpus can hide a dense Rabat-Meknes-Oujda
+    network, or three teams ignoring each other: same country, opposite
+    readings.
 
-    Chaque lien porte un ``scope`` : « national » quand les deux villes
-    partagent le pays, « international » sinon. Sans cette distinction, une
-    collaboration de couloir et une collaboration transcontinentale auraient
-    exactement le même aspect.
+    Each link carries a ``scope``: "national" when the two cities share the
+    country, "international" otherwise. Without this distinction, a corridor
+    collaboration and a transcontinental one would look exactly the same.
     """
     aff = corpus.affiliations
     if aff.empty or "city" not in aff.columns:

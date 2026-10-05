@@ -1,7 +1,7 @@
-"""`Corpus.from_csv` ne lit que le fichier exporté par le nettoyage.
+"""`Corpus.from_csv` only reads the file exported by the cleaning.
 
-Signature : les auteurs numérotés dans l'ordre (« 1:Idri A.; 2:Hosni M. »)
-dans les trois colonnes d'auteurs, ce que seul l'export du nettoyage écrit.
+Signature: the authors numbered in order ("1:Idri A.; 2:Hosni M.") in the
+three author columns, which only the cleaning export writes.
 """
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def test_a_raw_scopus_export_is_refused(tmp_path):
 
 
 def test_one_unnumbered_line_is_enough(tmp_path):
-    """Un fichier nettoyé retouché à la main n'est plus le livrable."""
+    """A cleaned file edited by hand is no longer the deliverable."""
     edited = dict(CLEAN, Authors="Added B.")
     with pytest.raises(NotCleanedError, match='line 3, column "Authors": "Added B."'):
         Corpus.from_csv(_write(tmp_path, [CLEAN, edited]))
@@ -66,6 +66,6 @@ def test_a_file_without_authors_is_refused(tmp_path):
 
 
 def test_the_error_is_a_value_error(tmp_path):
-    """Les appelants qui attrapaient `ValueError` (l'API) le reçoivent."""
+    """Callers that caught `ValueError` (the API) still receive it."""
     with pytest.raises(ValueError):
         Corpus.from_csv(_write(tmp_path, [{"Title": "T", "Authors": "Doe J."}]))

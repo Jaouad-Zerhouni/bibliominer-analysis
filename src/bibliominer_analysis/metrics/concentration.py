@@ -1,20 +1,22 @@
-"""Concentration de la production : Gini, courbe de Lorenz, ratios.
+"""Concentration of production: Gini, Lorenz curve, ratios.
 
-Un corpus de cent articles peut être l'œuvre de cent personnes ayant publié une
-fois chacune, ou de trois personnes en ayant écrit trente. Les classements ne
-distinguent pas ces deux situations : ils montrent le haut du tableau, jamais la
-forme de la distribution.
+A corpus of a hundred articles can be the work of a hundred people who
+each published once, or of three people who wrote thirty each. Rankings do
+not distinguish these two situations: they show the top of the table,
+never the shape of the distribution.
 
-  - **Gini**, 0 = tout le monde produit autant, 1 = une seule entité produit
-    tout. Sur des auteurs, un Gini au-dessus de ~0,6 signale un domaine porté
-    par quelques personnes.
-  - **Courbe de Lorenz**, la représentation dont le Gini n'est que le résumé.
-    Elle montre *où* se situe l'inégalité, ce qu'un seul nombre ne dit pas.
-  - **CR4 / CR10**, part des 4 et des 10 premiers. Plus lisible qu'un Gini
-    pour un lecteur non spécialiste, et suffisant pour la plupart des propos.
+  - **Gini**: 0 = everyone produces the same, 1 = a single entity produces
+    everything. On authors, a Gini above ~0.6 signals a field carried by a
+    few people.
+  - **Lorenz curve**: the representation of which the Gini is only the
+    summary. It shows *where* the inequality lies, which a single number
+    does not.
+  - **CR4 / CR10**: share of the top 4 and top 10. Easier to read than a
+    Gini for a non-specialist, and enough for most purposes.
 
-Lotka (`laws.py`) répond à une question voisine mais différente : il teste si la
-distribution suit une loi de puissance. Ici on ne teste rien, on mesure.
+Lotka (`laws.py`) answers a neighbouring but different question: it tests
+whether the distribution follows a power law. Here nothing is tested; it
+is measured.
 """
 
 from __future__ import annotations
@@ -24,16 +26,16 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
-#: Dimensions sur lesquelles la concentration a un sens.
+#: Dimensions on which concentration makes sense.
 UNITS = ("authors", "institutions", "countries", "sources", "cities")
 
 
 def gini(values) -> Optional[float]:
-    """Coefficient de Gini d'une série de valeurs positives.
+    """Gini coefficient of a series of positive values.
 
-    Formule directe sur la série triée. Les valeurs nulles comptent : un auteur
-    à zéro document fait partie de la population, et l'exclure ferait baisser
-    artificiellement l'inégalité mesurée.
+    Direct formula on the sorted series. Zero values count: an author with
+    zero documents is part of the population, and excluding them would
+    artificially lower the measured inequality.
     """
     x = np.sort(np.asarray([v for v in values if v is not None and v >= 0],
                            dtype=float))
@@ -48,12 +50,13 @@ def gini(values) -> Optional[float]:
 
 
 def lorenz(values, points: int = 40) -> pd.DataFrame:
-    """Courbe de Lorenz : part cumulée de la population × part cumulée du total.
+    """Lorenz curve: cumulative share of the population x cumulative share of
+    the total.
 
-    Colonnes : ``population_share``, ``value_share``.
+    Columns: ``population_share``, ``value_share``.
 
-    La diagonale représente l'égalité parfaite ; l'aire entre la courbe et la
-    diagonale est exactement ce que résume le Gini.
+    The diagonal represents perfect equality; the area between the curve and
+    the diagonal is exactly what the Gini summarises.
     """
     x = np.sort(np.asarray([v for v in values if v is not None and v >= 0],
                            dtype=float))
@@ -63,8 +66,8 @@ def lorenz(values, points: int = 40) -> pd.DataFrame:
 
     cum = np.concatenate([[0.0], np.cumsum(x) / x.sum()])
     pop = np.linspace(0.0, 1.0, x.size + 1)
-    # On échantillonne : au-delà de quelques dizaines de points la courbe ne
-    # gagne rien en lisibilité et alourdit la réponse.
+    # The curve is sampled: beyond a few dozen points it gains nothing in
+    # readability and makes the answer heavier.
     if pop.size > points:
         keep = np.unique(np.linspace(0, pop.size - 1, points).astype(int))
         pop, cum = pop[keep], cum[keep]
@@ -75,7 +78,7 @@ def lorenz(values, points: int = 40) -> pd.DataFrame:
 
 
 def _series(corpus, unit: str) -> pd.Series:
-    """Documents par entité, pour l'unité demandée."""
+    """Documents per entity, for the requested unit."""
     if unit == "authors":
         a = corpus.authors
         a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
@@ -108,13 +111,13 @@ def _series(corpus, unit: str) -> pd.Series:
 
 
 def concentration(corpus, unit: str = "authors") -> Dict[str, Any]:
-    """Mesures de concentration pour une dimension.
+    """Concentration measures for one dimension.
 
-    Retour : ``unit``, ``entities``, ``documents``, ``gini``, ``cr4``,
-    ``cr10``, ``top_share_10pct``, ``lorenz`` (liste de points).
+    Returns: ``unit``, ``entities``, ``documents``, ``gini``, ``cr4``,
+    ``cr10``, ``top_share_10pct``, ``lorenz`` (list of points).
 
-    ``top_share_10pct`` est la part produite par les 10 % les plus actifs,
-    la formulation que comprend n'importe quel lecteur, contrairement au Gini.
+    ``top_share_10pct`` is the share produced by the 10 % most active, the
+    wording any reader understands, unlike the Gini.
     """
     s = _series(corpus, unit)
     empty = {"unit": unit, "entities": 0, "documents": 0, "gini": None,
@@ -143,9 +146,9 @@ def concentration(corpus, unit: str = "authors") -> Dict[str, Any]:
 
 
 def concentration_summary(corpus) -> pd.DataFrame:
-    """Une ligne par dimension, la comparaison est plus parlante que le détail.
+    """One row per dimension: the comparison says more than the detail.
 
-    Colonnes : ``unit``, ``entities``, ``documents``, ``gini``, ``cr4``,
+    Columns: ``unit``, ``entities``, ``documents``, ``gini``, ``cr4``,
     ``cr10``, ``top_share_10pct``.
     """
     cols = ["unit", "entities", "documents", "gini", "cr4", "cr10",

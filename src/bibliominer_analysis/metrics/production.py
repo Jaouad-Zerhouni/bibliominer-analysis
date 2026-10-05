@@ -1,12 +1,12 @@
-"""Indicateurs de production et d'acteurs.
+"""Production and actor indicators.
 
-Chaque fonction prend un `Corpus` et renvoie un DataFrame prêt à être affiché
-ou exporté, jamais une figure. Les colonnes sont nommées de façon stable :
-l'interface s'appuie dessus.
+Every function takes a `Corpus` and returns a DataFrame ready to be
+displayed or exported, never a figure. Columns have stable names: the
+interface relies on them.
 
-Une règle vaut partout : on ne compte JAMAIS deux fois le même document. Une
-institution citée par trois auteurs du même article compte pour un document,
-pas trois, sinon les classements sont faux.
+One rule holds everywhere: the same document is NEVER counted twice. An
+institution cited by three authors of the same article counts for one
+document, not three; otherwise the rankings are wrong.
 """
 
 from __future__ import annotations
@@ -17,16 +17,16 @@ import pandas as pd
 
 
 def _citations(corpus) -> pd.Series:
-    """eid -> nombre de citations, en entier, jamais NaN."""
+    """eid -> number of citations, as an integer, never NaN."""
     d = corpus.documents
     return pd.to_numeric(d["cited_by"], errors="coerce").fillna(0).astype(int)
 
 
 def by_year(corpus) -> pd.DataFrame:
-    """Documents et citations par année, sans trou dans la série.
+    """Documents and citations per year, with no gap in the series.
 
-    Les années manquantes sont ajoutées à zéro : une courbe de production avec
-    des années absentes se lit de travers.
+    Missing years are added at zero: a production curve with absent years
+    reads wrongly.
     """
     d = corpus.documents.copy()
     d["year"] = pd.to_numeric(d["year"], errors="coerce")
@@ -45,10 +45,10 @@ def by_year(corpus) -> pd.DataFrame:
     g = full.merge(g, on="year", how="left").fillna({"documents": 0, "citations": 0})
     g["documents"] = g["documents"].astype(int)
     g["citations"] = g["citations"].astype(int)
-    # Une année SANS document (ajoutée à zéro ci-dessus) n'a pas de moyenne :
-    # vide, pas zéro. `where` garde une colonne NUMÉRIQUE ; `replace(0, pd.NA)`
-    # la rendait « object », et `round` échouait (erreur 500 sur Production
-    # dès qu'une année manquait dans la série).
+    # A year WITHOUT documents (added at zero above) has no mean: empty, not
+    # zero. `where` keeps a NUMERIC column; `replace(0, pd.NA)` made it
+    # "object", and `round` failed (an error 500 on Production as soon as a
+    # year was missing from the series).
     per_doc = g["citations"] / g["documents"].where(g["documents"] > 0)
     g["citations_per_doc"] = per_doc.astype(float).round(2)
     g["cumulative"] = g["documents"].cumsum()
@@ -56,11 +56,11 @@ def by_year(corpus) -> pd.DataFrame:
 
 
 def by_country(corpus, n: Optional[int] = None) -> pd.DataFrame:
-    """Documents par pays d'affiliation.
+    """Documents per country of affiliation.
 
-    Un document dont deux auteurs sont marocains compte UNE fois pour le
-    Maroc. Un document maroco-espagnol compte une fois pour chaque pays : la
-    somme dépasse donc volontairement le nombre de documents.
+    A document with two Moroccan authors counts ONCE for Morocco. A
+    Moroccan-Spanish document counts once for each country: the sum therefore
+    deliberately exceeds the number of documents.
     """
     a = corpus.affiliations
     a = a[a["country"].notna() & (a["country"].map(str).str.strip() != "")]
@@ -80,16 +80,16 @@ def by_country(corpus, n: Optional[int] = None) -> pd.DataFrame:
     return g.head(n) if n else g
 
 
-#: Colonne de la table `affiliations` selon le niveau d'analyse demandé.
-#:   « parent »    -> l'organisme mère (université, entreprise, hôpital)
-#:   « subparent » -> l'unité interne (laboratoire, école, département)
-#: Les deux niveaux répondent à des questions différentes : le premier situe
-#: l'établissement, le second identifie l'équipe qui produit réellement.
+#: Column of the `affiliations` table for the requested level of analysis.
+#:   "parent"    -> the parent organisation (university, company, hospital)
+#:   "subparent" -> the internal unit (laboratory, school, department)
+#: The two levels answer different questions: the first locates the
+#: institution, the second identifies the team that actually produces.
 _ORG_LEVELS = {"parent": "parent1", "subparent": "subparent"}
 
 
 def org_column(level: str = "parent") -> str:
-    """Colonne à analyser pour le niveau demandé."""
+    """Column to analyse for the requested level."""
     try:
         return _ORG_LEVELS[level]
     except KeyError:
@@ -97,19 +97,18 @@ def org_column(level: str = "parent") -> str:
                          % level) from None
 
 
-#: Les deux organismes mères qu'une affiliation peut citer.
+#: The two parent organisations an affiliation can name.
 PARENT_COLUMNS = ("parent1", "parent2")
 
 
 def institution_rows(affiliations: pd.DataFrame) -> pd.DataFrame:
-    """Une ligne par (affiliation, organisme mère), colonne ``institution``.
+    """One row per (affiliation, parent organisation), column ``institution``.
 
-    Une affiliation à DOUBLE rattachement (« parent 1: Université A, parent 2:
-    CNRS ») appartient aux deux organismes : elle compte pour chacun, en
-    compte entier, comme un document co-signé compte pour chaque pays. Lire
-    ``parent1`` seul faisait disparaître le second organisme de tous les
-    classements. Un ``parent 2`` identique au ``parent 1`` ne compte qu'une
-    fois.
+    An affiliation with a DOUBLE attachment ("parent 1: University A,
+    parent 2: CNRS") belongs to both organisations: it counts for each, with
+    full counting, as a co-signed document counts for each country. Reading
+    ``parent1`` alone made the second organisation disappear from every
+    ranking. A ``parent 2`` identical to ``parent 1`` counts only once.
     """
     frames = []
     for col in PARENT_COLUMNS:
@@ -127,14 +126,14 @@ def institution_rows(affiliations: pd.DataFrame) -> pd.DataFrame:
 
 
 def _org_frame(corpus, level: str = "parent") -> pd.DataFrame:
-    """Affiliations exploitables pour ce niveau, colonne renommée `org`.
+    """Usable affiliations for this level, column renamed `org`.
 
-    Au niveau « parent », une affiliation à double rattachement donne une
-    ligne par organisme (voir `institution_rows`).
+    At "parent" level, an affiliation with a double attachment gives one row
+    per organisation (see `institution_rows`).
 
-    Les chercheurs sans rattachement sont EXCLUS : le cleaning les marque
-    « Independent researcher », ce n'est pas une organisation et sa présence
-    en tête de classement n'aurait aucun sens.
+    Researchers without an affiliation are EXCLUDED: the cleaning marks them
+    "Independent researcher"; it is not an organisation and its presence at
+    the top of a ranking would make no sense.
     """
     from ..io.schema import INDEPENDENT_LABEL
 
@@ -157,22 +156,22 @@ def _org_frame(corpus, level: str = "parent") -> pd.DataFrame:
     if a.empty:
         return pd.DataFrame(columns=["eid", "org", "country", "parent1"])
 
-    # On construit colonne par colonne : au niveau « parent », `col` EST
-    # « parent1 », et une sélection par liste la ferait apparaître deux fois,
-    # pandas refuse ensuite de grouper sur une colonne dupliquée.
+    # Built column by column: at "parent" level, `col` IS "parent1", and a list
+    # selection would make it appear twice; pandas then refuses to group on a
+    # duplicated column.
     out = pd.DataFrame({
         "eid": a["eid"].to_numpy(),
         "org": a[col].to_numpy(),
         "country": a["country"].to_numpy(),
-        # `parent1` sert à rattacher une unité à son organisme ; au niveau
-        # parent les deux colonnes coïncident, ce qui est correct.
+        # `parent1` is used to attach a unit to its organisation; at parent level
+        # the two columns coincide, which is correct.
         "parent1": a["parent1"].to_numpy(),
     })
     return out
 
 
 def top_institutions(corpus, n: int = 20, level: str = "parent") -> pd.DataFrame:
-    """Classement des organisations, au niveau demandé."""
+    """Ranking of the organisations, at the requested level."""
     a = _org_frame(corpus, level)
     if a.empty:
         return pd.DataFrame(columns=["institution", "documents", "citations",
@@ -197,12 +196,12 @@ def top_institutions(corpus, n: int = 20, level: str = "parent") -> pd.DataFrame
 
 def institutions_over_time(corpus, n: int = 10, cumulative: bool = True,
                            level: str = "parent") -> pd.DataFrame:
-    """Production annuelle des `n` premières organisations, au niveau demandé.
+    """Yearly production of the top `n` organisations, at the requested level.
 
-    Format long : ``institution``, ``year``, ``documents``, ``cumulative``.
-    Toutes les années du corpus figurent pour CHAQUE organisation, y compris à
-    zéro, sinon les courbes seraient interrompues là où elle n'a rien publié,
-    ce qui se lit comme une absence de donnée plutôt que comme une absence de
+    Long format: ``institution``, ``year``, ``documents``, ``cumulative``.
+    Every year of the corpus appears for EACH organisation, including at
+    zero; otherwise the curves would be interrupted where it published
+    nothing, which reads as an absence of data rather than an absence of
     production.
     """
     aff = _org_frame(corpus, level)
@@ -239,7 +238,7 @@ def institutions_over_time(corpus, n: int = 10, cumulative: bool = True,
 
 def institutions_by_country(corpus, n: int = 20,
                             level: str = "parent") -> pd.DataFrame:
-    """Organisations groupées par pays : combien, et lesquelles dominent."""
+    """Organisations grouped by country: how many, and which ones dominate."""
     aff = _org_frame(corpus, level)
     aff = aff[aff["country"].notna()] if not aff.empty else aff
     empty = pd.DataFrame(columns=["country", "institutions", "documents",
@@ -265,33 +264,33 @@ def institutions_by_country(corpus, n: int = 20,
 
 
 def org_hierarchy(corpus, n: int = 20, min_documents: int = 1) -> pd.DataFrame:
-    """Hiérarchie ORGANISME → UNITÉS, telle que le cleaning l'a établie.
+    """ORGANISATION -> UNITS hierarchy, as the cleaning established it.
 
-    C'est le pendant analytique de la vue « organisations » du nettoyage :
-    sous chaque organisme mère, les unités internes qui y sont rattachées,
-    avec leur volume et leurs citations.
+    It is the analytical counterpart of the cleaning's "organisations" view:
+    under each parent organisation, the internal units attached to it, with
+    their volume and their citations.
 
-    Colonnes : ``parent``, ``subparent``, ``documents``, ``citations``,
+    Columns: ``parent``, ``subparent``, ``documents``, ``citations``,
     ``parent_documents``, ``share``.
 
-    ``share`` est la part de l'unité DANS son organisme : elle dit si un
-    laboratoire porte l'essentiel de la production de son université ou s'il
-    n'en est qu'une composante parmi d'autres.
+    ``share`` is the unit's share WITHIN its organisation: it says whether a
+    laboratory carries most of its university's production or is only one
+    component among others.
 
-    Une unité à double rattachement figure sous SES DEUX organismes.
+    A unit with a double attachment appears under BOTH its organisations.
     """
     from ..io.schema import INDEPENDENT_LABEL
 
     base = institution_rows(corpus.affiliations)
     base = base[base["institution"] != INDEPENDENT_LABEL]
-    # La suite lit « parent1 » : c'est ici l'organisme de CETTE ligne,
-    # premier ou second rattachement.
+    # What follows reads "parent1": here it is the organisation of THIS row,
+    # first or second attachment.
     base = base.assign(parent1=base["institution"])
 
-    # `a` ne garde que les lignes PORTANT une unité, mais le total de
-    # l'organisme se calcule sur `base` : une université dont un document ne
-    # mentionne aucune unité en a quand même un de plus, et l'ignorer
-    # gonflerait artificiellement la part des unités.
+    # `a` keeps only the rows CARRYING a unit, but the organisation's total is
+    # computed on `base`: a university with a document that mentions no unit
+    # still has one more, and ignoring it would artificially inflate the units'
+    # share.
     a = base[base["subparent"].notna()
              & (base["subparent"].map(str).str.strip() != "")]
     empty = pd.DataFrame(columns=["parent", "subparent", "documents",
@@ -310,8 +309,8 @@ def org_hierarchy(corpus, n: int = 20, min_documents: int = 1) -> pd.DataFrame:
               .reset_index()
               .rename(columns={"parent1": "parent"}))
 
-    # Total de l'organisme : compté sur les documents DISTINCTS, sinon un
-    # document citant deux unités du même organisme le compterait deux fois.
+    # Total of the organisation: counted on DISTINCT documents, otherwise a
+    # document naming two units of the same organisation would count it twice.
     parent_totals = (base[["eid", "parent1"]].drop_duplicates()
                       .groupby("parent1")["eid"].nunique()
                       .rename("parent_documents"))
@@ -325,11 +324,11 @@ def org_hierarchy(corpus, n: int = 20, min_documents: int = 1) -> pd.DataFrame:
 
 
 def top_authors(corpus, n: int = 20) -> pd.DataFrame:
-    """Classement des auteurs, avec le nombre de fois en PREMIÈRE position.
+    """Ranking of the authors, with the number of times in FIRST position.
 
-    `first_author` n'existe que parce que le cleaning indexe les auteurs :
-    sans cette information, on ne peut pas distinguer un porteur de travaux
-    d'un co-signataire.
+    `first_author` only exists because the cleaning indexes the authors:
+    without this information, the lead of a work cannot be told from a
+    co-author.
     """
     a = corpus.authors
     a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
@@ -342,8 +341,8 @@ def top_authors(corpus, n: int = 20) -> pd.DataFrame:
     a = a.merge(cites, on="eid", how="left")
     a["is_first"] = pd.to_numeric(a["position"], errors="coerce").eq(1)
 
-    # Clé de regroupement : l'identifiant Scopus s'il existe (fiable), sinon
-    # le nom, deux homonymes sans identifiant restent indiscernables.
+    # Grouping key: the Scopus identifier if it exists (reliable), otherwise the
+    # name; two namesakes without an identifier stay indistinguishable.
     a["key"] = a["scopus_id"].fillna("name:" + a["name"].map(str))
 
     g = (a.groupby("key")
@@ -374,10 +373,10 @@ def top_sources(corpus, n: int = 20) -> pd.DataFrame:
 
 
 def top_keywords(corpus, n: int = 30, kind: str = "author") -> pd.DataFrame:
-    """Mots-clés les plus fréquents. `kind` : 'author', 'index' ou 'all'.
+    """Most frequent keywords. `kind`: 'author', 'index' or 'all'.
 
-    La comparaison se fait sans tenir compte de la casse, mais la graphie
-    affichée est la plus employée par les auteurs.
+    Comparison ignores case, but the displayed spelling is the one most used
+    by the authors.
     """
     k = corpus.keywords
     if kind != "all":

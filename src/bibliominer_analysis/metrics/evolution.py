@@ -1,26 +1,27 @@
-"""Évolution thématique : comment les thèmes se transmettent d'une période à l'autre.
+"""Thematic evolution: how themes carry over from one period to the next.
 
-La carte thématique (`themes.py`) est une photographie. Ici on en prend
-plusieurs, à des périodes successives, et on relie les groupes entre eux : un
-thème qui se scinde en deux, deux thèmes qui fusionnent, un thème qui
-disparaît. C'est la seule vue qui distingue vraiment un sujet **émergent** d'un
-sujet **déclinant**, le quadrant en bas à gauche de Callon confond les deux.
+The thematic map (`themes.py`) is a snapshot. Here several are taken, over
+successive periods, and the clusters are linked to each other: a theme
+that splits in two, two themes that merge, a theme that disappears. It is
+the only view that really tells an **emerging** subject from a
+**declining** one; the bottom-left quadrant of Callon's map confuses the
+two.
 
-Le lien entre un groupe d'une période et un groupe de la suivante est l'**indice
-d'inclusion pondéré** :
+The link between a cluster of one period and a cluster of the next is the
+**weighted inclusion index**:
 
-    inclusion = Σ_{t commun} min(occ_A(t), occ_B(t))
+    inclusion = Σ_{shared t} min(occ_A(t), occ_B(t))
                 ────────────────────────────────────────
-                min(Σ occurrences de A, Σ occurrences de B)
+                min(Σ occurrences of A, Σ occurrences of B)
 
-Au numérateur, le MINIMUM des occurrences de chaque terme commun aux deux
-périodes : un terme ne peut pas transmettre plus d'occurrences que la période
-la plus pauvre n'en porte, ce qui garde l'indice entre 0 et 1.
+The numerator takes the MINIMUM of the occurrences of each term shared by
+the two periods: a term cannot pass on more occurrences than the poorer
+period carries, which keeps the index between 0 and 1.
 
-On divise par le **plus petit** des deux, pas par l'union : un petit groupe
-entièrement absorbé par un grand doit donner 1, parce qu'il a bel et bien été
-absorbé. Diviser par l'union écraserait ce cas, qui est justement celui qu'on
-cherche à voir.
+The division is by the **smaller** of the two, not by the union: a small
+cluster entirely absorbed by a large one must give 1, because it was
+indeed absorbed. Dividing by the union would crush that case, which is
+precisely the one we want to see.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ import pandas as pd
 
 def _period_clusters(sub, top_n: int, min_weight: int,
                      min_cluster_size: int, kind: str) -> List[dict]:
-    """Groupes de co-mots d'un sous-corpus, avec leurs termes complets."""
+    """Co-word clusters of a sub-corpus, with their complete terms."""
     from ..networks import build as nets
 
     graph = nets.co_word(sub, top_n=top_n, min_weight=min_weight, kind=kind)
@@ -60,13 +61,13 @@ def _period_clusters(sub, top_n: int, min_weight: int,
             "occurrences": int(sum(occ.values())),
             "top_terms": ", ".join(ordered[:8]),
         })
-    # Le plus gros groupe en premier : la lecture du Sankey suit ce poids.
+    # The largest cluster first: the Sankey is read by this weight.
     return sorted(out, key=lambda c: (-c["occurrences"], c["label"]))
 
 
 def _slice_bounds(corpus, cuts: Optional[Sequence[int]],
                   n_periods: int) -> List[tuple]:
-    """Bornes (début, fin) incluses de chaque période."""
+    """Inclusive (start, end) bounds of each period."""
     years = pd.to_numeric(corpus.documents["year"], errors="coerce").dropna()
     if years.empty:
         return []
@@ -75,9 +76,9 @@ def _slice_bounds(corpus, cuts: Optional[Sequence[int]],
     if cuts:
         pts = sorted({int(c) for c in cuts if lo <= int(c) < hi})
     else:
-        # Sans point de coupe explicite : des tranches d'effectif comparable,
-        # pas de durée égale. Un corpus dont la production explose donnerait
-        # sinon une première tranche vide de sens.
+        # Without explicit cut points: slices of comparable size, not of equal
+        # duration. A corpus whose production explodes would otherwise give a
+        # meaningless first slice.
         if n_periods < 2:
             return [(lo, hi)]
         qs = [years.quantile(i / n_periods) for i in range(1, n_periods)]
@@ -96,17 +97,17 @@ def thematic_evolution(corpus, cuts: Optional[Sequence[int]] = None,
                        min_weight: int = 2, min_cluster_size: int = 2,
                        kind: str = "author",
                        min_inclusion: float = 0.05) -> Dict[str, Any]:
-    """Flux thématiques entre périodes successives.
+    """Thematic flows between successive periods.
 
-    Retour ::
+    Returns ::
 
         {"periods": [{"label", "year_min", "year_max", "documents", "clusters"}],
          "nodes":   [{"name", "period", "label", "occurrences", "terms"}],
          "flows":   [{"source", "target", "value", "inclusion", "shared_terms"}]}
 
-    ``source`` et ``target`` reprennent le ``name`` des nœuds, qui préfixe le
-    groupe par sa période : deux périodes peuvent avoir un groupe du même nom,
-    et il ne faut surtout pas les confondre en un seul.
+    ``source`` and ``target`` reuse the nodes' ``name``, which prefixes the
+    cluster with its period: two periods can have a cluster with the same
+    name, and they must above all not be merged into one.
     """
     bounds = _slice_bounds(corpus, cuts, n_periods)
     if len(bounds) < 2:
@@ -148,8 +149,8 @@ def thematic_evolution(corpus, cuts: Optional[Sequence[int]] = None,
                 })
 
     flows.sort(key=lambda f: -f["value"])
-    # Un nœud sans aucun flux n'a rien à montrer dans un Sankey : il ferait une
-    # colonne orpheline. On ne garde que ceux qui sont reliés.
+    # A node without any flow has nothing to show in a Sankey: it would make an
+    # orphan column. Only the linked ones are kept.
     linked = {f["source"] for f in flows} | {f["target"] for f in flows}
     nodes = [n for n in nodes if n["name"] in linked]
     return {"periods": periods, "nodes": nodes, "flows": flows}

@@ -1,38 +1,40 @@
-"""Indicateurs de collaboration et de productivité.
+"""Collaboration and productivity indicators.
 
-Formules, telles qu'établies par leurs auteurs :
+Formulas, as established by their authors:
 
-  - **Degré de collaboration C** (Subramanyam, 1983)
+  - **Degree of collaboration C** (Subramanyam, 1983)
         ``C = Nm / (Nm + Ns)``
-    part des documents co-signés. Entre 0 (tout en solo) et 1 (aucun solo).
+    share of co-authored documents. Between 0 (all single-authored) and 1
+    (none).
 
-  - **Indice de collaboration CI** (Lawani, 1980)
+  - **Collaborative index CI** (Lawani, 1980)
         ``CI = Σ(j · f_j) / N``
-    nombre moyen d'auteurs par document, tous documents confondus.
+    mean number of authors per document, over all documents.
 
-  - **Coefficient de collaboration CC** (Ajiferuke, Burrell & Tague, 1988)
-        ``CC = 1 − [Σ(f_j / j)] / N``
-    corrige le défaut du CI : celui-ci croît sans borne avec les articles à
-    cinquante signataires, alors que le CC reste entre 0 et 1.
+  - **Collaboration coefficient CC** (Ajiferuke, Burrell & Tague, 1988)
+        ``CC = 1 - [Σ(f_j / j)] / N``
+    fixes the CI's flaw: the CI grows without bound with fifty-author
+    articles, while the CC stays between 0 and 1.
 
-  - **Coefficient modifié MCC** (Savanur & Srikanth, 2010)
-        ``MCC = (A / (A − 1)) × [1 − Σ(f_j / j) / N]``
-    où **A est le nombre total d'auteurs distincts de la collection**. Le CC
-    ne peut pas atteindre 1 : si les A auteurs signent tous chaque article, il
-    vaut 1 − 1/A. Le facteur A/(A − 1) fait valoir 1 à cette collaboration
-    maximale. Sur un corpus réel A est grand, et MCC ≈ CC : c'est le
-    comportement rapporté par les études qui l'appliquent.
+  - **Modified collaboration coefficient MCC** (Savanur & Srikanth, 2010)
+        ``MCC = (A / (A - 1)) × [1 - Σ(f_j / j) / N]``
+    where **A is the total number of distinct authors in the collection**.
+    The CC cannot reach 1: if all A authors sign every article, it equals
+    1 - 1/A. The factor A/(A - 1) makes that maximum collaboration equal 1.
+    On a real corpus A is large, and MCC ≈ CC: that is the behaviour
+    reported by the studies that apply it.
 
-  - **CAI, indice de co-autorat** (Garg & Padhi, 2001)
+  - **CAI, co-authorship index** (Garg & Padhi, 2001)
         ``CAI = [(N_ij / N_i0) / (N_0j / N_00)] × 100``
-    compare, période par période, la part d'un type de signature à sa part
-    d'ensemble. **100 = conforme à la moyenne**, au-dessus = sur-représenté.
+    compares, period by period, the share of an authorship type with its
+    overall share. **100 = in line with the average**, above =
+    over-represented.
 
-  - **AAPP, productivité moyenne des auteurs**
-        ``AAPP = nombre de documents / nombre d'auteurs distincts``
+  - **AAPP, average author productivity**
+        ``AAPP = number of documents / number of distinct authors``
 
-  - **Loi de Price**, la racine carrée des auteurs produit la moitié des
-    signatures. On donne l'écart entre le théorique et l'observé.
+  - **Price's law**: the square root of the authors produces half of the
+    signatures. The gap between theory and observation is given.
 """
 
 from __future__ import annotations
@@ -44,7 +46,7 @@ import pandas as pd
 
 
 def _authors_per_doc(corpus) -> pd.Series:
-    """Nombre d'auteurs DISTINCTS par document."""
+    """Number of DISTINCT authors per document."""
     a = corpus.authors
     a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     if a.empty:
@@ -53,7 +55,7 @@ def _authors_per_doc(corpus) -> pd.Series:
 
 
 def collaboration_indicators(corpus) -> Dict[str, Any]:
-    """Tous les indicateurs de collaboration en un appel."""
+    """All the collaboration indicators in one call."""
     per_doc = _authors_per_doc(corpus)
     n = int(len(per_doc))
     if n == 0:
@@ -66,7 +68,7 @@ def collaboration_indicators(corpus) -> Dict[str, Any]:
     single = int((per_doc == 1).sum())
     multi = n - single
 
-    # f_j : nombre de documents ayant j auteurs.
+    # f_j: number of documents with j authors.
     f = per_doc.value_counts().sort_index()
     j = f.index.to_numpy(dtype=float)
     fj = f.to_numpy(dtype=float)
@@ -75,10 +77,10 @@ def collaboration_indicators(corpus) -> Dict[str, Any]:
     cc = float(1 - (fj / j).sum() / n)
     a_max = int(per_doc.max())
     n_authors = corpus.n_authors()
-    # A = auteurs DISTINCTS de la collection, pas le maximum par document.
-    # Défaut corrigé : avec le maximum, un corpus où chaque article a
-    # exactement deux auteurs obtenait MCC = 1, « collaboration maximale »,
-    # alors que chacun n'y signe qu'avec un seul partenaire.
+    # A = DISTINCT authors of the collection, not the maximum per document.
+    # Fixed defect: with the maximum, a corpus where every article has exactly
+    # two authors got MCC = 1, "maximum collaboration", while each author there
+    # signs with a single partner only.
     mcc = float(cc * n_authors / (n_authors - 1)) if n_authors > 1 else 0.0
     return {
         "documents": n,
@@ -89,14 +91,14 @@ def collaboration_indicators(corpus) -> Dict[str, Any]:
         "collaborative_coefficient": round(cc, 4),
         "modified_collaborative_coefficient": round(mcc, 4),
         "authors": n_authors,
-        # Productivité moyenne : documents par auteur distinct.
+        # Average productivity: documents per distinct author.
         "aapp": round(n / n_authors, 4) if n_authors else None,
         "max_authors": a_max,
     }
 
 
 def authorship_pattern(corpus) -> pd.DataFrame:
-    """Répartition des documents par nombre de signataires."""
+    """Distribution of documents by number of authors."""
     per_doc = _authors_per_doc(corpus)
     empty = pd.DataFrame(columns=["authors", "documents", "share"])
     if per_doc.empty:
@@ -108,20 +110,20 @@ def authorship_pattern(corpus) -> pd.DataFrame:
     return df.reset_index(drop=True)
 
 
-#: Catégories de signature du CAI, telles qu'employées dans la littérature.
+#: Authorship categories of the CAI, as used in the literature.
 _CAI_BINS = [("single", 1, 1), ("two", 2, 2), ("three", 3, 3),
              ("multi", 4, None)]
 
 
 def cai(corpus, block_years: int = 5) -> pd.DataFrame:
-    """Indice de co-autorat par période.
+    """Co-authorship index per period.
 
-    `block_years` regroupe les années en blocs : sur un corpus court, une
-    période de 5 ans donne des effectifs exploitables là où l'année par année
-    produirait des indices tirés d'un ou deux documents.
+    `block_years` groups the years into blocks: on a short corpus, a 5-year
+    period gives usable counts where year by year would produce indices drawn
+    from one or two documents.
 
-    Lecture : **100 = conforme à la moyenne du corpus**. 150 signifie que la
-    période produit 1,5 fois plus de documents de ce type qu'attendu.
+    Reading: **100 = in line with the corpus average**. 150 means that the
+    period produces 1.5 times more documents of this type than expected.
     """
     per_doc = _authors_per_doc(corpus)
     empty = pd.DataFrame(columns=["period", "documents", "single", "two",
@@ -149,12 +151,12 @@ def cai(corpus, block_years: int = 5) -> pd.DataFrame:
 
     df["band"] = df["n_authors"].map(band)
 
-    n00 = len(df)                                   # tous documents
-    n0j = df["band"].value_counts()                 # par type, tous blocs
+    n00 = len(df)                                   # all documents
+    n0j = df["band"].value_counts()                 # per type, all blocks
 
     rows = []
     for block, g in df.groupby("block"):
-        ni0 = len(g)                                # documents du bloc
+        ni0 = len(g)                                # documents of the block
         start = y0 + block * block_years
         end = min(start + block_years - 1, int(df["year"].max()))
         row: Dict[str, Any] = {
@@ -166,7 +168,7 @@ def cai(corpus, block_years: int = 5) -> pd.DataFrame:
             nij = int(counts.get(name, 0))
             row[name] = nij
             total_j = int(n0j.get(name, 0))
-            # CAI indéfini si ce type de signature n'existe nulle part.
+            # CAI undefined if this authorship type exists nowhere.
             row["cai_" + name] = (round(((nij / ni0) / (total_j / n00)) * 100, 1)
                                   if ni0 and total_j else None)
         rows.append(row)
@@ -175,11 +177,11 @@ def cai(corpus, block_years: int = 5) -> pd.DataFrame:
 
 
 def price_law(corpus) -> Dict[str, Any]:
-    """Loi de Price : √N auteurs devraient produire la moitié des signatures.
+    """Price's law: √N authors should produce half of the signatures.
 
-    On compare le théorique et l'observé. Un écart important signale un corpus
-    plus (ou moins) concentré que ce que Price prédit, c'est l'intérêt de
-    l'indicateur, pas le fait qu'il « tombe juste ».
+    Theory and observation are compared. A large gap signals a corpus more
+    (or less) concentrated than Price predicts; that is the point of the
+    indicator, not whether it "comes out right".
     """
     a = corpus.authors
     a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
@@ -202,29 +204,28 @@ def price_law(corpus) -> Dict[str, Any]:
     return {
         "authors": n_authors,
         "signatures": total,
-        # Nombre d'auteurs que la loi désigne comme « noyau ».
+        # Number of authors the law designates as the "core".
         "expected_core": core,
-        # Part réellement produite par ce noyau (la loi prédit 50 %).
+        # Share actually produced by this core (the law predicts 50 %).
         "observed_share": round(100 * observed / total, 1) if total else None,
-        # Nombre d'auteurs réellement nécessaires pour atteindre la moitié.
+        # Number of authors actually needed to reach half.
         "half_reached_with": reached,
     }
 
 
 def authorship_groups(corpus) -> pd.DataFrame:
-    """Répartition des documents par NOMBRE de signataires : 1, 2, 3, 4+.
+    """Distribution of documents by NUMBER of authors: 1, 2, 3, 4+.
 
-    Colonnes : ``group``, ``min_authors``, ``documents``, ``share``,
+    Columns: ``group``, ``min_authors``, ``documents``, ``share``,
     ``citations``, ``citations_per_document``.
 
-    Le regroupement s'arrête à « 4 et plus » parce qu'au-delà les effectifs
-    s'émiettent : distinguer 7 signataires de 8 n'apprend rien, alors que le
-    passage de 1 à 2 auteurs est la frontière qui compte, celle de la
-    collaboration.
+    Grouping stops at "4 and more" because beyond that the counts crumble:
+    telling 7 authors from 8 teaches nothing, while going from 1 to 2 authors
+    is the boundary that matters, that of collaboration.
 
-    Les quatre lignes sont TOUJOURS présentes, à zéro si besoin. Une catégorie
-    absente se lirait comme une donnée manquante, alors qu'un corpus sans aucun
-    article à auteur unique est une information en soi.
+    The four rows are ALWAYS present, at zero if needed. A missing category
+    would read as missing data, while a corpus without a single
+    single-authored article is information in itself.
     """
     labels = [(1, "1 author"), (2, "2 authors"), (3, "3 authors"), (4, "4+ authors")]
     cols = ["group", "min_authors", "documents", "share", "citations",
@@ -245,8 +246,8 @@ def authorship_groups(corpus) -> pd.DataFrame:
                 .groupby("eid").size().rename("n_authors"))
     docs = docs.merge(per_doc, left_on="eid", right_index=True, how="left")
     docs["n_authors"] = docs["n_authors"].fillna(0).astype(int)
-    # Un document sans auteur identifié n'est ni « à auteur unique » ni
-    # « collaboratif » : il est écarté plutôt que rangé arbitrairement.
+    # A document without an identified author is neither "single-authored" nor
+    # "collaborative": it is left out rather than filed arbitrarily.
     docs = docs[docs["n_authors"] > 0]
     total = len(docs)
 

@@ -1,8 +1,8 @@
-"""Tests des parseurs : c'est ici que se joue la fidélité au format.
+"""Tests of the parsers: this is where fidelity to the format is decided.
 
-Les cas ne sont pas inventés, ils viennent d'exports réels, y compris les
-cas dégradés (ancien format non indexé, affiliation brute, référence non
-réconciliée), parce que l'utilisateur a des fichiers dans les deux états.
+The cases are not invented, they come from real exports, including the
+degraded ones (old non-indexed format, raw affiliation, unreconciled
+reference), because users have files in both states.
 """
 
 from bibliominer_analysis.io import parsers as P
@@ -24,7 +24,7 @@ def test_authors_indexes_bibliominer():
 
 
 def test_authors_scopus_brut_sans_index():
-    """Ancien export : pas de préfixe « n: ». La position retombe sur le rang."""
+    """Old export: no "n:" prefix. The position falls back on the rank."""
     a = P.parse_authors("Idri A.; Hosni M.",
                         "Idri, Ali (6602789810); Hosni, Mohamed (57189341317)",
                         "6602789810; 57189341317")
@@ -33,7 +33,7 @@ def test_authors_scopus_brut_sans_index():
 
 
 def test_authors_colonnes_desalignees():
-    """Un export abîmé ne doit pas décaler les noms ni lever d'exception."""
+    """A damaged export must neither shift the names nor raise an exception."""
     a = P.parse_authors("A.; B.; C.", "A, Alpha (11111)", "")
     assert len(a) == 3
     assert a[0]["scopus_id"] == "11111"
@@ -60,8 +60,8 @@ def test_affiliation_etiquetee():
 
 
 def test_affiliation_etiquetee_champs_omis():
-    """Les champs vides sont OMIS à l'export : la lecture ne doit pas dépendre
-    de la position."""
+    """Empty fields are OMITTED from the export: reading must not depend on the
+    position."""
     r = P.parse_affiliation("parent 1: University of Murcia, city: Murcia, "
                             "region: Murcia, country: Spain")
     assert r["parent1"] == "University of Murcia"
@@ -76,7 +76,7 @@ def test_affiliation_independent():
 
 
 def test_affiliation_brute_scopus():
-    """Non nettoyée : seuls pays et ville sont fiables, par position finale."""
+    """Not cleaned: only country and city are reliable, by final position."""
     r = P.parse_affiliation(
         "National School of Applied Sciences of Oujda, Mohamed 1st University, "
         "Oujda, Morocco")
@@ -91,7 +91,7 @@ def test_affiliation_vide():
     assert r["country"] is None and r["raw"] == ""
 
 
-# --- références ------------------------------------------------------------
+# --- references ------------------------------------------------------------
 
 def test_references_reconciliees():
     cell = ("ref1 | 10.1007/s11749-016-0481-7 | 2016 | Biau, Scornet | "
@@ -107,7 +107,7 @@ def test_references_reconciliees():
 
 
 def test_reference_non_structuree_conservee():
-    """Sans barres verticales, on garde le texte plutôt que de le perdre."""
+    """Without vertical bars, the text is kept rather than lost."""
     r = P.parse_references("Some old raw reference, 1998")
     assert len(r) == 1
     assert r[0]["ref_doi"] is None
@@ -118,7 +118,7 @@ def test_references_vides():
     assert P.parse_references("") == []
 
 
-# --- mots-clés -------------------------------------------------------------
+# --- keywords --------------------------------------------------------------
 
 def test_keywords_dedoublonnes_sans_casse():
     k = P.parse_keywords("Machine Learning; machine learning; Random Forest")
@@ -126,11 +126,11 @@ def test_keywords_dedoublonnes_sans_casse():
 
 
 def test_raw_scopus_references_are_split_per_reference_not_per_author():
-    """Constaté : dans l'export Scopus brut, les auteurs d'une référence sont
-    séparés par « ; », comme les références entre elles. Découpée sur « ; »,
-    chaque référence devenait autant de « références » que d'auteurs (8 854
-    au lieu de 2 847 sur un vrai corpus), sans titre ni année : ni citations
-    locales, ni historiographe."""
+    """Found: in the raw Scopus export, the authors of a reference are separated
+    by ";", like the references themselves. Split on ";", each reference
+    became as many "references" as it had authors (8,854 instead of 2,847 on a
+    real corpus), with neither title nor year: no local citations, no
+    historiograph."""
     from bibliominer_analysis.io.parsers import parse_references
     cell = ("Ali A.; Gravino C., A systematic literature review of software effort "
             "prediction, Journal of software: evolution and process, 31, 10, (2019); "

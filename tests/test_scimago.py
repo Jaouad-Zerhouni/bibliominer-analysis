@@ -1,4 +1,4 @@
-"""Appariement SCImago : ISSN, titre, et ce qu'on refuse de deviner."""
+"""SCImago matching: ISSN, title, and what we refuse to guess."""
 
 import pandas as pd
 import pytest
@@ -19,9 +19,9 @@ def _doc(i, source, issn="", cited="0", year=2020):
 
 def test_referentiel_charge():
     t = sc.load_scimago()
-    assert not t.empty, "le CSV SCImago doit voyager avec le package"
+    assert not t.empty, "the SCImago CSV must travel with the package"
     assert set(t["quartile"].dropna().unique()) <= set(sc.QUARTILES)
-    assert t["sjr"].max() > 1, "les decimales a la virgule doivent etre lues"
+    assert t["sjr"].max() > 1, "decimal commas must be read"
 
 
 def test_normalisation_issn():
@@ -32,7 +32,7 @@ def test_normalisation_issn():
 
 
 def test_appariement_par_issn():
-    """CA-A Cancer Journal for Clinicians, Q1, premiere ligne du referentiel."""
+    """CA-A Cancer Journal for Clinicians, Q1, first row of the reference table."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "Whatever the export calls it", issn="1542-4863"),
     ]))
@@ -52,7 +52,7 @@ def test_appariement_par_titre_quand_issn_absent():
 
 
 def test_revue_inconnue_reste_vide():
-    """On n'invente pas un quartile : ce serait pire que de ne rien dire."""
+    """We do not invent a quartile: that would be worse than saying nothing."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "Journal Of Things That Do Not Exist At All"),
     ]))
@@ -98,18 +98,18 @@ def test_quartiles_dans_le_temps():
     assert y.loc["Q1", "documents"] == 1
     assert y.loc["Not indexed", "documents"] == 1
     assert y.loc["Q1", "share"] == pytest.approx(50.0)
-    # Les cinq categories sont presentes meme a zero.
+    # The five categories are present, even at zero.
     assert len(y) == 5
 
 
 def test_titre_trop_court_refuse_comme_cle():
-    """« Nature » ou « Cell » ne peuvent pas servir de cle d'appariement."""
+    """"Nature" or "Cell" cannot serve as a matching key."""
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, "Cell")]))
     assert c.scimago_sources().iloc[0]["matched_by"] == ""
 
 
 def test_referentiel_absent_ne_casse_pas(tmp_path):
-    """Sans le fichier, l'analyse se degrade, elle ne s'interrompt pas."""
+    """Without the file, the analysis degrades, it does not stop."""
     missing = tmp_path / "absent.csv"
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, "Some Journal Name Here")]))
     out = c.scimago_sources(path=missing)
