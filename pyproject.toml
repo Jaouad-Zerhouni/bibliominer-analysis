@@ -12,8 +12,8 @@ description = "Bibliometric analysis of a Scopus corpus cleaned with Bibliominer
 readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
-# Same authors, same order as CITATION.cff and the project's website: the
-# order of authorship is meaningful, and every copy must keep it.
+# Same authors, same order as the project's website: the order of authorship
+# is meaningful, and every copy must keep it.
 authors = [
     { name = "Mohamed Hosni", email = "m.hosni@umi.ac.ma" },
     { name = "Jaouad Zerhouni", email = "j.zerhouni@edu.umi.ac.ma" },

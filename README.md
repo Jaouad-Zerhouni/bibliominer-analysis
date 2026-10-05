@@ -243,18 +243,6 @@ purposes as long as it is cited, *SCImago (n.d.). SJR - SCImago Journal &
 Country Rank [Portal]. Retrieved from https://www.scimagojr.com*. The terms
 travel with the file, in `data_ref/scimagojr_2025.NOTICE`.
 
-## How to cite
-
-If you use this package in a publication, please cite it:
-
-> Hosni, M., Zerhouni, J., Medarhri, I., Menaoui, R., & Carrillo de Gea, J. M.
-> (2026). *bibliominer-analysis: bibliometric analysis of a cleaned Scopus
-> corpus* (Version 0.1.0) [Computer software].
-> https://github.com/Jaouad-Zerhouni/bibliominer-analysis
-
-The repository's `CITATION.cff` gives the same reference in BibTeX and APA
-through GitHub's *Cite this repository* button.
-
 ## License
 
 MIT, the `LICENSE` file ships with the package. The world map
