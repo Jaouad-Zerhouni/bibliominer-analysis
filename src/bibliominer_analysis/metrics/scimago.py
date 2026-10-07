@@ -381,19 +381,19 @@ def scimago_coverage(corpus, path: Optional[Any] = None) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def _split_areas(cell: Any) -> List[str]:
-    """"Business, Management and Accounting; Computer Science" -> two areas.
+    '''"Business, Management and Accounting; Computer Science" -> two areas.
 
     The semicolon separates the areas; the comma belongs to the area's NAME.
     Splitting on the comma would break "Biochemistry, Genetics and Molecular
     Biology" into three false areas.
-    """
+    '''
     if not isinstance(cell, str) or not cell.strip():
         return []
     return [p.strip() for p in cell.split(";") if p.strip()]
 
 
 def _strip_quartile(label: str) -> str:
-    """"Oncology (Q1)" -> "Oncology": the category, without its rank."""
+    '''"Oncology (Q1)" -> "Oncology": the category, without its rank.'''
     return re.sub(r"\s*\(Q[1-4]\)\s*$", "", label).strip()
 
 

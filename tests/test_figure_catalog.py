@@ -55,7 +55,7 @@ def corpus():
     return Corpus.from_dataframe(pd.DataFrame(rows))
 
 
-def test_le_catalogue_est_decrit(corpus):
+def test_the_catalog_is_described(corpus):
     table = Corpus.figure_catalog()
     assert len(table) == len(CATALOG) >= 80
     assert set(table["section"]) == {"Corpus", "Actors", "Impact", "Concepts", "Networks"}
@@ -64,7 +64,7 @@ def test_le_catalogue_est_decrit(corpus):
     assert row["page"] == "Authors" and "n=20" in row["options"]
 
 
-def test_chaque_figure_se_dessine_ou_dit_pourquoi(corpus):
+def test_every_figure_draws_or_says_why(corpus):
     """On a small corpus some figures have no data (SCImago, open access...):
     they SAY so (ValueError), they do not crash."""
     drawn = 0
@@ -77,7 +77,7 @@ def test_chaque_figure_se_dessine_ou_dit_pourquoi(corpus):
     assert drawn >= 60
 
 
-def test_defauts_de_l_ecran_et_options(corpus):
+def test_screen_defaults_and_options(corpus):
     assert len(corpus.figure_spec("top-authors").categories) <= 20
     assert len(corpus.figure_spec("top_authors", n=2).categories) == 2    # snake_case accepted
     with pytest.raises(TypeError, match="accepted: n"):
@@ -86,26 +86,26 @@ def test_defauts_de_l_ecran_et_options(corpus):
         corpus.figure("no-such-figure")
 
 
-def test_une_periode_se_choisit_par_filter(corpus):
+def test_a_period_is_chosen_by_filter(corpus):
     spec = corpus.filter(years=(2023, 2024)).figure_spec("documents-per-year")
     assert spec.categories == ["2023", "2024"]
 
 
-def test_svg_et_fichier(corpus, tmp_path):
+def test_svg_and_file(corpus, tmp_path):
     svg = corpus.figure("documents-per-year", fmt="svg")
     assert b"<svg" in svg[:500]
     out = corpus.figure("co-word-network", path=tmp_path / "co_word.svg", min_weight=1)
     assert (tmp_path / "co_word.svg").read_bytes() == out and b"<svg" in out[:500]
 
 
-def test_figure_spec_seulement_pour_les_figures_simples(corpus):
+def test_figure_spec_only_for_simple_figures(corpus):
     assert isinstance(corpus.figure_spec("citations-per-year"), FigureSpec)
     assert corpus.figure_spec("citations-per-year").title == "Citations per year"
     with pytest.raises(TypeError, match="dedicated renderer"):
         corpus.figure_spec("collaboration-authors")
 
 
-def test_haute_resolution_par_defaut(corpus):
+def test_high_resolution_by_default(corpus):
     """300 dpi by default: the same figure is larger than at 100 dpi."""
     assert len(corpus.figure("documents-per-year")) > len(corpus.figure("documents-per-year", dpi=100))
 

@@ -26,7 +26,7 @@ def _doc(i, title="A long and perfectly ordinary document title",
 
 # ------------------------------------------------------------------ texte ----
 
-def test_bigrammes_extraits_du_resume():
+def test_bigrams_extracted_from_abstract():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, abstract="We apply machine learning to software effort estimation."),
         _doc(2, abstract="Machine learning improves effort estimation greatly."),
@@ -36,8 +36,8 @@ def test_bigrammes_extraits_du_resume():
     assert "effort estimation" in terms
 
 
-def test_ngramme_ne_commence_ni_ne_finit_par_un_mot_vide():
-    """"of the model" and "the model of" are not terms."""
+def test_ngram_neither_starts_nor_ends_with_a_stopword():
+    '''"of the model" and "the model of" are not terms.'''
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, abstract="the accuracy of the model is high"),
         _doc(2, abstract="the accuracy of the model is stable"),
@@ -48,7 +48,7 @@ def test_ngramme_ne_commence_ni_ne_finit_par_un_mot_vide():
         assert first not in tx.STOPWORDS and last not in tx.STOPWORDS, t
 
 
-def test_copyright_retire_avant_comptage():
+def test_copyright_removed_before_counting():
     """Without it, "springer nature" climbs into the very first terms."""
     tail = " © The Author(s), under exclusive licence to Springer Nature 2024."
     c = Corpus.from_dataframe(pd.DataFrame([
@@ -61,13 +61,13 @@ def test_copyright_retire_avant_comptage():
     assert "flood prediction" in terms
 
 
-def test_strip_copyright_conserve_le_texte_utile():
+def test_strip_copyright_keeps_the_useful_text():
     assert tx.strip_copyright("Body text. © 2020 Elsevier").strip() == "Body text."
     assert tx.strip_copyright("Body text. Copyright © 2020").strip() == "Body text."
     assert tx.strip_copyright("No notice here") == "No notice here"
 
 
-def test_terme_compte_une_fois_par_document():
+def test_term_counted_once_per_document():
     """A repetitive abstract must not weigh more than another document."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, abstract="deep learning deep learning deep learning"),
@@ -78,7 +78,7 @@ def test_terme_compte_une_fois_par_document():
     assert value == 2
 
 
-def test_reseau_de_texte_est_un_graphe_standard():
+def test_text_network_is_a_standard_graph():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, abstract="machine learning and effort estimation together"),
         _doc(2, abstract="machine learning with effort estimation again"),
@@ -91,20 +91,20 @@ def test_reseau_de_texte_est_un_graphe_standard():
 
 # ----------------------------------------------------------- dendrogramme ----
 
-def test_dendrogramme_separe_deux_familles():
+def test_dendrogram_separates_two_families():
     rows = [_doc(i, kws="alpha;beta;gamma") for i in range(6)]
     rows += [_doc(i, kws="delta;epsilon;zeta") for i in range(6, 12)]
     c = Corpus.from_dataframe(pd.DataFrame(rows))
     d = fac.topic_dendrogram(c, top_n=10, min_documents=2, max_clusters=2)
     assert d["tree"] is not None
     assert d["n_terms"] == 6
-    familles = [{"alpha", "beta", "gamma"}, {"delta", "epsilon", "zeta"}]
+    families = [{"alpha", "beta", "gamma"}, {"delta", "epsilon", "zeta"}]
     for g in d["clusters"]:
-        membres = {t.strip() for t in g["terms"].split(",")}
-        assert any(membres <= f for f in familles), membres
+        members = {t.strip() for t in g["terms"].split(",")}
+        assert any(members <= f for f in families), members
 
 
-def test_dendrogramme_coupe_au_nombre_demande():
+def test_dendrogram_cut_at_requested_number():
     rows = [_doc(i, kws="alpha;beta") for i in range(4)]
     rows += [_doc(i, kws="gamma;delta") for i in range(4, 8)]
     rows += [_doc(i, kws="epsilon;zeta") for i in range(8, 12)]
@@ -113,7 +113,7 @@ def test_dendrogramme_coupe_au_nombre_demande():
         assert len(fac.topic_dendrogram(c, top_n=10, max_clusters=k)["clusters"]) == k
 
 
-def test_lien_moyen_fusionne_les_plus_proches_d_abord():
+def test_average_linkage_merges_the_closest_first():
     D = np.array([[0.0, 0.1, 0.9], [0.1, 0.0, 0.9], [0.9, 0.9, 0.0]])
     merges = fac._average_linkage(D)
     assert merges[0][2] == pytest.approx(0.1)
@@ -122,7 +122,7 @@ def test_lien_moyen_fusionne_les_plus_proches_d_abord():
 
 # ------------------------------------------------------------ K-S test ----
 
-def test_ks_accepte_une_distribution_identique():
+def test_ks_accepts_an_identical_distribution():
     p = np.array([0.6, 0.2, 0.1, 0.1])
     r = lw.kolmogorov_smirnov(p, p)
     assert r["d"] == 0.0
@@ -130,7 +130,7 @@ def test_ks_accepte_une_distribution_identique():
     assert r["p_value"] == pytest.approx(1.0)
 
 
-def test_ks_rejette_une_distribution_opposee():
+def test_ks_rejects_an_opposite_distribution():
     a = np.array([0.9, 0.05, 0.03, 0.02])
     b = np.array([0.02, 0.03, 0.05, 0.9])
     r = lw.kolmogorov_smirnov(a, b)
@@ -138,7 +138,7 @@ def test_ks_rejette_une_distribution_opposee():
     assert r["follows_lotka"] is False
 
 
-def test_lotka_expose_le_test():
+def test_lotka_exposes_the_test():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, authors="1:A."), _doc(2, authors="1:A.; 2:B."),
         _doc(3, authors="1:C."),
@@ -154,7 +154,7 @@ LONG_A = "A systematic review of ensemble effort estimation methods"
 
 @pytest.fixture
 def citing():
-    """Doc 2 (revue J2) cite doc 1 (revue J1)."""
+    """Doc 2 (journal J2) cites doc 1 (journal J1)."""
     return Corpus.from_dataframe(pd.DataFrame([
         _doc(1, title=LONG_A, doi="10.1000/aaa", source="J1", authors="1:A."),
         _doc(2, title="Another paper with a decently long title", source="J2",
@@ -162,14 +162,14 @@ def citing():
     ]))
 
 
-def test_reseau_de_citation_est_oriente(citing):
+def test_citation_network_is_directed(citing):
     g = L.citation_network(citing, "sources", min_weight=1)
     assert g["n_edges"] == 1
     edge = g["edges"][0]
     assert edge["source"] == "J2" and edge["target"] == "J1"
 
 
-def test_auto_citation_d_entite_ecartee():
+def test_entity_self_citation_discarded():
     """Two documents from THE SAME journal: nothing to show at journal level."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, title=LONG_A, doi="10.1000/aaa", source="J1"),
@@ -179,7 +179,7 @@ def test_auto_citation_d_entite_ecartee():
     assert L.citation_network(c, "sources")["n_edges"] == 0
 
 
-def test_citation_par_auteur(citing):
+def test_citation_per_author(citing):
     g = L.citation_network(citing, "authors", min_weight=1)
     assert {e["source"] for e in g["edges"]} == {"B."}
     assert {e["target"] for e in g["edges"]} == {"A."}
@@ -195,18 +195,18 @@ def _ring_graph():
             "edges": edges, "n_nodes": 5, "n_edges": 5}
 
 
-def test_disposition_est_deterministe():
+def test_layout_is_deterministic():
     g = _ring_graph()
     assert netan.layout(g) == netan.layout(g)
 
 
-def test_disposition_place_tous_les_noeuds():
+def test_layout_places_every_node():
     coords = netan.layout(_ring_graph())
     assert set(coords) == set("ABCDE")
     assert all(len(v) == 2 for v in coords.values())
 
 
-def test_densite_normalisee_entre_zero_et_un():
+def test_normalised_density_between_zero_and_one():
     g = _ring_graph()
     d = netan.density_grid(g, netan.layout(g), size=12)
     values = [c[2] for c in d["cells"]]
@@ -214,7 +214,7 @@ def test_densite_normalisee_entre_zero_et_un():
     assert min(values) >= 0.0 and max(values) == pytest.approx(1.0)
 
 
-def test_resolution_change_le_nombre_de_groupes():
+def test_resolution_changes_the_number_of_groups():
     """Without an effect, the setting would be a decorative button."""
     rows = []
     for i in range(6):
@@ -223,6 +223,6 @@ def test_resolution_change_le_nombre_de_groupes():
         rows.append(_doc(i, kws="delta;epsilon;zeta"))
     c = Corpus.from_dataframe(pd.DataFrame(rows))
     g = c.co_word(top_n=20, min_weight=2)
-    basse = {n["community"] for n in netan.annotate(g, resolution=0.3)["nodes"]}
-    haute = {n["community"] for n in netan.annotate(g, resolution=3.0)["nodes"]}
-    assert len(haute) >= len(basse)
+    low = {n["community"] for n in netan.annotate(g, resolution=0.3)["nodes"]}
+    high = {n["community"] for n in netan.annotate(g, resolution=3.0)["nodes"]}
+    assert len(high) >= len(low)

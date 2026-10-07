@@ -18,7 +18,7 @@ def _aff(parent, country="Morocco"):
     return "parent 1: %s, city: X, country: %s" % (parent, country)
 
 
-def test_institutions_over_time_serie_complete():
+def test_institutions_over_time_complete_series():
     """Every institution must have ALL the years, even at zero."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, 2020, _aff("Univ A")),
@@ -34,7 +34,7 @@ def test_institutions_over_time_serie_complete():
     assert list(a["cumulative"]) == [1, 1, 2]
 
 
-def test_institutions_over_time_exclut_les_independants():
+def test_institutions_over_time_excludes_independents():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, 2020, _aff("Univ A")),
         _doc(2, 2020, _aff(INDEPENDENT_LABEL)),
@@ -43,7 +43,7 @@ def test_institutions_over_time_exclut_les_independants():
     assert INDEPENDENT_LABEL not in set(t["institution"])
 
 
-def test_institutions_over_time_limite():
+def test_institutions_over_time_limit():
     rows = [_doc(i, 2020, _aff("U%d" % i)) for i in range(5)]
     c = Corpus.from_dataframe(pd.DataFrame(rows))
     assert c.institutions_over_time(n=2)["institution"].nunique() == 2
@@ -63,7 +63,7 @@ def test_institutions_by_country():
     assert t.loc["Spain", "institutions"] == 1
 
 
-def test_institutions_corpus_vide():
+def test_institutions_empty_corpus():
     c = Corpus.from_dataframe(pd.DataFrame([{"Title": "x"}]))
     assert c.institutions_over_time().empty
     assert c.institutions_by_country().empty

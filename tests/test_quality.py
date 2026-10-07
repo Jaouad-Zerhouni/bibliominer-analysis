@@ -24,13 +24,13 @@ def _doc(i, year=2020, title=None, doi="", issn="", abstract="Some abstract text
 
 # ------------------------------------------------- the missing-value trap ---
 
-def test_is_filled_attrape_toutes_les_ecritures_d_une_absence():
-    """"nan" and "None" are STRINGS after conversion: the trap.
+def test_is_filled_catches_every_spelling_of_absence():
+    '''"nan" and "None" are STRINGS after conversion: the trap.
 
     A naive `value != ""` test counts them as filled, and the completeness
     table reports 100 % everywhere: a wrong check of a particularly treacherous
     kind, since it reassures.
-    """
+    '''
     s = pd.Series(["a", "", None, np.nan, "nan", "None", "  ", "NA", "null", "b"])
     mask = q.is_filled(s)
     assert list(mask) == [True, False, False, False, False, False,
@@ -38,7 +38,7 @@ def test_is_filled_attrape_toutes_les_ecritures_d_une_absence():
     assert int(mask.sum()) == 2
 
 
-def test_completude_ne_ment_pas_sur_un_champ_vide():
+def test_completeness_does_not_lie_about_an_empty_field():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, issn="1542-4863"), _doc(2), _doc(3), _doc(4),
     ]))
@@ -50,7 +50,7 @@ def test_completude_ne_ment_pas_sur_un_champ_vide():
 
 # ------------------------------------------------------------- fiabilite -----
 
-def test_statuts_suivent_les_seuils():
+def test_statuses_follow_the_thresholds():
     assert q._status(100.0) == q.READY
     assert q._status(90.0) == q.READY
     assert q._status(89.9) == q.PARTIAL
@@ -58,7 +58,7 @@ def test_statuts_suivent_les_seuils():
     assert q._status(49.9) == q.LIMITED
 
 
-def test_fiabilite_couvre_toutes_les_familles():
+def test_reliability_covers_every_family():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1), _doc(2)]))
     r = q.indicator_readiness(c)
     assert len(r) == 10
@@ -66,16 +66,16 @@ def test_fiabilite_couvre_toutes_les_familles():
     assert set(r["status"]) <= {q.READY, q.PARTIAL, q.LIMITED}
 
 
-def test_resume_compte_les_analyses_fiables():
+def test_summary_counts_the_reliable_analyses():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1), _doc(2)]))
     s = q.quality_summary(c)
     assert s["analyses"] == s["ready"] + s["partial"] + s["limited"]
     assert 0 <= s["mean_coverage"] <= 100
 
 
-# ------------------------------------------------------------- doublons ------
+# ------------------------------------------------------------- duplicates ----
 
-def test_doublon_par_doi():
+def test_duplicate_by_doi():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, doi="10.1000/aaa"), _doc(2, doi="10.1000/aaa"), _doc(3),
     ]))
@@ -85,7 +85,7 @@ def test_doublon_par_doi():
     assert d.iloc[0]["documents"] == 2
 
 
-def test_doublon_par_titre():
+def test_duplicate_by_title():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, title=LONG), _doc(2, title=LONG.upper()), _doc(3),
     ]))
@@ -94,34 +94,34 @@ def test_doublon_par_titre():
     assert d.iloc[0]["kind"] == "Title"
 
 
-def test_titre_court_ne_declenche_pas_un_faux_doublon():
+def test_short_title_does_not_trigger_a_false_duplicate():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, title="Editorial"), _doc(2, title="Editorial"),
     ]))
     assert q.duplicates(c).empty
 
 
-def test_corpus_propre_sans_doublon():
+def test_clean_corpus_without_duplicate():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1), _doc(2)]))
     assert q.duplicates(c).empty
 
 
 # ------------------------------------------------------------ anomalies ------
 
-def test_document_sans_annee_signale():
+def test_document_without_year_flagged():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1), _doc(2, year="")]))
     a = q.anomalies(c).set_index("check")
     assert a.loc["Missing year", "documents"] == 1
     assert a.loc["Missing year", "severity"] == "high"
 
 
-def test_document_sans_mot_cle_signale():
+def test_document_without_keyword_flagged():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1), _doc(2, kws="")]))
     a = q.anomalies(c).set_index("check")
     assert a.loc["No keyword", "documents"] == 1
 
 
-def test_anomalies_toujours_toutes_les_lignes():
+def test_anomalies_always_all_rows():
     """A missing check would read as not performed."""
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1)]))
     a = q.anomalies(c)
@@ -129,18 +129,18 @@ def test_anomalies_toujours_toutes_les_lignes():
     assert (a["documents"] == 0).all()
 
 
-def test_tables_liees_evaluees():
+def test_linked_tables_evaluated():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1)]))
     t = q.table_completeness(c)
     assert set(t["table"]) == {"authors", "affiliations", "keywords", "references"}
 
 
-# ------------------------------------------ « No single city » (site: virtual)
+# ------------------------------------------ "No single city" (site: virtual)
 
 def test_a_virtual_site_is_read_and_not_a_missing_city():
-    """"site: virtual": the user ticked "No single city" during cleaning
+    '''"site: virtual": the user ticked "No single city" during cleaning
     (virtual laboratory). No city BY DECISION: neither a city named "virtual"
-    nor a missing city."""
+    nor a missing city.'''
     docs = [_doc(1), _doc(2, aff="parent 1: LIRIMA, site: virtual, country: France")]
     c = Corpus.from_dataframe(pd.DataFrame(docs))
     lirima = c.affiliations[c.affiliations["parent1"] == "LIRIMA"].iloc[0]

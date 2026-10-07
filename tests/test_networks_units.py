@@ -20,7 +20,7 @@ def _aff(parent, country, city="X"):
 
 # --- collaboration between institutions ------------------------------------
 
-def test_co_institution_poids():
+def test_co_institution_weights():
     """Univ A and Univ B together on 2 documents -> an edge of weight 2."""
     both = _aff("Univ A", "Morocco") + "; " + _aff("Univ B", "Spain")
     c = Corpus.from_dataframe(pd.DataFrame([
@@ -33,8 +33,8 @@ def test_co_institution_poids():
     assert w[("Univ A", "Univ C")] == 1
 
 
-def test_co_institution_exclut_les_independants():
-    """"Independent researcher" is not an institution."""
+def test_co_institution_excludes_independents():
+    '''"Independent researcher" is not an institution.'''
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff("Univ A", "Morocco") + "; " + _aff(INDEPENDENT_LABEL, "Morocco")),
         _doc(2, _aff("Univ A", "Morocco") + "; " + _aff(INDEPENDENT_LABEL, "Morocco")),
@@ -59,7 +59,7 @@ def test_co_country():
     assert occ["Morocco"] == 3               # present on all 3 documents
 
 
-def test_co_country_document_national_sans_lien():
+def test_co_country_national_document_without_link():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, _aff("U1", "Morocco"))]))
     g = c.co_country(min_weight=1)
     assert g["n_edges"] == 0 and g["n_nodes"] == 0
@@ -67,7 +67,7 @@ def test_co_country_document_national_sans_lien():
 
 # --- author co-citation -----------------------------------------------------
 
-def test_co_citation_authors_premier_auteur():
+def test_co_citation_authors_first_author():
     """The ACA convention keeps the FIRST author of each reference."""
     refs = ("ref1 | 10.1/a | 2015 | Biau G., Scornet E. | Random forests ; "
             "ref2 | 10.1/b | 2016 | Chen T., Guestrin C. | XGBoost")
@@ -81,8 +81,8 @@ def test_co_citation_authors_premier_auteur():
     assert g["edges"][0]["weight"] == 2
 
 
-def test_co_citation_authors_regroupe_les_graphies():
-    """"Chen T." and "Chen T." cited by two documents = a single node."""
+def test_co_citation_authors_groups_spellings():
+    '''"Chen T." and "Chen T." cited by two documents = a single node.'''
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff("U", "Morocco"),
              refs="ref1 | 10.1/b | 2016 | Chen T., Guestrin C. | XGBoost ; "
@@ -97,13 +97,13 @@ def test_co_citation_authors_regroupe_les_graphies():
     assert g["n_nodes"] == 2
 
 
-def test_co_citation_authors_sans_auteurs():
+def test_co_citation_authors_without_authors():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff("U", "Morocco"), refs="ref1 | 10.1/a | 2015 | | Without author")]))
     assert c.co_citation_authors(min_weight=1)["n_nodes"] == 0
 
 
-def test_tous_les_reseaux_sur_corpus_vide():
+def test_all_networks_on_empty_corpus():
     c = Corpus.from_dataframe(pd.DataFrame([{"Title": "x"}]))
     for g in (c.co_institution(), c.co_country(), c.co_citation_authors()):
         assert g["n_nodes"] == 0 and g["n_edges"] == 0

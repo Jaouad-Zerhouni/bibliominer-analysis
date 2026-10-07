@@ -26,12 +26,12 @@ def _corpus(productivities):
 
 # ------------------------------------------------------------------ zeta ----
 
-def test_zeta_valeurs_connues():
+def test_zeta_known_values():
     assert lw._zeta(2.0) == pytest.approx(np.pi ** 2 / 6, abs=1e-4)
     assert lw._zeta(4.0) == pytest.approx(np.pi ** 4 / 90, abs=1e-4)
 
 
-def test_zeta_indefinie_en_dessous_de_un():
+def test_zeta_undefined_below_one():
     """The series diverges: no constant normalises the law."""
     assert np.isnan(lw._zeta(1.0))
     assert np.isnan(lw._zeta(0.755))
@@ -39,7 +39,7 @@ def test_zeta_indefinie_en_dessous_de_un():
 
 # ------------------------------------------------------------------- MLE ----
 
-def test_mle_retrouve_un_exposant_connu():
+def test_mle_finds_a_known_exponent():
     """A sample drawn from a zeta law with exponent 2.5: we must recover it."""
     rng = np.random.default_rng(7)
     a = 2.5
@@ -50,7 +50,7 @@ def test_mle_retrouve_un_exposant_connu():
     assert lw._lotka_mle(sample) == pytest.approx(a, abs=0.08)
 
 
-def test_mle_resiste_a_une_queue_qui_trompe_les_moindres_carres():
+def test_mle_resists_a_tail_that_fools_least_squares():
     """The fixed defect: a tail of levels with a single author each.
 
     Least squares on log-log give the same weight to every productivity
@@ -68,16 +68,16 @@ def test_mle_resiste_a_une_queue_qui_trompe_les_moindres_carres():
 
 # --------------------------------------------------------------- the formula ----
 
-def test_la_loi_ajustee_suit_bien_y_egale_c_sur_n_puissance_a():
+def test_the_fitted_law_follows_y_equals_c_over_n_power_a():
     c = _corpus([1] * 12 + [2] * 6 + [3] * 3 + [5, 8])
     r = c.lotka()
     a, const = r["fit"]["exponent"], r["fit"]["constant"]
     for row in r["table"].itertuples():
-        attendu = const * row.documents_written ** (-a)
-        assert row.share_fitted == pytest.approx(attendu, abs=1e-4)
+        expected = const * row.documents_written ** (-a)
+        assert row.share_fitted == pytest.approx(expected, abs=1e-4)
 
 
-def test_constante_normalise_la_loi():
+def test_constant_normalises_the_law():
     """C = 1/ζ(a): the law sums to 1 over ALL integers, not only the observed ones."""
     c = _corpus([1] * 12 + [2] * 6 + [3] * 3 + [5, 8])
     fit = c.lotka()["fit"]
@@ -86,13 +86,13 @@ def test_constante_normalise_la_loi():
     assert float(np.sum(const * n ** (-a))) == pytest.approx(1.0, abs=0.01)
 
 
-def test_les_trois_colonnes_sont_presentes():
+def test_the_three_columns_are_present():
     c = _corpus([1] * 8 + [2] * 4 + [3, 5])
     cols = set(c.lotka()["table"].columns)
     assert {"share_observed", "share_fitted", "share_lotka"} <= cols
 
 
-def test_lotka_strict_reste_l_exposant_deux():
+def test_strict_lotka_stays_exponent_two():
     """The reference column must NOT move with the fit."""
     c = _corpus([1] * 8 + [2] * 4 + [3, 5])
     t = c.lotka()["table"].set_index("documents_written")
@@ -101,7 +101,7 @@ def test_lotka_strict_reste_l_exposant_deux():
         assert t.loc[n, "share_lotka"] == pytest.approx((1 / n ** 2) / zeta2, abs=1e-4)
 
 
-def test_deux_tests_ks_distincts():
+def test_two_distinct_ks_tests():
     """Following a power law and following LOTKA's law are two questions."""
     c = _corpus([1] * 18 + [2] * 10 + [3, 3, 4, 4, 7, 7, 7, 25, 50])
     r = c.lotka()
@@ -110,7 +110,7 @@ def test_deux_tests_ks_distincts():
     assert r["ks_test_strict"]["d"] is not None
 
 
-def test_ajustement_plus_proche_que_lotka_strict():
+def test_fit_closer_than_strict_lotka():
     """That is the whole point of the fix: the gap must shrink."""
     c = _corpus([1] * 18 + [2] * 10 + [3, 3, 4, 4, 6, 7, 7, 7, 8, 10, 11, 12, 25, 50])
     r = c.lotka()

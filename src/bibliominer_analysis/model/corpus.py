@@ -333,7 +333,7 @@ class Corpus:
         """Callon's strategic map: centrality × density."""
         return th.thematic_map(self, top_n, min_weight, kind=kind)
 
-    # -- croissance ----------------------------------------------------------
+    # -- growth --------------------------------------------------------------
 
     def cagr(self) -> Optional[float]:
         """Compound annual growth (%)."""
@@ -516,7 +516,7 @@ class Corpus:
         """Share of the corpus actually matched to the reference table."""
         return scim.scimago_coverage(self, path)
 
-    # -- villes ---------------------------------------------------------------
+    # -- cities ---------------------------------------------------------------
 
     def top_cities(self, n: Optional[int] = 20) -> pd.DataFrame:
         """Cities by number of documents."""
@@ -536,7 +536,7 @@ class Corpus:
         return cit.cities_over_time(self, n)
 
     def city_hierarchy(self, n: Optional[int] = 40) -> pd.DataFrame:
-        """Pays → ville → institutions."""
+        """Country → city → institutions."""
         return cit.city_hierarchy(self, n)
 
     def co_city(self, top_n: int = 50, min_weight: int = 1) -> Dict[str, Any]:
@@ -582,7 +582,7 @@ class Corpus:
         """Garfield's historiograph: the lineage of the key works."""
         return loc.historiograph(self, n)
 
-    # -- revues ---------------------------------------------------------------
+    # -- journals -------------------------------------------------------------
 
     def sources_impact(self, n: Optional[int] = 20,
                        min_documents: int = 1) -> pd.DataFrame:

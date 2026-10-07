@@ -230,7 +230,7 @@ def anomalies(corpus) -> pd.DataFrame:
         row("Missing year", int(years.isna().sum()), "high",
             "Excluded from every time-based indicator."),
         row("Year in the future", int((years > (last or 0) + 1).sum()) if last else 0,
-            "low", "Usually an « in press » record; harmless but it stretches the axis."),
+            "low", "Usually an 'in press' record; harmless but it stretches the axis."),
         row("Negative or unreadable citations", int((cites < 0).sum()), "high",
             "Impact indices would be wrong."),
         row("No author", len(eids - with_authors), "high",

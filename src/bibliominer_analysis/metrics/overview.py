@@ -52,7 +52,7 @@ def main_information(corpus) -> Dict[str, Any]:
     if not years.empty and y_max is not None:
         age = round(float((y_max - years).mean()), 2)
 
-    # --- auteurs -----------------------------------------------------------
+    # --- authors -----------------------------------------------------------
     a = corpus.authors
     a = a[a["name"].notna() & (a["name"].map(str).str.strip() != "")]
     per_doc = a.drop_duplicates(subset=["eid", "name"]).groupby("eid").size()

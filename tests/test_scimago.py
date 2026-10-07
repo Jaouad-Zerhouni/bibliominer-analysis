@@ -17,21 +17,21 @@ def _doc(i, source, issn="", cited="0", year=2020):
     }
 
 
-def test_referentiel_charge():
+def test_reference_source_loaded():
     t = sc.load_scimago()
     assert not t.empty, "the SCImago CSV must travel with the package"
     assert set(t["quartile"].dropna().unique()) <= set(sc.QUARTILES)
     assert t["sjr"].max() > 1, "decimal commas must be read"
 
 
-def test_normalisation_issn():
+def test_issn_normalisation():
     assert sc.normalize_issn("1542-4863") == "15424863"
     assert sc.normalize_issn("0921030X") == "0921030X"
-    assert sc.normalize_issn("trop court") == ""
+    assert sc.normalize_issn("too short") == ""
     assert sc.normalize_issn(None) == ""
 
 
-def test_appariement_par_issn():
+def test_matching_by_issn():
     """CA-A Cancer Journal for Clinicians, Q1, first row of the reference table."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "Whatever the export calls it", issn="1542-4863"),
@@ -42,7 +42,7 @@ def test_appariement_par_issn():
     assert row["sjr"] > 100
 
 
-def test_appariement_par_titre_quand_issn_absent():
+def test_matching_by_title_when_issn_missing():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "Ca-A Cancer Journal for Clinicians"),
     ]))
@@ -51,7 +51,7 @@ def test_appariement_par_titre_quand_issn_absent():
     assert row["quartile"] == "Q1"
 
 
-def test_revue_inconnue_reste_vide():
+def test_unknown_journal_stays_empty():
     """We do not invent a quartile: that would be worse than saying nothing."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "Journal Of Things That Do Not Exist At All"),
@@ -62,7 +62,7 @@ def test_revue_inconnue_reste_vide():
     assert pd.isna(row["sjr"])
 
 
-def test_distribution_toujours_cinq_lignes():
+def test_distribution_always_five_rows():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "Ca-A Cancer Journal for Clinicians", issn="1542-4863"),
         _doc(2, "Journal Of Things That Do Not Exist"),
@@ -75,7 +75,7 @@ def test_distribution_toujours_cinq_lignes():
     assert counts["Not indexed"] == 1
 
 
-def test_couverture_dit_ce_qui_manque():
+def test_coverage_says_what_is_missing():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "Ca-A Cancer Journal for Clinicians", issn="1542-4863"),
         _doc(2, "Journal Of Things That Do Not Exist"),
@@ -88,7 +88,7 @@ def test_couverture_dit_ce_qui_manque():
     assert cov["document_share"] == pytest.approx(50.0)
 
 
-def test_quartiles_dans_le_temps():
+def test_quartiles_over_time():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "Ca-A Cancer Journal for Clinicians", issn="1542-4863", year=2019),
         _doc(2, "Journal Of Things That Do Not Exist", year=2019),
@@ -102,13 +102,13 @@ def test_quartiles_dans_le_temps():
     assert len(y) == 5
 
 
-def test_titre_trop_court_refuse_comme_cle():
-    """"Nature" or "Cell" cannot serve as a matching key."""
+def test_too_short_title_refused_as_key():
+    '''"Nature" or "Cell" cannot serve as a matching key.'''
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, "Cell")]))
     assert c.scimago_sources().iloc[0]["matched_by"] == ""
 
 
-def test_referentiel_absent_ne_casse_pas(tmp_path):
+def test_missing_reference_source_does_not_break(tmp_path):
     """Without the file, the analysis degrades, it does not stop."""
     missing = tmp_path / "absent.csv"
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, "Some Journal Name Here")]))

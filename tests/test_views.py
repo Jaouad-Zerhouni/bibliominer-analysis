@@ -59,7 +59,7 @@ def corpus():
 
 # --- documents ---------------------------------------------------------------
 
-def test_document_list_colonnes_et_tri(corpus):
+def test_document_list_columns_and_sort(corpus):
     docs = corpus.document_list()
     assert list(docs.columns) == ["title", "first_author", "year", "source",
                                   "doc_type", "citations", "local_citations", "doi"]
@@ -70,7 +70,7 @@ def test_document_list_colonnes_et_tri(corpus):
     assert dict(zip(docs["title"], docs["local_citations"]))[T2] == 1
 
 
-def test_document_list_autres_tris(corpus):
+def test_document_list_other_sorts(corpus):
     assert list(corpus.document_list(sort="year")["year"])[:2] == [2022, 2022]
     titles = list(corpus.document_list(sort="title")["title"])
     assert titles == sorted(titles)
@@ -101,7 +101,7 @@ def test_citation_balance_sources(corpus):
     assert list(b["balance"]) == sorted(b["balance"], reverse=True)
 
 
-def test_citation_balance_reprend_le_reseau(corpus):
+def test_citation_balance_matches_the_network(corpus):
     """The table and the drawing come from the same network."""
     graph = corpus.citation_graph("sources", min_weight=1)
     labels = {n["label"] for n in graph["nodes"]}
@@ -112,30 +112,30 @@ def test_citation_balance_reprend_le_reseau(corpus):
 # --- networks ----------------------------------------------------------------
 
 @pytest.mark.parametrize("unit", NETWORK_UNITS)
-def test_network_toutes_les_unites(corpus, unit):
+def test_network_all_units(corpus, unit):
     graph = corpus.network(unit, top_n=20, min_weight=1)
     assert {"nodes", "edges", "summary"} <= set(graph)
     ids = {n["id"] for n in graph["nodes"]}
     assert all(e["source"] in ids and e["target"] in ids for e in graph["edges"])
 
 
-def test_network_unite_inconnue(corpus):
+def test_network_unknown_unit(corpus):
     with pytest.raises(ValueError):
         corpus.network("journals")
 
 
-def test_network_normalisation_garde_le_poids_brut(corpus):
+def test_network_normalisation_keeps_the_raw_weight(corpus):
     graph = corpus.network("keywords", min_weight=1, normalization="association")
     assert graph["edges"]
     assert all("raw_weight" in e for e in graph["edges"])
 
 
-def test_network_superposition_par_annee(corpus):
+def test_network_overlay_by_year(corpus):
     graph = corpus.network("authors", min_weight=1, overlay=True)
     assert any(n.get("overlay_year") is not None for n in graph["nodes"])
 
 
-def test_density_map_deterministe(corpus):
+def test_density_map_deterministic(corpus):
     first = corpus.density_map("keywords", min_weight=1, size=16)
     second = corpus.density_map("keywords", min_weight=1, size=16)
     assert first == second

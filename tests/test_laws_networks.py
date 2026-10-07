@@ -39,7 +39,7 @@ def test_lotka_distribution():
     assert res["total_authors"] == 4
 
 
-def test_lotka_part_theorique():
+def test_lotka_theoretical_share():
     """Lotka's theoretical share for x=1 is 1/zeta(2) = 6/pi^2 ≈ 0.6079."""
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, "1:A."), _doc(2, "1:B.")]))
     row = c.lotka()["table"].iloc[0]
@@ -47,7 +47,7 @@ def test_lotka_part_theorique():
     assert row["share_lotka"] == pytest.approx(6 / np.pi ** 2, abs=1e-3)
 
 
-def test_lotka_corpus_vide():
+def test_lotka_empty_corpus():
     c = Corpus.from_dataframe(pd.DataFrame([{"Title": "x"}]))
     assert c.lotka()["table"].empty
 
@@ -56,7 +56,7 @@ def test_lotka_corpus_vide():
 # Bradford
 # ---------------------------------------------------------------------------
 
-def test_bradford_zones_couvrent_tout():
+def test_bradford_zones_cover_everything():
     """Every source belongs to a zone, and the zones add up to the total."""
     rows = []
     i = 0
@@ -78,7 +78,7 @@ def test_bradford_zones_couvrent_tout():
     assert top["source"] == "Core" and top["zone"] == 1
 
 
-def test_bradford_cumul_croissant():
+def test_bradford_increasing_cumulative():
     rows = [_doc(i, "1:A.", source="S%d" % (i % 4)) for i in range(12)]
     c = Corpus.from_dataframe(pd.DataFrame(rows))
     cum = c.bradford()["table"]["cumulative"].tolist()
@@ -90,7 +90,7 @@ def test_bradford_cumul_croissant():
 # Zipf
 # ---------------------------------------------------------------------------
 
-def test_zipf_rangs_et_frequences():
+def test_zipf_ranks_and_frequencies():
     rows = [
         _doc(1, "1:A.", keywords="alpha; beta; gamma"),
         _doc(2, "1:A.", keywords="alpha; beta"),
@@ -103,11 +103,11 @@ def test_zipf_rangs_et_frequences():
     assert t.iloc[0]["keyword"] == "alpha"
 
 
-def test_zipf_ajustement_sur_loi_parfaite():
+def test_zipf_fit_on_a_perfect_law():
     """On a distribution exactly in 1/rank, the exponent must be 1."""
     rows = []
     i = 0
-    for rank, freq in enumerate([12, 6, 4, 3], start=1):   # ~ 12/rang
+    for rank, freq in enumerate([12, 6, 4, 3], start=1):   # ~ 12/rank
         for _ in range(freq):
             i += 1
             rows.append(_doc(i, "1:A.", keywords="w%d" % rank))
@@ -121,7 +121,7 @@ def test_zipf_ajustement_sur_loi_parfaite():
 # Networks
 # ---------------------------------------------------------------------------
 
-def test_co_word_poids():
+def test_co_word_weights():
     """alpha and beta together in 2 documents -> an edge of weight 2."""
     rows = [
         _doc(1, "1:A.", keywords="alpha; beta"),
@@ -135,7 +135,7 @@ def test_co_word_poids():
     assert edge[("alpha", "gamma")] == 1
 
 
-def test_co_word_filtre_les_liens_faibles():
+def test_co_word_filters_weak_links():
     rows = [_doc(1, "1:A.", keywords="alpha; beta"),
             _doc(2, "1:A.", keywords="alpha; gamma")]
     c = Corpus.from_dataframe(pd.DataFrame(rows))
@@ -153,7 +153,7 @@ def test_co_authorship():
     assert w[tuple(sorted(("name:A.", "name:C.")))] == 1
 
 
-def test_co_citation_par_doi():
+def test_co_citation_by_doi():
     """Two references shared by two documents -> an edge of weight 2."""
     r = ("ref1 | 10.1/x | 2015 | Doe J. | Paper X ; "
          "ref2 | 10.1/y | 2016 | Roe R. | Paper Y")
@@ -165,14 +165,14 @@ def test_co_citation_par_doi():
     assert any("Paper X" in n["label"] for n in g["nodes"])
 
 
-def test_co_citation_ignore_les_refs_non_identifiables():
+def test_co_citation_ignores_unidentifiable_refs():
     """Without a DOI or a usable title, a reference cannot be matched."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "1:A.", refs="ref1 | | | | ab ; ref2 | | | | cd")]))
     assert c.co_citation(min_weight=1)["n_nodes"] == 0
 
 
-def test_reseaux_corpus_vide():
+def test_networks_empty_corpus():
     c = Corpus.from_dataframe(pd.DataFrame([{"Title": "x"}]))
     for g in (c.co_word(), c.co_citation(), c.co_authorship()):
         assert g["n_nodes"] == 0 and g["n_edges"] == 0
@@ -182,7 +182,7 @@ def test_reseaux_corpus_vide():
 # Country map
 # ---------------------------------------------------------------------------
 
-def test_country_map_collaboration_internationale():
+def test_country_map_international_collaboration():
     rows = [
         _doc(1, "1:A."),                                    # Morocco alone
         dict(_doc(2, "1:B."),

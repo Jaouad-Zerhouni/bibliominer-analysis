@@ -48,7 +48,7 @@ _INDEX = re.compile(S.AUTHOR_INDEX_PATTERN)
 
 
 def _numbered_in_order(cell: str) -> bool:
-    """"1:A.; 2:B.; 3:C." yes; "A.; B." or "1:A.; 3:B." no."""
+    '''"1:A.; 2:B.; 3:C." yes; "A.; B." or "1:A.; 3:B." no.'''
     parts = [p for p in (x.strip() for x in cell.split(S.LIST_SEP)) if p]
     for expected, part in enumerate(parts, 1):
         m = _INDEX.match(part)
@@ -165,7 +165,7 @@ def build_tables(df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
             "publisher": col(row, S.COL_PUBLISHER) or None,
         })
 
-        # --- auteurs ------------------------------------------------------
+        # --- authors ------------------------------------------------------
         parsed_authors = P.parse_authors(row.get(S.COL_AUTHORS),
                                          row.get(S.COL_AUTHOR_FULL),
                                          row.get(S.COL_AUTHOR_IDS))

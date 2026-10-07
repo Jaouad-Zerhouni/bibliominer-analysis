@@ -31,15 +31,15 @@ PNG = b"\x89PNG\r\n\x1a\n"
     ("Morocco", "Morocco"),
     ("morocco", "Morocco"),
 ])
-def test_noms_de_pays_vers_le_fond_de_carte(corpus_name, atlas):
+def test_country_names_to_the_base_map(corpus_name, atlas):
     assert atlas_name(corpus_name) == atlas
 
 
-def test_pays_absent_du_fond_de_carte():
+def test_country_missing_from_the_base_map():
     assert atlas_name("Hong Kong") is None
 
 
-def test_aucun_anneau_ne_traverse_la_carte():
+def test_no_ring_crosses_the_map():
     """A ring that crosses the 180° line must not jump from one edge to the
     other (otherwise a horizontal band strikes across the map)."""
     shapes, _ = _atlas()
@@ -49,14 +49,14 @@ def test_aucun_anneau_ne_traverse_la_carte():
             assert max(jumps, default=0) <= 180, name
 
 
-def test_cartes_du_monde_png():
+def test_world_maps_png():
     values = {"Morocco": 85, "Spain": 69, "United States": 3, "Hong Kong": 1}
     assert render_world_map(values, dpi=60).startswith(PNG)
     links = [("Morocco", "Spain", 40), ("Spain", "United States", 2)]
     assert render_world_map(values, links=links, dpi=60).startswith(PNG)
 
 
-def test_graphiques_sans_axes_png():
+def test_charts_without_axes_png():
     kw = pd.DataFrame({"keyword": ["Machine learning", "Classification", "Usability"],
                        "documents": [24, 18, 7]})
     assert render_treemap(kw, dpi=60).startswith(PNG)
@@ -84,7 +84,7 @@ def _tables(authors, keywords):
     return {"authors": pd.DataFrame(authors), "keywords": pd.DataFrame(keywords)}
 
 
-def test_une_graphie_par_auteur_selon_son_identifiant():
+def test_one_spelling_per_author_by_identifier():
     t = unify_spellings(_tables(
         {"eid": ["d1", "d2", "d3", "d4"],
          "name": ["Fernández-Alemán J.L.", "Fernández-Alemán J.L.",
@@ -96,7 +96,7 @@ def test_une_graphie_par_auteur_selon_son_identifiant():
     assert names[3] == "Noid A."
 
 
-def test_une_graphie_par_mot_cle_sans_la_casse():
+def test_one_spelling_per_keyword_ignoring_case():
     t = unify_spellings(_tables(
         {"eid": [], "name": [], "scopus_id": []},
         {"eid": ["d1", "d2", "d3", "d4"],
@@ -105,7 +105,7 @@ def test_une_graphie_par_mot_cle_sans_la_casse():
     assert list(t["keywords"]["keyword"]) == ["Machine learning"] * 3 + ["ML"]
 
 
-def test_mots_cles_de_types_differents_restent_separes():
+def test_keywords_of_different_types_stay_separate():
     t = unify_spellings(_tables(
         {"eid": [], "name": [], "scopus_id": []},
         {"eid": ["d1", "d2", "d3"], "keyword": ["Ecology", "ecology", "ecology"],
@@ -113,7 +113,7 @@ def test_mots_cles_de_types_differents_restent_separes():
     assert list(t["keywords"]["keyword"]) == ["Ecology", "ecology", "ecology"]
 
 
-def test_organisations_meme_nom_a_la_ponctuation_pres():
+def test_organisations_same_name_up_to_punctuation():
     tables = _tables({"eid": [], "name": [], "scopus_id": []},
                      {"eid": [], "keyword": [], "kind": []})
     tables["affiliations"] = pd.DataFrame({
@@ -127,7 +127,7 @@ def test_organisations_meme_nom_a_la_ponctuation_pres():
     assert out["subparent"][3] == "Facultad de Informática"
 
 
-def test_colonnes_non_textuelles_intactes():
+def test_non_text_columns_untouched():
     """A boolean indicator (labelled) keeps its type: only a column of NAMES is
     normalised."""
     tables = _tables({"eid": [], "name": [], "scopus_id": []},
@@ -145,12 +145,12 @@ def test_colonnes_non_textuelles_intactes():
     ("Singapore", True), ("Hong Kong", True), ("Viet Nam", True), ("Kosovo", True),
     ("University Moulay Ismail of Meknes", False), ("Meknes", False), ("", False),
 ])
-def test_reconnaissance_des_pays(name, expected):
+def test_country_recognition(name, expected):
     from bibliominer_analysis.io.countries import is_country
     assert is_country(name) is expected
 
 
-def test_petits_pays_places_a_leur_capitale():
+def test_small_countries_placed_at_their_capital():
     from bibliominer_analysis.io.countries import atlas_name, position
     assert atlas_name("Singapore") is None          # absent from the 1:110 m base map
     lon, lat = position("Singapore")
@@ -160,7 +160,7 @@ def test_petits_pays_places_a_leur_capitale():
                             links=[("Singapore", "Morocco", 2)], dpi=60).startswith(PNG)
 
 
-def test_affiliation_brute_sans_pays_reconnu():
+def test_raw_affiliation_without_recognised_country():
     """The last segment is a country only if it is one: otherwise the geography
     stays empty, and that segment is the organisation."""
     from bibliominer_analysis.io import parsers as P
@@ -171,7 +171,7 @@ def test_affiliation_brute_sans_pays_reconnu():
     assert r["country"] == "Morocco" and r["city"] == "Rabat"
 
 
-def test_trois_champs_meme_nom_dans_deux_colonnes():
+def test_three_fields_same_name_in_two_columns():
     """A keyword and a journal with the same name stay two distinct nodes."""
     links = pd.DataFrame({"source": ["A", "Energies"], "target": ["Energies", "Energies"],
                           "value": [2, 2], "depth": [0, 1]})

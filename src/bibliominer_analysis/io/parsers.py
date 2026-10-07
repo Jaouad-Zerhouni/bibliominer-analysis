@@ -15,7 +15,7 @@ from . import schema as S
 
 _INDEX_RE = re.compile(S.AUTHOR_INDEX_PATTERN)
 _AWA_MULTI_RE = re.compile(S.AWA_MULTI_AFFILIATION_PATTERN)
-#: « Idri, Ali (6602789810) » -> nom + identifiant Scopus
+#: "Idri, Ali (6602789810)" -> name + Scopus identifier
 _FULLNAME_RE = re.compile(r"^(.*?)\s*\((\d{5,})\)\s*$")
 
 
@@ -38,7 +38,7 @@ def split_list(value: Any) -> List[str]:
 
 
 def strip_index(item: str) -> "tuple[Optional[int], str]":
-    """"3:Abran A." -> (3, 'Abran A.'). Without a prefix -> (None, item)."""
+    '''"3:Abran A." -> (3, 'Abran A.'). Without a prefix -> (None, item).'''
     m = _INDEX_RE.match(item or "")
     if not m:
         return None, (item or "").strip()
@@ -46,7 +46,7 @@ def strip_index(item: str) -> "tuple[Optional[int], str]":
 
 
 # ---------------------------------------------------------------------------
-# Auteurs
+# Authors
 # ---------------------------------------------------------------------------
 
 def _by_index(items: List[str]) -> Optional[Dict[int, str]]:
@@ -66,7 +66,7 @@ def _surname_key(text: str) -> str:
 
 
 def _surname_of_short(name: str) -> str:
-    """"El Baida M." -> "el baida": the short name without its initials."""
+    '''"El Baida M." -> "el baida": the short name without its initials.'''
     tokens = name.strip().split()
     while len(tokens) > 1 and "." in tokens[-1]:
         tokens.pop()
@@ -74,7 +74,7 @@ def _surname_of_short(name: str) -> str:
 
 
 def _surname_of_full(full: str) -> str:
-    """« El Baida, Maelaynayn (58834078300) » -> « el baida »."""
+    """'El Baida, Maelaynayn (58834078300)' -> 'el baida'."""
     return _surname_key(full.split(",")[0])
 
 
@@ -358,13 +358,13 @@ def _reconciled(item: str, i: int) -> Dict[str, Any]:
 
 
 def _raw_scopus(item: str, i: int) -> Dict[str, Any]:
-    """"Ali A.; Gravino C., A systematic literature review..., Journal..., 31,
+    '''"Ali A.; Gravino C., A systematic literature review..., Journal..., 31,
     (2019)" -> authors, title, year, DOI.
 
     Authors are separated by ";", the last one is followed by the title after
     a comma. When the form is not that one, the whole text stays the title:
     information is never lost.
-    """
+    '''
     years = _YEAR.findall(item)
     doi = _DOI.search(item)
     parts = [p.strip() for p in item.split(";")]

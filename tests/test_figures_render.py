@@ -14,7 +14,7 @@ def _png_signature(data: bytes) -> bool:
     return data[:8] == b"\x89PNG\r\n\x1a\n"
 
 
-def test_barres_simples_produit_un_png_valide():
+def test_simple_bars_produce_a_valid_png():
     spec = FigureSpec(
         kind="bar",
         categories=["2020", "2021", "2022"],
@@ -26,7 +26,7 @@ def test_barres_simples_produit_un_png_valide():
     assert len(data) > 500  # an empty figure would be a few dozen bytes
 
 
-def test_lignes_multi_series_ne_leve_pas():
+def test_multi_series_lines_do_not_raise():
     spec = FigureSpec(
         kind="line",
         categories=["2020", "2021", "2022"],
@@ -38,7 +38,7 @@ def test_lignes_multi_series_ne_leve_pas():
     assert _png_signature(render_figure(spec, fmt="png"))
 
 
-def test_nuage_de_points_simple():
+def test_simple_scatter_plot():
     spec = FigureSpec(
         kind="scatter",
         series=[Series(name="Corpus", points=[(1.0, 2.0), (3.0, 4.5)])],
@@ -46,7 +46,7 @@ def test_nuage_de_points_simple():
     assert _png_signature(render_figure(spec, fmt="png"))
 
 
-def test_barres_horizontales_grille_sur_l_axe_des_valeurs():
+def test_horizontal_bars_grid_on_the_value_axis():
     """Non-regression: the grid line must follow the X axis (values) in
     horizontal orientation, not Y (categories) -- otherwise it is useless."""
     spec = FigureSpec(
@@ -57,7 +57,7 @@ def test_barres_horizontales_grille_sur_l_axe_des_valeurs():
     render_figure(spec, fmt="png")  # must not raise
 
 
-def test_barres_et_ligne_melangees_ne_leve_pas():
+def test_mixed_bars_and_line_do_not_raise():
     """The "count + trend" pattern (RPYS, moving average...): a bar series and a
     line series on the same categorical axis."""
     spec = FigureSpec(
@@ -71,7 +71,7 @@ def test_barres_et_ligne_melangees_ne_leve_pas():
     assert _png_signature(render_figure(spec, fmt="png"))
 
 
-def test_scatter_melange_a_des_barres_leve_figure_error():
+def test_scatter_mixed_with_bars_raises_figure_error():
     spec = FigureSpec(
         kind="bar", categories=["a", "b"],
         series=[
@@ -83,35 +83,35 @@ def test_scatter_melange_a_des_barres_leve_figure_error():
         render_figure(spec, fmt="png")
 
 
-def test_type_non_couvert_leve_figure_error():
+def test_uncovered_type_raises_figure_error():
     spec = FigureSpec(kind="sankey", series=[Series(name="x", values=[1])])
     with pytest.raises(FigureError):
         render_figure(spec, fmt="png")
 
 
-def test_format_jpg_produit_un_jpeg_valide():
-    """"jpg" is the name users know -- matplotlib only knows "jpeg" (internal
-    alias, see `_MPL_FORMAT`)."""
+def test_jpg_format_produces_a_valid_jpeg():
+    '''"jpg" is the name users know -- matplotlib only knows "jpeg" (internal
+    alias, see `_MPL_FORMAT`).'''
     spec = FigureSpec(kind="bar", categories=["a", "b"],
                       series=[Series(name="x", values=[1, 2])])
     data = render_figure(spec, fmt="jpg")
     assert data[:3] == b"\xff\xd8\xff"  # signature JPEG
 
 
-def test_format_inconnu_leve_figure_error():
+def test_unknown_format_raises_figure_error():
     spec = FigureSpec(kind="bar", categories=["a"],
                       series=[Series(name="x", values=[1])])
     with pytest.raises(FigureError):
         render_figure(spec, fmt="gif")
 
 
-def test_aucune_serie_leve_figure_error():
+def test_no_series_raises_figure_error():
     spec = FigureSpec(kind="bar", categories=["a"], series=[])
     with pytest.raises(FigureError):
         render_figure(spec, fmt="png")
 
 
-def test_longueur_valeurs_categories_desaccordees_leve_figure_error():
+def test_mismatched_values_categories_length_raises_figure_error():
     """A series of 2 values for 3 categories is broken data -- the figure must
     not silently build itself on a wrong alignment."""
     spec = FigureSpec(
@@ -122,20 +122,20 @@ def test_longueur_valeurs_categories_desaccordees_leve_figure_error():
         render_figure(spec, fmt="png")
 
 
-def test_scatter_sans_points_leve_figure_error():
+def test_scatter_without_points_raises_figure_error():
     spec = FigureSpec(kind="scatter", series=[Series(name="x", points=None)])
     with pytest.raises(FigureError):
         render_figure(spec, fmt="png")
 
 
-def test_svg_est_du_texte_vectoriel():
+def test_svg_is_vector_text():
     spec = FigureSpec(kind="bar", categories=["a"],
                       series=[Series(name="x", values=[1])])
     data = render_figure(spec, fmt="svg")
     assert data.strip().startswith(b"<?xml") or data.strip().startswith(b"<svg")
 
 
-def test_couleurs_categorielles_dans_l_ordre_valide():
+def test_categorical_colours_in_valid_order():
     """The first series must carry the FIRST colour of the validated ramp --
     never a colour picked at random by matplotlib."""
     from bibliominer_analysis.figures.palette import CATEGORICAL_LIGHT
@@ -150,7 +150,7 @@ def test_couleurs_categorielles_dans_l_ordre_valide():
     assert CATEGORICAL_LIGHT[0].lower() in svg.lower()
 
 
-def test_axes_logarithmiques_pour_zipf():
+def test_logarithmic_axes_for_zipf():
     """Zipf is read in log-log: the option must change the scale, not raise."""
     spec = FigureSpec(kind="scatter", x_log=True, y_log=True,
                       series=[Series(name="observed",
@@ -162,7 +162,7 @@ def test_axes_logarithmiques_pour_zipf():
     assert log_svg != linear_svg
 
 
-def test_etiquettes_de_points_superposes_fusionnees():
+def test_overlapping_point_labels_merged():
     """Two themes at the same place: a single "first +1" label."""
     spec = FigureSpec(kind="scatter", series=[Series(
         name="themes", points=[(0, 50), (0, 50), (1, 60)],
@@ -173,7 +173,7 @@ def test_etiquettes_de_points_superposes_fusionnees():
     assert "Gamma theme" in svg
 
 
-def test_beaucoup_de_categories_graduations_clairsemees():
+def test_many_categories_sparse_ticks():
     """77 Bradford ranks: the axis does not write 77 labels side by side."""
     from bibliominer_analysis.figures import render as r
 

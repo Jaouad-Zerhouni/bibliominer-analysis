@@ -9,7 +9,7 @@ from bibliominer_analysis.io import parsers as P
 from bibliominer_analysis.io.schema import INDEPENDENT_LABEL
 
 
-# --- auteurs ---------------------------------------------------------------
+# --- authors ---------------------------------------------------------------
 
 def test_authors_indexes_bibliominer():
     a = P.parse_authors(
@@ -23,7 +23,7 @@ def test_authors_indexes_bibliominer():
     assert a[0]["scopus_id"] == "6602789810"
 
 
-def test_authors_scopus_brut_sans_index():
+def test_authors_raw_scopus_without_index():
     """Old export: no "n:" prefix. The position falls back on the rank."""
     a = P.parse_authors("Idri A.; Hosni M.",
                         "Idri, Ali (6602789810); Hosni, Mohamed (57189341317)",
@@ -32,7 +32,7 @@ def test_authors_scopus_brut_sans_index():
     assert a[1]["scopus_id"] == "57189341317"
 
 
-def test_authors_colonnes_desalignees():
+def test_authors_misaligned_columns():
     """A damaged export must neither shift the names nor raise an exception."""
     a = P.parse_authors("A.; B.; C.", "A, Alpha (11111)", "")
     assert len(a) == 3
@@ -40,14 +40,14 @@ def test_authors_colonnes_desalignees():
     assert a[2]["full_name"] is None
 
 
-def test_authors_cellule_vide():
+def test_authors_empty_cell():
     assert P.parse_authors("", "", "") == []
     assert P.parse_authors(None) == []
 
 
 # --- affiliations ----------------------------------------------------------
 
-def test_affiliation_etiquetee():
+def test_labelled_affiliation():
     r = P.parse_affiliation(
         "subparent: ENSMR, parent 1: National School of Mineral Industry, "
         "city: Rabat, country: Morocco")
@@ -59,7 +59,7 @@ def test_affiliation_etiquetee():
     assert r["parent2"] is None and r["region"] is None
 
 
-def test_affiliation_etiquetee_champs_omis():
+def test_labelled_affiliation_omitted_fields():
     """Empty fields are OMITTED from the export: reading must not depend on the
     position."""
     r = P.parse_affiliation("parent 1: University of Murcia, city: Murcia, "
@@ -75,7 +75,7 @@ def test_affiliation_independent():
     assert r["parent1"] == INDEPENDENT_LABEL
 
 
-def test_affiliation_brute_scopus():
+def test_raw_scopus_affiliation():
     """Not cleaned: only country and city are reliable, by final position."""
     r = P.parse_affiliation(
         "National School of Applied Sciences of Oujda, Mohamed 1st University, "
@@ -86,14 +86,14 @@ def test_affiliation_brute_scopus():
     assert r["parent1"] == "Mohamed 1st University"
 
 
-def test_affiliation_vide():
+def test_empty_affiliation():
     r = P.parse_affiliation("")
     assert r["country"] is None and r["raw"] == ""
 
 
 # --- references ------------------------------------------------------------
 
-def test_references_reconciliees():
+def test_reconciled_references():
     cell = ("ref1 | 10.1007/s11749-016-0481-7 | 2016 | Biau, Scornet | "
             "A random forest guided tour ; "
             "ref2 | 10.1145/2939672.2939785 | 2016 | Chen T., Guestrin C. | "
@@ -106,7 +106,7 @@ def test_references_reconciliees():
     assert r[1]["ref_title"].startswith("XGBoost")
 
 
-def test_reference_non_structuree_conservee():
+def test_unstructured_reference_kept():
     """Without vertical bars, the text is kept rather than lost."""
     r = P.parse_references("Some old raw reference, 1998")
     assert len(r) == 1
@@ -114,13 +114,13 @@ def test_reference_non_structuree_conservee():
     assert "1998" in r[0]["ref_title"]
 
 
-def test_references_vides():
+def test_empty_references():
     assert P.parse_references("") == []
 
 
 # --- keywords --------------------------------------------------------------
 
-def test_keywords_dedoublonnes_sans_casse():
+def test_keywords_deduplicated_ignoring_case():
     k = P.parse_keywords("Machine Learning; machine learning; Random Forest")
     assert k == ["Machine Learning", "Random Forest"]
 

@@ -34,7 +34,7 @@ def _corpus(specs):
 # CAGR / AGR
 # ---------------------------------------------------------------------------
 
-def test_cagr_doublement_annuel():
+def test_cagr_yearly_doubling():
     """1 doc en 2020, 2 en 2021, 4 en 2022 -> +100 %/an."""
     c = _corpus([(2020, 1)] + [(2021, 1)] * 2 + [(2022, 1)] * 4)
     assert c.cagr() == 100.0
@@ -45,11 +45,11 @@ def test_cagr_stable():
     assert c.cagr() == 0.0
 
 
-def test_cagr_une_seule_annee():
+def test_cagr_single_year():
     assert _corpus([(2020, 1), (2020, 1)]).cagr() is None
 
 
-def test_agr_annee_par_annee():
+def test_agr_year_by_year():
     """2 docs en 2020, 3 en 2021 -> +50 % ; 3 -> 6 -> +100 %."""
     c = _corpus([(2020, 1)] * 2 + [(2021, 1)] * 3 + [(2022, 1)] * 6)
     a = c.agr().set_index("year")
@@ -59,9 +59,9 @@ def test_agr_annee_par_annee():
     assert list(a["cumulative"]) == [2, 5, 11]
 
 
-def test_agr_annee_vide_sans_division_par_zero():
+def test_agr_empty_year_without_division_by_zero():
     """A year without documents must not produce an infinite rate."""
-    c = _corpus([(2020, 1), (2022, 1)])       # 2021 vide
+    c = _corpus([(2020, 1), (2022, 1)])       # 2021 empty
     a = c.agr().set_index("year")
     assert a.loc[2021, "documents"] == 0
     assert pd.isna(a.loc[2022, "agr"])        # division by zero avoided
@@ -71,7 +71,7 @@ def test_agr_annee_vide_sans_division_par_zero():
 # RGR / doubling time
 # ---------------------------------------------------------------------------
 
-def test_rgr_et_doublement():
+def test_rgr_and_doubling():
     """Cumulative 1, 2, 4 -> RGR = ln2 every year -> doubling in 1 year."""
     c = _corpus([(2020, 1), (2021, 1), (2022, 1), (2022, 1)])
     r = c.rgr_doubling_time().set_index("year")
@@ -81,7 +81,7 @@ def test_rgr_et_doublement():
     assert r.loc[2022, "doubling_time"] == pytest.approx(1.0, abs=0.02)
 
 
-def test_rgr_decroit_sur_croissance_lineaire():
+def test_rgr_decreases_on_linear_growth():
     """At constant production, RGR decreases: that is the expected behaviour."""
     c = _corpus([(2020 + i, 1) for i in range(5)])
     r = c.rgr_doubling_time()["rgr"].dropna().tolist()
@@ -92,7 +92,7 @@ def test_rgr_decroit_sur_croissance_lineaire():
 # Cochran
 # ---------------------------------------------------------------------------
 
-def test_cochran_population_infinie():
+def test_cochran_infinite_population():
     """n0 = 1.96² × 0.25 / 0.05² = 384,16 -> 385."""
     c = _corpus([(2020, 1)] * 10)
     r = c.cochran_sample_size()
@@ -100,7 +100,7 @@ def test_cochran_population_infinie():
     assert r["z_score"] == 1.96
 
 
-def test_cochran_correction_population_finie():
+def test_cochran_finite_population_correction():
     """Over 100 documents: n = 385 / (1 + 384/100) = 79.5 -> 80."""
     c = _corpus([(2020, 1)] * 100)
     r = c.cochran_sample_size()
@@ -108,14 +108,14 @@ def test_cochran_correction_population_finie():
     assert r["sample_size"] == 80
 
 
-def test_cochran_ne_depasse_jamais_le_corpus():
+def test_cochran_never_exceeds_the_corpus():
     c = _corpus([(2020, 1)] * 10)
     r = c.cochran_sample_size()
     assert r["sample_size"] <= 10
     assert r["sampling_fraction"] <= 100
 
 
-def test_cochran_marge_plus_serree_demande_plus():
+def test_cochran_tighter_margin_needs_more():
     c = _corpus([(2020, 1)] * 1000)
     large = c.cochran_sample_size(margin=0.10)["sample_size"]
     tight = c.cochran_sample_size(margin=0.03)["sample_size"]
@@ -126,7 +126,7 @@ def test_cochran_marge_plus_serree_demande_plus():
 # Collaboration
 # ---------------------------------------------------------------------------
 
-def test_degre_de_collaboration():
+def test_degree_of_collaboration():
     """3 co-authored documents out of 4 -> C = 0.75."""
     c = _corpus([(2020, 1), (2020, 2), (2020, 3), (2020, 4)])
     r = c.collaboration_indicators()
@@ -135,13 +135,13 @@ def test_degre_de_collaboration():
     assert r["degree_of_collaboration"] == 0.75
 
 
-def test_indice_de_collaboration_lawani():
+def test_lawani_collaboration_index():
     """CI = Σ(j·f_j)/N = (1+2+3+4)/4 = 2.5 authors per document."""
     c = _corpus([(2020, 1), (2020, 2), (2020, 3), (2020, 4)])
     assert c.collaboration_indicators()["collaboration_index"] == 2.5
 
 
-def test_coefficient_de_collaboration():
+def test_collaboration_coefficient():
     """CC = 1 − Σ(f_j/j)/N = 1 − (1/1+1/2+1/3+1/4)/4 = 1 − 0,520833 = 0,479167."""
     c = _corpus([(2020, 1), (2020, 2), (2020, 3), (2020, 4)])
     r = c.collaboration_indicators()
@@ -150,7 +150,7 @@ def test_coefficient_de_collaboration():
     assert r["modified_collaborative_coefficient"] == pytest.approx(0.6389, abs=1e-4)
 
 
-def test_tout_en_solo():
+def test_all_solo():
     c = _corpus([(2020, 1), (2021, 1)])
     r = c.collaboration_indicators()
     assert r["degree_of_collaboration"] == 0.0
@@ -191,7 +191,7 @@ def test_cai_reference_a_cent():
         assert all(v == 100.0 for v in vals), (col, vals)
 
 
-def test_cai_sur_representation():
+def test_cai_over_representation():
     """Period 1: single authors only. Period 2: co-authored only."""
     specs = [(2000, 1), (2000, 1)] + [(2010, 2), (2010, 2)]
     t = _corpus(specs).cai(block_years=5).set_index("period")
@@ -201,7 +201,7 @@ def test_cai_sur_representation():
     assert t.loc[p2, "cai_two"] == 200.0
 
 
-def test_cai_corpus_vide():
+def test_cai_empty_corpus():
     c = Corpus.from_dataframe(pd.DataFrame([{"Title": "x"}]))
     assert c.cai().empty
 
@@ -223,7 +223,7 @@ def test_price_law():
     assert r["observed_share"] == pytest.approx(33.3, abs=0.1)
 
 
-def test_growth_summary_corpus_vide():
+def test_growth_summary_empty_corpus():
     c = Corpus.from_dataframe(pd.DataFrame([{"Title": "x"}]))
     s = c.growth_summary()
     assert s["cagr"] is None and s["rgr_mean"] is None
@@ -233,7 +233,7 @@ def test_growth_summary_corpus_vide():
 # Least-squares trend
 # ---------------------------------------------------------------------------
 
-def test_trend_lineaire_parfait():
+def test_trend_perfect_linear():
     """2, 4, 6, 8 documents -> pente exactement 2, R² = 1."""
     specs = []
     for i, n in enumerate([2, 4, 6, 8]):
@@ -249,7 +249,7 @@ def test_trend_lineaire_parfait():
     assert fut.iloc[1]["fitted"] == pytest.approx(12.0, abs=1e-6)
 
 
-def test_trend_exponentiel():
+def test_trend_exponential():
     """1, 2, 4, 8 -> facteur multiplicatif annuel = 2."""
     specs = []
     for i, n in enumerate([1, 2, 4, 8]):
@@ -259,7 +259,7 @@ def test_trend_exponentiel():
     assert res["fit"]["r2"] == pytest.approx(1.0, abs=1e-3)
 
 
-def test_trend_projection_jamais_negative():
+def test_trend_projection_never_negative():
     """A downward slope must not predict a negative number."""
     specs = []
     for i, n in enumerate([10, 6, 2]):
@@ -268,7 +268,7 @@ def test_trend_projection_jamais_negative():
     assert (res["table"]["fitted"] >= 0).all()
 
 
-def test_trend_exige_trois_annees():
+def test_trend_requires_three_years():
     """Two points always give an R² of 1: that is not a trend."""
     res = _corpus([(2020, 1), (2021, 1)]).trend_forecast()
     assert res["fit"] is None

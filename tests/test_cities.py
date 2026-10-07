@@ -22,7 +22,7 @@ RABAT2 = "parent 1: Univ C, city: Rabat, country: Morocco"
 MADRID = "parent 1: Univ D, city: Madrid, country: Spain"
 
 
-def test_portee_distingue_national_de_local():
+def test_reach_distinguishes_national_from_local():
     """The SCP/MCP split puts these two documents together; we do not."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, RABAT + ";" + RABAT2),      # two institutions, one city
@@ -37,14 +37,14 @@ def test_portee_distingue_national_de_local():
     assert s["Single affiliation"] == 1
 
 
-def test_portee_somme_a_cent_pour_cent():
+def test_reach_sums_to_one_hundred_percent():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, RABAT + ";" + MEKNES), _doc(2, RABAT + ";" + MADRID),
     ]))
     assert c.collaboration_scale()["share"].sum() == pytest.approx(100.0, abs=0.2)
 
 
-def test_portee_toujours_quatre_lignes():
+def test_reach_always_four_rows():
     """An empty category would read as missing data."""
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, RABAT)]))
     s = c.collaboration_scale()
@@ -53,7 +53,7 @@ def test_portee_toujours_quatre_lignes():
                                 "National (same country)", "International"]
 
 
-def test_une_seule_affiliation_n_est_pas_une_collaboration_locale():
+def test_a_single_affiliation_is_not_a_local_collaboration():
     """Confusing them would artificially inflate local collaboration."""
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, RABAT), _doc(2, RABAT)]))
     s = c.collaboration_scale().set_index("scale")["documents"]
@@ -61,7 +61,7 @@ def test_une_seule_affiliation_n_est_pas_une_collaboration_locale():
     assert s["Local (same city)"] == 0
 
 
-def test_top_cities_compte_les_institutions():
+def test_top_cities_counts_the_institutions():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, RABAT + ";" + RABAT2), _doc(2, RABAT),
     ]))
@@ -71,13 +71,13 @@ def test_top_cities_compte_les_institutions():
     assert row["country"] == "Morocco"
 
 
-def test_un_document_compte_pour_chaque_ville():
+def test_a_document_counts_for_each_city():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, RABAT + ";" + MEKNES)]))
     t = c.top_cities().set_index("city")["documents"]
     assert t["Rabat"] == 1 and t["Meknes"] == 1
 
 
-def test_reseau_marque_national_et_international():
+def test_network_marks_national_and_international():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, RABAT + ";" + MEKNES),
         _doc(2, RABAT + ";" + MADRID),
@@ -92,7 +92,7 @@ def test_reseau_marque_national_et_international():
             assert scope == "international"
 
 
-def test_reseau_porte_le_pays_de_chaque_ville():
+def test_network_carries_each_citys_country():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, RABAT + ";" + MADRID)]))
     g = c.co_city(min_weight=1)
     country = {n["id"]: n["country"] for n in g["nodes"]}
@@ -100,7 +100,7 @@ def test_reseau_porte_le_pays_de_chaque_ville():
     assert country["Madrid"] == "Spain"
 
 
-def test_hierarchie_rapporte_au_total_du_pays():
+def test_hierarchy_relative_to_the_country_total():
     """The share is computed BEFORE any truncation, otherwise the denominator
     lies."""
     c = Corpus.from_dataframe(pd.DataFrame([
@@ -111,7 +111,7 @@ def test_hierarchie_rapporte_au_total_du_pays():
     assert h.loc["Meknes", "share_of_country"] == pytest.approx(25.0)
 
 
-def test_villes_dans_le_temps_sans_trou():
+def test_cities_over_time_without_gap():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, RABAT, year=2018), _doc(2, RABAT, year=2021),
     ]))
@@ -120,7 +120,7 @@ def test_villes_dans_le_temps_sans_trou():
     assert list(t["cumulative"]) == [1, 1, 1, 2]
 
 
-def test_corpus_sans_ville_ne_casse_pas():
+def test_corpus_without_city_does_not_break():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "parent 1: Univ A, country: Morocco"),
     ]))
@@ -130,7 +130,7 @@ def test_corpus_sans_ville_ne_casse_pas():
     assert len(c.collaboration_scale()) == 4
 
 
-def test_hierarchie_liste_toutes_les_institutions_de_la_ville():
+def test_hierarchy_lists_every_institution_of_the_city():
     """The leader alone hid the other institutions of the city.
 
     Counted in AFFILIATIONS: a document co-signed by two laboratories of
@@ -146,7 +146,7 @@ def test_hierarchie_liste_toutes_les_institutions_de_la_ville():
     assert h.loc["Rabat", "institutions"] == 2
 
 
-def test_hierarchie_egalite_departagee_par_le_nom():
+def test_hierarchy_tie_broken_by_name():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, RABAT2), _doc(2, RABAT)]))
     h = c.city_hierarchy().set_index("city")
     assert h.loc["Rabat", "institution_affiliations"] == "Univ A (1); Univ C (1)"

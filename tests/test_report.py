@@ -38,7 +38,7 @@ def _report():
     return r
 
 
-def test_structure_du_zip():
+def test_zip_structure():
     names = zipfile.ZipFile(io.BytesIO(_report().to_bytes())).namelist()
     assert names[:2] == ["README.txt", "all_tables.xlsx"]
     assert "1-corpus/figures/annual-production.png" in names
@@ -57,7 +57,7 @@ def test_figure_rendue_a_300_dpi():
     assert width == int(SPEC.width_in * 300)           # 7.2 inches at 300 dpi
 
 
-def test_tableaux_excel_et_indicateurs():
+def test_excel_tables_and_indicators():
     z = zipfile.ZipFile(io.BytesIO(_report().to_bytes()))
     # Sheet 1: the contents; the tables follow, in the order they were added.
     assert _cells(z.read("2-actors/actors_tables.xlsx"), sheet=2) == [
@@ -67,36 +67,36 @@ def test_tableaux_excel_et_indicateurs():
         "indicator", "value", "definition", "CAGR", "12.5", "Compound annual growth rate"]
 
 
-def test_readme_dit_les_filtres_et_les_notes():
+def test_readme_states_the_filters_and_notes():
     readme = zipfile.ZipFile(io.BytesIO(_report().to_bytes())).read("README.txt").decode()
     assert "Filters: years: 2023-2025" in readme
     assert "Top 10 authors (years 2023-2025)" in readme
     assert readme.index("1-corpus/") < readme.index("2-actors/") < readme.index("5-networks/")
 
 
-def test_deterministe():
+def test_deterministic():
     assert _report().to_bytes() == _report().to_bytes()
 
 
-def test_rapport_vide_refuse():
+def test_empty_report_refused():
     with pytest.raises(ValueError):
         Report().to_bytes()
 
 
-def test_noms_de_feuilles_excel():
+def test_excel_sheet_names():
     taken: set = set()
     assert sheet_name("A/B:C*?", taken) == "A B C"
     assert sheet_name("x" * 40, taken) == "x" * 31
     assert sheet_name("X" * 40, taken) == "X" * 27 + " (2)"   # Excel ignores case
 
 
-def test_cellules_vides_et_caracteres_interdits():
+def test_empty_cells_and_forbidden_characters():
     data = workbook_bytes([("S", pd.DataFrame({"a": [None, float("nan"), "x\x01y"],
                                                 "b": [pd.NA, 1.5, True]}))])
     assert _cells(data) == ["a", "b", "1.5", "xy", "1"]
 
 
-def test_figure_du_catalogue(tmp_path):
+def test_catalog_figure(tmp_path):
     from bibliominer_analysis import Corpus
     c = Corpus.from_dataframe(pd.DataFrame([{
         "Title": "T%d" % i, "Year": str(2020 + i), "Cited by": "1", "EID": "e%d" % i,

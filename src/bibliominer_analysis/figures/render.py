@@ -76,7 +76,7 @@ class Series:
 class FigureSpec:
     kind: str  # "bar" | "line" | "scatter"
     series: List[Series]
-    categories: Optional[List[str]] = None  # barres/lignes
+    categories: Optional[List[str]] = None  # bars/lines
     title: str = ""
     x_label: str = ""
     y_label: str = ""

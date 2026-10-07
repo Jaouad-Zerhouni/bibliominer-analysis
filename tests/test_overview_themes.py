@@ -47,7 +47,7 @@ def test_main_information(corpus):
     assert m["international_share"] == 25.0
 
 
-def test_age_moyen_relatif_au_corpus(corpus):
+def test_mean_age_relative_to_corpus(corpus):
     """Age is counted from the MOST RECENT year of the corpus, not from today;
     otherwise the value would change every year."""
     m = corpus.main_information()
@@ -55,12 +55,12 @@ def test_age_moyen_relatif_au_corpus(corpus):
     assert m["document_average_age"] == 1.5
 
 
-def test_taux_de_croissance(corpus):
+def test_growth_rate(corpus):
     """1 document en 2020, 1 en 2023 -> croissance nulle."""
     assert corpus.main_information()["annual_growth_rate"] == 0.0
 
 
-def test_main_information_une_seule_annee():
+def test_main_information_single_year():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, 2020, 0, "1:A.")]))
     assert c.main_information()["annual_growth_rate"] is None
 
@@ -85,7 +85,7 @@ def test_most_cited_references(corpus):
 
 # --- topics over time -------------------------------------------------------
 
-def test_trend_topics_mediane(corpus):
+def test_trend_topics_median(corpus):
     t = corpus.trend_topics(min_documents=1).set_index("keyword")
     # alpha appears in 2020, 2021, 2022 -> median 2021
     assert t.loc["alpha", "year_median"] == 2021
@@ -93,7 +93,7 @@ def test_trend_topics_mediane(corpus):
     assert t.loc["delta", "year_median"] == 2023
 
 
-def test_trend_topics_seuil(corpus):
+def test_trend_topics_threshold(corpus):
     """The threshold leaves out terms too rare to be interpreted."""
     t = corpus.trend_topics(min_documents=3)
     assert list(t["keyword"]) == ["alpha"]
@@ -122,7 +122,7 @@ def test_thematic_map_quadrants():
     assert res["medians"]["centrality"] >= 0
 
 
-def test_thematic_map_corpus_vide():
+def test_thematic_map_empty_corpus():
     c = Corpus.from_dataframe(pd.DataFrame([{"Title": "x"}]))
     assert c.thematic_map()["clusters"].empty
 
@@ -138,6 +138,6 @@ def test_bibliographic_coupling(corpus):
     assert "Doc 1" in labels["eid-1"]
 
 
-def test_bibliographic_coupling_seuil(corpus):
+def test_bibliographic_coupling_threshold(corpus):
     """With a threshold of 2 shared references, no edge is left here."""
     assert corpus.bibliographic_coupling(min_weight=2)["n_edges"] == 0

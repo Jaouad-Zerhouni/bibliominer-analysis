@@ -39,7 +39,7 @@ def corpus():
     ]))
 
 
-def test_rapprochement_par_doi_et_par_titre(corpus):
+def test_matching_by_doi_and_by_title(corpus):
     pairs = L.citation_pairs(corpus)
     assert len(pairs) == 2
     assert set(pairs["via"]) == {"doi", "title"}
@@ -47,7 +47,7 @@ def test_rapprochement_par_doi_et_par_titre(corpus):
     assert set(pairs["cited"]) == {"eid-1", "eid-2"}
 
 
-def test_le_doi_prime_sur_le_titre():
+def test_the_doi_prevails_over_the_title():
     """When both agree, the pair counts only ONCE, through the DOI."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, LONG_A, doi="10.1000/aaa"),
@@ -58,16 +58,16 @@ def test_le_doi_prime_sur_le_titre():
     assert pairs.iloc[0]["via"] == "doi"
 
 
-def test_doi_normalise_malgre_le_prefixe_url():
+def test_doi_normalised_despite_url_prefix():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, LONG_A, doi="https://doi.org/10.1000/AAA"),
-        _doc(2, "Citing", refs="ref1 | doi:10.1000/aaa | 2016 | X | autre titre"),
+        _doc(2, "Citing", refs="ref1 | doi:10.1000/aaa | 2016 | X | other title"),
     ]))
     assert len(L.citation_pairs(c)) == 1
 
 
-def test_titre_trop_court_refuse():
-    """"Machine learning" must NEVER serve as a matching key."""
+def test_too_short_title_refused():
+    '''"Machine learning" must NEVER serve as a matching key.'''
     short = "Machine learning"
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, short),
@@ -76,7 +76,7 @@ def test_titre_trop_court_refuse():
     assert L.citation_pairs(c).empty
 
 
-def test_pas_d_auto_citation():
+def test_no_self_citation():
     """A document citing itself must not inflate its own score."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, LONG_A, doi="10.1000/aaa",
@@ -86,7 +86,7 @@ def test_pas_d_auto_citation():
     assert int(L.local_citations(c)["local_citations"].sum()) == 0
 
 
-def test_documents_les_plus_cites_localement(corpus):
+def test_most_locally_cited_documents(corpus):
     d = L.most_local_cited_documents(corpus)
     assert len(d) == 2
     row = d[d["title"] == LONG_A].iloc[0]
@@ -96,7 +96,7 @@ def test_documents_les_plus_cites_localement(corpus):
     assert row["lc_gc_ratio"] == 1.0
 
 
-def test_etiquettes_desambiguisees():
+def test_labels_disambiguated():
     """Two articles by the same author in the same year get a suffix."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, LONG_A, authors="1:Idri A.", doi="10.1000/aaa", year="2016"),
@@ -109,7 +109,7 @@ def test_etiquettes_desambiguisees():
     assert all(x.startswith("IDRI A., 2016") for x in labels)
 
 
-def test_auteurs_cites_localement_comptage_entier():
+def test_locally_cited_authors_full_counting():
     """Every author receives all the local citations of the document."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, LONG_A, authors="1:A.; 2:B.", doi="10.1000/aaa"),
@@ -119,7 +119,7 @@ def test_auteurs_cites_localement_comptage_entier():
     assert a["A."] == 1 and a["B."] == 1
 
 
-def test_historiographe_ne_garde_que_les_liens_internes(corpus):
+def test_historiograph_keeps_only_internal_links(corpus):
     h = L.historiograph(corpus, n=25)
     ids = {n["id"] for n in h["nodes"]}
     # eid-3 receives no citation: it does not enter the graph, so its outgoing
@@ -129,7 +129,7 @@ def test_historiographe_ne_garde_que_les_liens_internes(corpus):
         assert e["source"] in ids and e["target"] in ids
 
 
-def test_corpus_sans_reference_ne_casse_pas():
+def test_corpus_without_references_does_not_break():
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, LONG_A)]))
     assert L.citation_pairs(c).empty
     assert L.most_local_cited_documents(c).empty

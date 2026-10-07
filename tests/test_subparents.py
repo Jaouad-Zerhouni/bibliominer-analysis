@@ -37,14 +37,14 @@ def corpus() -> Corpus:
     ]))
 
 
-def test_niveau_change_l_objet_analyse(corpus):
+def test_level_changes_the_analysed_object(corpus):
     parents = set(corpus.top_institutions(level="parent")["institution"])
     subs = set(corpus.top_institutions(level="subparent")["institution"])
     assert parents == {"Moulay Ismail University", "Mohammed V University"}
     assert subs == {"LMAID", "MOSI", "ENSIAS"}
 
 
-def test_comptes_par_niveau(corpus):
+def test_counts_per_level(corpus):
     p = corpus.top_institutions(level="parent").set_index("institution")
     s = corpus.top_institutions(level="subparent").set_index("institution")
     assert p.loc["Moulay Ismail University", "documents"] == 3   # 1 + 2 + 3
@@ -52,7 +52,7 @@ def test_comptes_par_niveau(corpus):
     assert s.loc["MOSI", "documents"] == 1
 
 
-def test_impact_par_niveau(corpus):
+def test_impact_per_level(corpus):
     s = corpus.institutions_impact(level="subparent").set_index("institution")
     # LMAID: citations 10 and 4 -> h = 2
     assert s.loc["LMAID", "citations"] == 14
@@ -61,19 +61,19 @@ def test_impact_par_niveau(corpus):
     assert s.loc["ENSIAS", "h_index"] == 1
 
 
-def test_over_time_par_niveau(corpus):
+def test_over_time_per_level(corpus):
     t = corpus.institutions_over_time(level="subparent")
     assert set(t["institution"]) == {"LMAID", "MOSI", "ENSIAS"}
     lmaid = t[t["institution"] == "LMAID"].set_index("year")
     assert list(lmaid["cumulative"]) == [1, 2, 2]      # 2020, 2021, 2022
 
 
-def test_by_country_par_niveau(corpus):
+def test_by_country_per_level(corpus):
     s = corpus.institutions_by_country(level="subparent").set_index("country")
     assert s.loc["Morocco", "institutions"] == 3       # 3 units, not 2 universities
 
 
-def test_reseau_par_niveau():
+def test_network_per_level():
     """Two units of the SAME university collaborating: invisible at parent level."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff("LMAID", "Univ A") + "; " + _aff("MOSI", "Univ A")),
@@ -86,7 +86,7 @@ def test_reseau_par_niveau():
     assert sub["edges"][0]["weight"] == 2
 
 
-def test_hierarchie(corpus):
+def test_hierarchy(corpus):
     h = corpus.org_hierarchy()
     mi = h[h["parent"] == "Moulay Ismail University"].set_index("subparent")
     assert set(mi.index) == {"LMAID", "MOSI"}
@@ -96,7 +96,7 @@ def test_hierarchie(corpus):
     assert mi.loc["LMAID", "share"] == pytest.approx(66.7, abs=0.1)
 
 
-def test_hierarchie_ignore_les_affiliations_sans_unite():
+def test_hierarchy_ignores_affiliations_without_unit():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "parent 1: Univ A, city: X, country: Morocco"),
         _doc(2, _aff("Lab", "Univ A")),
@@ -107,7 +107,7 @@ def test_hierarchie_ignore_les_affiliations_sans_unite():
     assert h.iloc[0]["parent_documents"] == 2     # the university does have 2
 
 
-def test_subparent_exclut_les_independants():
+def test_subparent_excludes_independents():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff(INDEPENDENT_LABEL, "Univ A")),
         _doc(2, _aff("Lab", "Univ A")),
@@ -116,12 +116,12 @@ def test_subparent_exclut_les_independants():
         c.top_institutions(level="subparent")["institution"])
 
 
-def test_niveau_invalide_leve_une_erreur(corpus):
+def test_invalid_level_raises_an_error(corpus):
     with pytest.raises(ValueError, match="parent"):
         corpus.top_institutions(level="departement")
 
 
-def test_corpus_sans_sous_unite():
+def test_corpus_without_sub_unit():
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "parent 1: Univ A, city: X, country: Morocco")]))
     assert c.top_institutions(level="subparent").empty

@@ -39,7 +39,7 @@ def _corpus(rows):
 
 # --- Lotka: Kolmogorov-Smirnov test (Pao, 1985) ----------------------------
 
-def test_ks_valeur_critique_sur_le_nombre_d_auteurs():
+def test_ks_critical_value_on_the_number_of_authors():
     """1.36/√N with N = 1,000 authors, not N = 4 productivity levels.
 
     With the old N = 4, the critical value was 0.68 and D = 0.1 passed.
@@ -52,7 +52,7 @@ def test_ks_valeur_critique_sur_le_nombre_d_auteurs():
     assert r["follows_lotka"] is False
 
 
-def test_lotka_ks_couvre_les_niveaux_sans_auteur():
+def test_lotka_ks_covers_levels_without_author():
     """A has 3 documents, B, C, D, E have 1; nobody has 2.
 
     Observed shares over 1..3: 0.8 / 0 / 0.2. Strict Lotka (1/x²)/ζ(2):
@@ -69,7 +69,7 @@ def test_lotka_ks_couvre_les_niveaux_sans_auteur():
 
 # --- MCC (Savanur & Srikanth, 2010) ----------------------------------------
 
-def test_mcc_a_est_le_nombre_total_d_auteurs():
+def test_mcc_a_is_the_total_number_of_authors():
     """3 articles, each with 2 authors, all different: 6 authors.
 
     CC = 1 - (3 × 1/2)/3 = 0.5. MCC = 0.5 × 6/5 = 0.6. With A = maximum per
@@ -84,7 +84,7 @@ def test_mcc_a_est_le_nombre_total_d_auteurs():
 
 # --- Bradford ---------------------------------------------------------------
 
-def test_bradford_une_revue_qui_remplit_deux_zones():
+def test_bradford_one_journal_filling_two_zones():
     """J1: 8 documents out of 10 fills zones 1 AND 2 (thresholds 3.33 and 6.67).
 
     The next two journals are therefore in zone 3. The old `if` only moved
@@ -99,7 +99,7 @@ def test_bradford_une_revue_qui_remplit_deux_zones():
 
 # --- Eigenvector centrality -------------------------------------------------
 
-def test_vecteur_propre_d_une_etoile():
+def test_eigenvector_of_a_star():
     """A 3-branch star: λ = √3, vector (√3, 1, 1, 1)/√6.
 
     Centre = 0.7071, leaves = 0.4082. Bipartite graph: the old iteration
@@ -114,7 +114,7 @@ def test_vecteur_propre_d_une_etoile():
     assert x[1] == pytest.approx(1 / math.sqrt(6), abs=1e-6)
 
 
-def test_modularite_du_resume_suit_les_communautes_affichees():
+def test_summary_modularity_follows_the_displayed_communities():
     graph = {
         "nodes": [{"id": "a", "community": 1}, {"id": "b", "community": 1},
                   {"id": "c", "community": 2}, {"id": "d", "community": 2}],
@@ -131,7 +131,7 @@ def test_modularite_du_resume_suit_les_communautes_affichees():
 
 # --- Callon's thematic map --------------------------------------------------
 
-def test_densite_de_callon_sur_l_indice_d_equivalence():
+def test_callon_density_on_the_equivalence_index():
     """{a, b} co-occurring in 2 documents: e = 2²/(2·2) = 1, density = 100·1/2 = 50.
     {c, d} in 3 documents: e = 3²/(3·3) = 1, density = 50 too.
 
@@ -143,14 +143,14 @@ def test_densite_de_callon_sur_l_indice_d_equivalence():
     assert sorted(clusters["density"]) == [50.0, 50.0]
 
 
-# --- Croissance ------------------------------------------------------------
+# --- Growth ----------------------------------------------------------------
 
-def test_quantile_pour_une_confiance_non_tabulee():
+def test_quantile_for_a_non_tabulated_confidence():
     """0.975 two-sided -> z = 2.2414; the old rounding to 0.97 gave 2.1705."""
     assert gr._z_score(0.975) == pytest.approx(2.2414, abs=5e-4)
 
 
-def test_temps_de_doublement_sur_le_rgr_exact():
+def test_doubling_time_on_the_exact_rgr():
     """1,500 documents, then 1: RGR = ln(1501/1500) = 0.000666.
 
     Dt = ln 2 / RGR = 1,040.1 years. Computed on the RGR rounded to 0.0007,
@@ -162,7 +162,7 @@ def test_temps_de_doublement_sur_le_rgr_exact():
     assert dt == pytest.approx(math.log(2) / math.log(1501 / 1500), abs=0.01)
 
 
-def test_derniere_annee_partielle_signalee():
+def test_partial_last_year_flagged():
     from datetime import date
     this_year = date.today().year
     rows = [_doc(i, year=y) for i, y in enumerate(
@@ -173,7 +173,7 @@ def test_derniere_annee_partielle_signalee():
 
 # --- Matching the author columns --------------------------------------------
 
-def test_un_identifiant_manquant_ne_decale_pas_les_suivants():
+def test_a_missing_identifier_does_not_shift_the_following_ones():
     """Roe has no identifier: the column holds two for three authors.
 
     By rank, the old code gave Poe's identifier to Roe, and none to Poe.
@@ -182,13 +182,13 @@ def test_un_identifiant_manquant_ne_decale_pas_les_suivants():
     assert [x["scopus_id"] for x in a] == [None, None, None]
 
 
-def test_le_nom_complet_rattache_par_patronyme():
+def test_the_full_name_attached_by_surname():
     a = P.parse_authors("Doe J.; Roe A.; Poe B.",
                         "Doe, John (111111); Poe, Bob (333333)", "")
     assert [x["scopus_id"] for x in a] == ["111111", None, "333333"]
 
 
-def test_l_identifiant_entre_parentheses_prime_sur_la_colonne():
+def test_the_bracketed_id_prevails_over_the_column():
     a = P.parse_authors("Doe J.; Roe A.", "Doe, John (111111); Roe, Ann (222222)",
                         "222222; 111111")
     assert [x["scopus_id"] for x in a] == ["111111", "222222"]
@@ -196,7 +196,7 @@ def test_l_identifiant_entre_parentheses_prime_sur_la_colonne():
 
 # --- Auto-citation ----------------------------------------------------------
 
-def test_deux_homonymes_ne_s_auto_citent_pas():
+def test_two_namesakes_do_not_self_cite():
     """Two "Smith J." with different identifiers: one cites the other.
 
     It is NOT a self-citation. Going by the name, the old computation counted

@@ -14,55 +14,55 @@ from bibliominer_analysis.metrics.impact import g_index, h_index, i10_index
 
 # --- h-index ---------------------------------------------------------------
 
-def test_h_index_cas_classique():
+def test_h_index_classic_case():
     # [10, 8, 5, 4, 3]: 4 articles have >= 4 citations; the 5th has only 3.
     assert h_index([10, 8, 5, 4, 3]) == 4
 
 
-def test_h_index_un_article_tres_cite():
+def test_h_index_one_highly_cited_article():
     # A single article, even cited 100 times, only gives an h of 1.
     assert h_index([100]) == 1
 
 
-def test_h_index_aucune_citation():
+def test_h_index_no_citation():
     assert h_index([0, 0, 0]) == 0
 
 
-def test_h_index_serie_vide():
+def test_h_index_empty_series():
     assert h_index([]) == 0
 
 
-def test_h_index_ordre_indifferent():
+def test_h_index_order_independent():
     assert h_index([3, 10, 4, 8, 5]) == h_index([10, 8, 5, 4, 3])
 
 
-def test_h_index_tous_egaux():
+def test_h_index_all_equal():
     # 5 articles with 5 citations: h = 5.
     assert h_index([5, 5, 5, 5, 5]) == 5
 
 
 # --- g-index ---------------------------------------------------------------
 
-def test_g_index_cas_classique():
+def test_g_index_classic_case():
     # [10, 8, 5, 4, 3] -> cumulative [10, 18, 23, 27, 30]; g^2 [1, 4, 9, 16, 25].
     # 30 >= 25 so g = 5.
     assert g_index([10, 8, 5, 4, 3]) == 5
 
 
-def test_g_index_superieur_ou_egal_au_h():
+def test_g_index_greater_or_equal_to_h():
     """Fundamental property: g >= h, always."""
     for serie in ([10, 8, 5, 4, 3], [100], [1, 1, 1], [25, 8, 5, 3, 3],
                   [0, 0, 1], [7, 7, 7, 7]):
         assert g_index(serie) >= h_index(serie), serie
 
 
-def test_g_index_article_tres_cite_compte():
+def test_g_index_highly_cited_article_counts():
     # h is capped at 1, but g goes up: 25 citations cover 5^2.
     assert h_index([25, 0, 0, 0, 0]) == 1
     assert g_index([25, 0, 0, 0, 0]) == 5
 
 
-def test_g_index_vide_et_zero():
+def test_g_index_empty_and_zero():
     assert g_index([]) == 0
     assert g_index([0, 0]) == 0
 
@@ -111,7 +111,7 @@ def test_authors_impact(corpus):
     assert idri["first_author"] == 0     # always second
 
 
-def test_authors_impact_periode(corpus):
+def test_authors_impact_period(corpus):
     df = corpus.authors_impact()
     hosni = df[df["author"] == "Hosni M."].iloc[0]
     assert (hosni["first_year"], hosni["last_year"]) == (2019, 2022)
@@ -125,13 +125,13 @@ def test_institutions_impact(corpus):
     assert df.iloc[0]["country"] == "Morocco"
 
 
-def test_summary_compte_les_affiliations(corpus):
+def test_summary_counts_the_affiliations(corpus):
     s = corpus.summary()
     assert s["affiliations"] == 1        # a single distinct affiliation
     assert s["institutions"] == 1
 
 
-def test_corpus_vide_indices_a_zero():
+def test_empty_corpus_indices_at_zero():
     c = Corpus.from_dataframe(pd.DataFrame([{"Title": "x"}]))
     assert c.impact()["h_index"] == 0
     assert c.authors_impact().empty

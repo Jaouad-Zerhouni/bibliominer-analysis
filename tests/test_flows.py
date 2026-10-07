@@ -24,7 +24,7 @@ def corpus():
     ]))
 
 
-def test_liens_et_poids(corpus):
+def test_links_and_weights(corpus):
     """A -> alpha carries 2 documents; alpha -> J1 too."""
     t = corpus.three_fields()
     w = {(r["source"], r["target"]): r["value"] for _, r in t.iterrows()}
@@ -33,7 +33,7 @@ def test_liens_et_poids(corpus):
     assert w[("B.", "beta")] == 1
 
 
-def test_profondeur_des_colonnes(corpus):
+def test_column_depth(corpus):
     """Depth aligns the nodes; without it the rendering misplaces them."""
     t = corpus.three_fields()
     gauche = t[t["depth"] == 0]
@@ -42,25 +42,25 @@ def test_profondeur_des_colonnes(corpus):
     assert set(milieu["source"]) == {"alpha", "beta"}
 
 
-def test_limite_par_colonne():
+def test_limit_per_column():
     rows = [_doc(i, "1:A%d." % i, "k%d" % i, "S%d" % i) for i in range(8)]
     c = Corpus.from_dataframe(pd.DataFrame(rows))
     t = c.three_fields(n=3)
     assert t[t["depth"] == 0]["source"].nunique() <= 3
 
 
-def test_meme_dimension_deux_fois_est_desambiguisee():
+def test_same_dimension_twice_is_disambiguated():
     """Without a prefix, a node would appear in two columns and loop."""
     c = Corpus.from_dataframe(pd.DataFrame([_doc(1, "1:A.", "alpha", "J1")]))
     t = c.three_fields(left="authors", middle="keywords", right="authors")
     assert any(str(v).startswith("3\u00b7 ") for v in t["target"])
 
 
-def test_champ_inconnu(corpus):
+def test_unknown_field(corpus):
     with pytest.raises(ValueError, match="champ inconnu"):
         corpus.three_fields(left="galaxies")
 
 
-def test_corpus_vide():
+def test_empty_corpus():
     c = Corpus.from_dataframe(pd.DataFrame([{"Title": "x"}]))
     assert c.three_fields().empty

@@ -53,7 +53,7 @@ def mini() -> Corpus:
     return Corpus.from_dataframe(df)
 
 
-def test_six_tables_presentes(mini):
+def test_six_tables_present(mini):
     t = mini.tables()
     assert set(t) == {"documents", "authors", "affiliations",
                       "author_affiliations", "keywords", "references"}
@@ -73,58 +73,58 @@ def test_summary(mini):
     assert s["documents_without_references"] == 1   # Doc C
 
 
-def test_production_by_year_sans_trou(mini):
+def test_production_by_year_without_gap(mini):
     g = mini.production_by_year()
     assert list(g["year"]) == [2020, 2021]
     assert list(g["documents"]) == [1, 2]
     assert list(g["cumulative"]) == [1, 3]
 
 
-def test_pays_compte_une_fois_par_document(mini):
+def test_country_counted_once_per_document(mini):
     """Doc B is Moroccan-Spanish: it counts once for each country."""
     g = mini.production_by_country().set_index("country")["documents"]
     assert g["Spain"] == 2       # Doc A + Doc B
     assert g["Morocco"] == 2     # Doc B + Doc C
 
 
-def test_institutions_excluent_les_independants(mini):
-    """"Independent researcher" is not an institution."""
+def test_institutions_exclude_independents(mini):
+    '''"Independent researcher" is not an institution.'''
     inst = list(mini.top_institutions()["institution"])
     assert INDEPENDENT_LABEL not in inst
     assert "University of Murcia" in inst
 
 
-def test_top_authors_compte_les_premiers_auteurs(mini):
+def test_top_authors_counts_the_first_authors(mini):
     g = mini.top_authors().set_index("author")
     assert g.loc["Hosni M.", "documents"] == 2
     assert g.loc["Hosni M.", "first_author"] == 1     # first author on Doc B only
     assert g.loc["Idri A.", "first_author"] == 1
 
 
-def test_keywords_insensibles_a_la_casse(mini):
+def test_keywords_case_insensitive(mini):
     g = mini.top_keywords().set_index("keyword")["documents"]
     assert g.get("Machine learning", g.get("machine learning")) == 2
 
 
-def test_filter_ne_modifie_pas_l_original(mini):
+def test_filter_does_not_modify_the_original(mini):
     f = mini.filter(years=(2021, 2021))
     assert len(f) == 2
     assert len(mini) == 3                       # the original is untouched
     assert set(f.authors["eid"]) <= {"eid-B", "eid-C"}
 
 
-def test_filter_par_pays(mini):
+def test_filter_by_country(mini):
     f = mini.filter(countries=["Spain"])
     assert set(f.documents["eid"]) == {"eid-A", "eid-B"}
 
 
-def test_corpus_vide_ne_plante_pas():
+def test_empty_corpus_does_not_crash():
     c = Corpus.from_dataframe(pd.DataFrame([{"Title": "Nothing at all"}]))
     assert c.summary()["documents"] == 1
     assert c.production_by_year().empty        # no usable year
     assert c.top_authors().empty
 
 
-def test_colonnes_indispensables():
+def test_required_columns():
     with pytest.raises(ValueError, match="Required columns missing"):
-        Corpus.from_dataframe(pd.DataFrame([{"Autre": "x"}]))
+        Corpus.from_dataframe(pd.DataFrame([{"Other": "x"}]))
