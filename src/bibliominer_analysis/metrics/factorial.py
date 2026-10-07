@@ -9,8 +9,8 @@ Two methods, two points of view:
 
   - **CA** (correspondence analysis) on the documents × terms table. The
     axes are the directions of greatest *inertia*, i.e. of greatest
-    departure from independence. We know what share of the information
-    each axis carries, which MDS does not give.
+    departure from independence. The share of the information
+    each axis carries is known, which MDS does not give.
   - **MDS** (multidimensional scaling) on a dissimilarity matrix. It only
     tries to preserve the pairwise distances: more faithful locally, but
     the axes have no interpretation of their own.

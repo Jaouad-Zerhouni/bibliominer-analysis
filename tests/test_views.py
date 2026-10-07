@@ -43,17 +43,17 @@ ABSTRACT = ("Software effort estimation with ensemble methods improves "
 def corpus():
     """Doc 3 (J3) cites doc 1 (J1) and doc 2 (J2); doc 4 (J3) cites doc 1."""
     return Corpus.from_dataframe(pd.DataFrame([
-        _doc(1, T1, "J1", 2016, 100, "Idri A.; Hosni M.", RABAT + "; " + MADRID,
+        _doc(1, T1, "J1", 2016, 100, "Varela A.; Okafor M.", RABAT + "; " + MADRID,
              keywords="effort estimation; ensemble", abstract=ABSTRACT,
              doi="10.1000/aaa"),
-        _doc(2, T2, "J2", 2020, 10, "Hosni M.; Garcia J.", RABAT + "; " + MADRID,
+        _doc(2, T2, "J2", 2020, 10, "Okafor M.; Garcia J.", RABAT + "; " + MADRID,
              keywords="effort estimation; machine learning", abstract=ABSTRACT),
-        _doc(3, T3, "J3", 2022, 4, "Idri A.; Garcia J.", RABAT + "; " + MADRID,
+        _doc(3, T3, "J3", 2022, 4, "Varela A.; Garcia J.", RABAT + "; " + MADRID,
              keywords="machine learning; ensemble", abstract=ABSTRACT,
-             refs="ref1 | 10.1000/aaa | 2016 | Idri | %s;ref2 |  | 2020 | Hosni | %s" % (T1, T2)),
-        _doc(4, "A fourth paper on agile teams", "J3", 2022, 0, "Idri A.", RABAT,
+             refs="ref1 | 10.1000/aaa | 2016 | Varela | %s;ref2 |  | 2020 | Okafor | %s" % (T1, T2)),
+        _doc(4, "A fourth paper on agile teams", "J3", 2022, 0, "Varela A.", RABAT,
              keywords="effort estimation; ensemble", abstract=ABSTRACT,
-             refs="ref1 | 10.1000/aaa | 2016 | Idri | %s" % T1),
+             refs="ref1 | 10.1000/aaa | 2016 | Varela | %s" % T1),
     ]))
 
 
@@ -64,7 +64,7 @@ def test_document_list_columns_and_sort(corpus):
     assert list(docs.columns) == ["title", "first_author", "year", "source",
                                   "doc_type", "citations", "local_citations", "doi"]
     assert list(docs["citations"]) == [100, 10, 4, 0]
-    assert docs.loc[0, "first_author"] == "Idri A."
+    assert docs.loc[0, "first_author"] == "Varela A."
     # doc 1 is cited by doc 3 and doc 4, doc 2 by doc 3
     assert dict(zip(docs["title"], docs["local_citations"]))[T1] == 2
     assert dict(zip(docs["title"], docs["local_citations"]))[T2] == 1

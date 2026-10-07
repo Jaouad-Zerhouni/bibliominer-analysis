@@ -29,7 +29,7 @@ def _cells(data: bytes, sheet: int = 1):
 def _report():
     r = Report(filters={"years": "2023-2025"}, created=datetime(2026, 1, 1))
     r.add_table("Actors", "Top 10 authors",
-                pd.DataFrame({"author": ["Idri A.", "Hosni M."], "documents": [12, 9]}),
+                pd.DataFrame({"author": ["Varela A.", "Okafor M."], "documents": [12, 9]}),
                 note="years 2023-2025")
     r.add_indicators("Impact", "Collaboration", {"CAGR": 12.5, "nested": {"x": 1}},
                      definitions={"CAGR": "Compound annual growth rate"})
@@ -61,7 +61,7 @@ def test_excel_tables_and_indicators():
     z = zipfile.ZipFile(io.BytesIO(_report().to_bytes()))
     # Sheet 1: the contents; the tables follow, in the order they were added.
     assert _cells(z.read("2-actors/actors_tables.xlsx"), sheet=2) == [
-        "author", "documents", "Idri A.", "12", "Hosni M.", "9"]
+        "author", "documents", "Varela A.", "12", "Okafor M.", "9"]
     # a nested indicator is not an indicator: left out
     assert _cells(z.read("3-impact/impact_tables.xlsx"), sheet=2) == [
         "indicator", "value", "definition", "CAGR", "12.5", "Compound annual growth rate"]

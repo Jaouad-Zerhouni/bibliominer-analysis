@@ -21,7 +21,7 @@ period carries, which keeps the index between 0 and 1.
 The division is by the **smaller** of the two, not by the union: a small
 cluster entirely absorbed by a large one must give 1, because it was
 indeed absorbed. Dividing by the union would crush that case, which is
-precisely the one we want to see.
+precisely the one to show.
 """
 
 from __future__ import annotations

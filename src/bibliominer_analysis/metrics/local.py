@@ -182,7 +182,7 @@ def most_local_cited_documents(corpus, n: Optional[int] = 20) -> pd.DataFrame:
 
 
 def _labels(d: pd.DataFrame) -> pd.Series:
-    '''"HOSNI M., 2019", the usual short label in bibliometrics.'''
+    '''"OKAFOR M., 2019", the usual short label in bibliometrics.'''
     author = d["first_author"].fillna("ANONYMOUS").map(str).str.upper()
     year = d["year"].astype("Int64").map(str).replace("<NA>", "n.d.")
     base = author + ", " + year

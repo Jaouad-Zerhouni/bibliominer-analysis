@@ -19,8 +19,8 @@ def mini() -> Corpus:
             "Title": "Doc A", "Year": "2020", "Cited by": "10",
             "Source title": "Journal X", "Document Type": "Article",
             "EID": "eid-A", "DOI": "10.1/a",
-            "Authors": "1:Idri A.; 2:Hosni M.",
-            "Author full names": "1:Idri, Ali (111); 2:Hosni, Mohamed (222)",
+            "Authors": "1:Varela A.; 2:Okafor M.",
+            "Author full names": "1:Varela, Ana (111); 2:Okafor, Maya (222)",
             "Author(s) ID": "1:111; 2:222",
             "Affiliations": "parent 1: University of Murcia, city: Murcia, country: Spain",
             "Author Keywords": "Machine learning; Random forest",
@@ -30,8 +30,8 @@ def mini() -> Corpus:
             "Title": "Doc B", "Year": "2021", "Cited by": "5",
             "Source title": "Journal X", "Document Type": "Article",
             "EID": "eid-B", "DOI": "10.1/b",
-            "Authors": "1:Hosni M.",
-            "Author full names": "1:Hosni, Mohamed (222)",
+            "Authors": "1:Okafor M.",
+            "Author full names": "1:Okafor, Maya (222)",
             "Author(s) ID": "1:222",
             "Affiliations": ("parent 1: Moulay Ismail University, city: Meknes, country: Morocco; "
                              "parent 1: University of Murcia, city: Murcia, country: Spain"),
@@ -67,7 +67,7 @@ def test_summary(mini):
     s = mini.summary()
     assert s["documents"] == 3
     assert (s["year_min"], s["year_max"]) == (2020, 2021)
-    assert s["authors"] == 3               # Idri, Hosni, Solo
+    assert s["authors"] == 3               # Varela, Okafor, Solo
     assert s["countries"] == 2             # Spain, Morocco
     assert s["citations"] == 15
     assert s["documents_without_references"] == 1   # Doc C
@@ -96,9 +96,9 @@ def test_institutions_exclude_independents(mini):
 
 def test_top_authors_counts_the_first_authors(mini):
     g = mini.top_authors().set_index("author")
-    assert g.loc["Hosni M.", "documents"] == 2
-    assert g.loc["Hosni M.", "first_author"] == 1     # first author on Doc B only
-    assert g.loc["Idri A.", "first_author"] == 1
+    assert g.loc["Okafor M.", "documents"] == 2
+    assert g.loc["Okafor M.", "first_author"] == 1     # first author on Doc B only
+    assert g.loc["Varela A.", "first_author"] == 1
 
 
 def test_keywords_case_insensitive(mini):

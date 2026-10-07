@@ -91,8 +91,8 @@ def access_status(corpus) -> pd.DataFrame:
 
     Only two rows, on purpose. Scopus only flags OPEN articles; it never
     writes "closed". "Not reported" therefore groups closed articles and those
-    whose status is missing; separating them would assume information we do
-    not have.
+    whose status is missing; separating them would assume information that is
+    not available.
     """
     cols = ["status", "documents", "share", "citations", "citations_per_document"]
     order = ["Open access", "Not flagged"]

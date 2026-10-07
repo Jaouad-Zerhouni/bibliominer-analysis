@@ -127,7 +127,7 @@ def most_cited_documents(corpus, n: int = 20) -> pd.DataFrame:
     if years.notna().any():
         latest = int(years.max())
         # +1 year: an article published in the most recent year has already "lived"
-        # one year; otherwise we would divide by zero.
+        # one year; otherwise the division would be by zero.
         d["citations_per_year"] = (d["citations"] / (latest - years + 1)).round(2)
     else:
         d["citations_per_year"] = np.nan
@@ -146,7 +146,7 @@ def most_cited_documents(corpus, n: int = 20) -> pd.DataFrame:
 def most_cited_references(corpus, n: int = 20) -> pd.DataFrame:
     """References most cited BY the corpus (local impact).
 
-    Not to be confused with the number of global citations: here we count how
+    Not to be confused with the number of global citations: here the count is how
     many documents of the corpus cite that work. That is what identifies the
     foundations of the field as this corpus practises it.
     """

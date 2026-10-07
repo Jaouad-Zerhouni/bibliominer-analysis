@@ -40,7 +40,7 @@ def test_zeta_undefined_below_one():
 # ------------------------------------------------------------------- MLE ----
 
 def test_mle_finds_a_known_exponent():
-    """A sample drawn from a zeta law with exponent 2.5: we must recover it."""
+    """A sample drawn from a zeta law with exponent 2.5: the fit must recover it."""
     rng = np.random.default_rng(7)
     a = 2.5
     n = np.arange(1, 200, dtype=float)

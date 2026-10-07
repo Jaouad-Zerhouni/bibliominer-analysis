@@ -81,8 +81,8 @@ def corpus() -> Corpus:
         rows.append({
             "Title": "Doc %d" % i, "Year": str(2018 + i), "Cited by": str(cites),
             "EID": "eid-%d" % i, "Source title": "J", "Document Type": "Article",
-            "Authors": "1:Hosni M.; 2:Idri A.",
-            "Author full names": "1:Hosni, Mohamed (222); 2:Idri, Ali (111)",
+            "Authors": "1:Okafor M.; 2:Varela A.",
+            "Author full names": "1:Okafor, Maya (222); 2:Varela, Ana (111)",
             "Author(s) ID": "1:222; 2:111",
             "Affiliations": "parent 1: Moulay Ismail University, city: Meknes, country: Morocco",
         })
@@ -102,19 +102,19 @@ def test_authors_impact(corpus):
     df = corpus.authors_impact()
     assert set(df.columns) >= {"author", "documents", "citations",
                                "h_index", "g_index", "first_author"}
-    hosni = df[df["author"] == "Hosni M."].iloc[0]
-    assert hosni["documents"] == 4
-    assert hosni["citations"] == 24
-    assert hosni["h_index"] == 3
-    assert hosni["first_author"] == 4    # first on all 4 documents
-    idri = df[df["author"] == "Idri A."].iloc[0]
-    assert idri["first_author"] == 0     # always second
+    okafor = df[df["author"] == "Okafor M."].iloc[0]
+    assert okafor["documents"] == 4
+    assert okafor["citations"] == 24
+    assert okafor["h_index"] == 3
+    assert okafor["first_author"] == 4    # first on all 4 documents
+    varela = df[df["author"] == "Varela A."].iloc[0]
+    assert varela["first_author"] == 0     # always second
 
 
 def test_authors_impact_period(corpus):
     df = corpus.authors_impact()
-    hosni = df[df["author"] == "Hosni M."].iloc[0]
-    assert (hosni["first_year"], hosni["last_year"]) == (2019, 2022)
+    okafor = df[df["author"] == "Okafor M."].iloc[0]
+    assert (okafor["first_year"], okafor["last_year"]) == (2019, 2022)
 
 
 def test_institutions_impact(corpus):

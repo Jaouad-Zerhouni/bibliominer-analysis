@@ -1,6 +1,6 @@
 """`Corpus.from_csv` only reads the file exported by the cleaning.
 
-Signature: the authors numbered in order ("1:Idri A.; 2:Hosni M.") in the
+Signature: the authors numbered in order ("1:Varela A.; 2:Okafor M.") in the
 three author columns, which only the cleaning export writes.
 """
 from __future__ import annotations
@@ -21,8 +21,8 @@ def _write(tmp_path, rows):
     return path
 
 
-CLEAN = {"Title": "T", "Year": "2024", "Authors": "1:Idri A.; 2:Hosni M.",
-         "Author full names": "1:Idri, Ali (11); 2:Hosni, Mohamed (22)",
+CLEAN = {"Title": "T", "Year": "2024", "Authors": "1:Varela A.; 2:Okafor M.",
+         "Author full names": "1:Varela, Ana (11); 2:Okafor, Maya (22)",
          "Author(s) ID": "1:11; 2:22"}
 
 
@@ -37,13 +37,13 @@ def test_numbered_authors_load(tmp_path):
 
 
 def test_a_raw_scopus_export_is_refused(tmp_path):
-    raw = {"Title": "T", "Authors": "Idri A.; Hosni M.",
-           "Author full names": "Idri, Ali (11); Hosni, Mohamed (22)", "Author(s) ID": "11; 22"}
+    raw = {"Title": "T", "Authors": "Varela A.; Okafor M.",
+           "Author full names": "Varela, Ana (11); Okafor, Maya (22)", "Author(s) ID": "11; 22"}
     with pytest.raises(NotCleanedError, match="not been cleaned with Bibliominer") as err:
         Corpus.from_csv(_write(tmp_path, [raw, raw]))
     message = str(err.value)
     assert "6 author cell(s) out of 6 are not numbered" in message
-    assert 'line 2, column "Authors": "Idri A.; Hosni M."' in message
+    assert 'line 2, column "Authors": "Varela A.; Okafor M."' in message
     assert "Clean the Scopus export first" in message
 
 
@@ -54,7 +54,7 @@ def test_one_unnumbered_line_is_enough(tmp_path):
         Corpus.from_csv(_write(tmp_path, [CLEAN, edited]))
 
 
-@pytest.mark.parametrize("authors", ["1:Idri A.; 3:Hosni M.", "2:Idri A.", "1:Idri A.; Hosni M."])
+@pytest.mark.parametrize("authors", ["1:Varela A.; 3:Okafor M.", "2:Varela A.", "1:Varela A.; Okafor M."])
 def test_the_numbers_must_run_1_2_3(tmp_path, authors):
     with pytest.raises(NotCleanedError):
         Corpus.from_csv(_write(tmp_path, [dict(CLEAN, Authors=authors)]))

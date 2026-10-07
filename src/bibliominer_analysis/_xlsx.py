@@ -2,8 +2,8 @@
 
 Why not go through ``DataFrame.to_excel``? Because it requires openpyxl
 or xlsxwriter: one more dependency for every user of the package, only to
-write tables. An .xlsx is only a ZIP of a few XML files; we write the
-strict minimum: sheets, a bold frozen header row, readable column widths.
+write tables. An .xlsx is only a ZIP of a few XML files; only the
+strict minimum is written: sheets, a bold frozen header row, readable column widths.
 
 The file is DETERMINISTIC: no creation date, ZIP entries dated 1 January
 1980. Two exports of the same tables give the same bytes.

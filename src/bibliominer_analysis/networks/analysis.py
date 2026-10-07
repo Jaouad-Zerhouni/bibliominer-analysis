@@ -34,7 +34,7 @@ NORMALIZATIONS = ("none", "association", "jaccard", "salton", "inclusion", "equi
 
 
 def _adjacency(G, order):
-    """Weighted adjacency matrix, dense: our networks fit in memory."""
+    """Weighted adjacency matrix, dense: these networks fit in memory."""
     import numpy as np
 
     index = {n: i for i, n in enumerate(order)}
@@ -538,7 +538,7 @@ def _declutter(graph: Dict[str, Any], coords: Dict[str, list],
     The spreading of `_readable` works inside a component, with the same
     minimum distance for all nodes. Yet a highly cited node is drawn four
     times wider than a small one: two large neighbouring discs still
-    overlapped ("Nassif" on "Hosni").
+    overlapped ("Navarro" on "Okafor").
 
     The coordinates are brought to the map frame (`LAYOUT_WIDTH` ×
     `LAYOUT_HEIGHT`, in screen pixels); each node there gets the radius the

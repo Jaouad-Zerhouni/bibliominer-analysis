@@ -1,9 +1,8 @@
 """The catalogue: every figure of the interface, produced in Python.
 
 The interface and the package must offer the same figures, with the same
-options. The coverage test (every figure on screen has an entry) lives on
-the API side, where the interface code is; here we check that the
-catalogue keeps its promises: the screen's defaults, options, formats,
+options. The coverage test (every figure on screen has an entry) lives
+with the interface; here the catalogue is checked to keep its promises: the screen's defaults, options, formats,
 filters.
 """
 
@@ -33,7 +32,7 @@ def corpus():
     rows = []
     for i in range(24):
         year = 2016 + i % 9
-        authors = ["Idri A.", "Hosni M.", "Garcia J.", "Martin P."][i % 4:] + ["Idri A."]
+        authors = ["Varela A.", "Okafor M.", "Garcia J.", "Martin P."][i % 4:] + ["Varela A."]
         affs = [RABAT, MADRID, PARIS][: 1 + i % 3]
         refs = ";".join("ref%d | 10.1/%d | %d | Author%d | Reference title number %d on estimation"
                         % (k, k, 2000 + k, k, k) for k in range(i % 5, i % 5 + 4))

@@ -69,31 +69,31 @@ def test_co_country_national_document_without_link():
 
 def test_co_citation_authors_first_author():
     """The ACA convention keeps the FIRST author of each reference."""
-    refs = ("ref1 | 10.1/a | 2015 | Biau G., Scornet E. | Random forests ; "
-            "ref2 | 10.1/b | 2016 | Chen T., Guestrin C. | XGBoost")
+    refs = ("ref1 | 10.1/a | 2015 | Lane G., Moss E. | Tree ensembles ; "
+            "ref2 | 10.1/b | 2016 | Park T., Quinn C. | Gradient boosting")
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff("U", "Morocco"), refs=refs),
         _doc(2, _aff("U", "Morocco"), refs=refs),
     ]))
     g = c.co_citation_authors(min_weight=2)
     labels = sorted(n["label"] for n in g["nodes"])
-    assert labels == ["Biau G.", "Chen T."]
+    assert labels == ["Lane G.", "Park T."]
     assert g["edges"][0]["weight"] == 2
 
 
 def test_co_citation_authors_groups_spellings():
-    '''"Chen T." and "Chen T." cited by two documents = a single node.'''
+    '''"Park T." and "park t." cited by two documents = a single node.'''
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, _aff("U", "Morocco"),
-             refs="ref1 | 10.1/b | 2016 | Chen T., Guestrin C. | XGBoost ; "
-                  "ref2 | 10.1/c | 2017 | Doe J. | Autre"),
+             refs="ref1 | 10.1/b | 2016 | Park T., Quinn C. | Gradient boosting ; "
+                  "ref2 | 10.1/c | 2017 | Doe J. | Another"),
         _doc(2, _aff("U", "Morocco"),
-             refs="ref1 | 10.1/d | 2018 | chen t., Other | Suite ; "
-                  "ref2 | 10.1/c | 2017 | Doe J. | Autre"),
+             refs="ref1 | 10.1/d | 2018 | park t., Other | Sequel ; "
+                  "ref2 | 10.1/c | 2017 | Doe J. | Another"),
     ]))
     g = c.co_citation_authors(min_weight=2)
     ids = {n["id"] for n in g["nodes"]}
-    assert "chen t." in ids            # the two spellings were merged
+    assert "park t." in ids            # the two spellings were merged
     assert g["n_nodes"] == 2
 
 

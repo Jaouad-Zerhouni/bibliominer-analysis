@@ -13,23 +13,23 @@ from bibliominer_analysis.io.schema import INDEPENDENT_LABEL
 
 def test_authors_indexes_bibliominer():
     a = P.parse_authors(
-        "1:Idri A.; 2:Hosni M.; 3:Abran A.",
-        "1:Idri, Ali (6602789810); 2:Hosni, Mohamed (57189341317); 3:Abran, Alain (7004233119)",
-        "1:6602789810; 2:57189341317; 3:7004233119",
+        "1:Varela A.; 2:Okafor M.; 3:Lindqvist A.",
+        "1:Varela, Ana (59990000001); 2:Okafor, Maya (59990000002); 3:Lindqvist, Arne (59990000003)",
+        "1:59990000001; 2:59990000002; 3:59990000003",
     )
     assert [x["position"] for x in a] == [1, 2, 3]
-    assert [x["name"] for x in a] == ["Idri A.", "Hosni M.", "Abran A."]
-    assert a[0]["full_name"] == "Idri, Ali"
-    assert a[0]["scopus_id"] == "6602789810"
+    assert [x["name"] for x in a] == ["Varela A.", "Okafor M.", "Lindqvist A."]
+    assert a[0]["full_name"] == "Varela, Ana"
+    assert a[0]["scopus_id"] == "59990000001"
 
 
 def test_authors_raw_scopus_without_index():
     """Old export: no "n:" prefix. The position falls back on the rank."""
-    a = P.parse_authors("Idri A.; Hosni M.",
-                        "Idri, Ali (6602789810); Hosni, Mohamed (57189341317)",
-                        "6602789810; 57189341317")
+    a = P.parse_authors("Varela A.; Okafor M.",
+                        "Varela, Ana (59990000001); Okafor, Maya (59990000002)",
+                        "59990000001; 59990000002")
     assert [x["position"] for x in a] == [1, 2]
-    assert a[1]["scopus_id"] == "57189341317"
+    assert a[1]["scopus_id"] == "59990000002"
 
 
 def test_authors_misaligned_columns():
@@ -94,16 +94,16 @@ def test_empty_affiliation():
 # --- references ------------------------------------------------------------
 
 def test_reconciled_references():
-    cell = ("ref1 | 10.1007/s11749-016-0481-7 | 2016 | Biau, Scornet | "
-            "A random forest guided tour ; "
-            "ref2 | 10.1145/2939672.2939785 | 2016 | Chen T., Guestrin C. | "
-            "XGBoost: A Scalable Tree Boosting System")
+    cell = ("ref1 | 10.1000/example.0481 | 2016 | Lane, Moss | "
+            "A guided tour of tree ensembles ; "
+            "ref2 | 10.1000/example.2939 | 2016 | Park T., Quinn C. | "
+            "Scalable gradient boosting")
     r = P.parse_references(cell)
     assert len(r) == 2
     assert r[0]["ref_pos"] == 1
-    assert r[0]["ref_doi"] == "10.1007/s11749-016-0481-7"
+    assert r[0]["ref_doi"] == "10.1000/example.0481"
     assert r[0]["ref_year"] == 2016
-    assert r[1]["ref_title"].startswith("XGBoost")
+    assert r[1]["ref_title"].startswith("Scalable gradient")
 
 
 def test_unstructured_reference_kept():
@@ -132,22 +132,22 @@ def test_raw_scopus_references_are_split_per_reference_not_per_author():
     real corpus), with neither title nor year: no local citations, no
     historiograph."""
     from bibliominer_analysis.io.parsers import parse_references
-    cell = ("Ali A.; Gravino C., A systematic literature review of software effort "
+    cell = ("Ali A.; Brandt C., A systematic literature review of software effort "
             "prediction, Journal of software: evolution and process, 31, 10, (2019); "
-            "Azzeh M.; Nassif A. B.; Minku L. L., An empirical evaluation of ensemble "
+            "Torvik M.; Navarro A. B.; Mendes L. L., An empirical evaluation of ensemble "
             "adjustment methods, Journal of Systems and Software, 103, pp. 36-52, (2015)")
     refs = parse_references(cell)
     assert len(refs) == 2
     assert refs[0]["ref_year"] == 2019
-    assert refs[0]["ref_authors"] == "Ali A., Gravino C."
+    assert refs[0]["ref_authors"] == "Ali A., Brandt C."
     assert refs[0]["ref_title"] == "A systematic literature review of software effort prediction"
     assert refs[1]["ref_year"] == 2015
-    assert refs[1]["ref_authors"].startswith("Azzeh M.")
+    assert refs[1]["ref_authors"].startswith("Torvik M.")
 
 
 def test_reconciled_references_are_read_as_before():
     from bibliominer_analysis.io.parsers import parse_references
-    refs = parse_references("ref1 | 10.1/x | 2016 | Biau G., Scornet E. | A random "
-                            "forest guided tour ; ref2 |  | 2019 | Doe J. | Other title")
+    refs = parse_references("ref1 | 10.1/x | 2016 | Lane G., Moss E. | A guided tour "
+                            "of tree ensembles ; ref2 |  | 2019 | Doe J. | Other title")
     assert [r["ref_doi"] for r in refs] == ["10.1/x", None]
-    assert refs[0]["ref_title"] == "A random forest guided tour"
+    assert refs[0]["ref_title"] == "A guided tour of tree ensembles"

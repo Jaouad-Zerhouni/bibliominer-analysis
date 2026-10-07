@@ -139,7 +139,7 @@ def cochran_sample_size(corpus, confidence: float = 0.95,
     q = 1.0 - p
 
     n0 = (z ** 2) * p * q / (margin ** 2)
-    # Finite population correction: without it, we would sometimes ask for more
+    # Finite population correction: without it, the formula would sometimes ask for more
     # documents than the corpus contains.
     n = n0 / (1 + (n0 - 1) / n_pop) if n_pop > 0 else n0
 

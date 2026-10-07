@@ -23,7 +23,7 @@ MADRID = "parent 1: Univ D, city: Madrid, country: Spain"
 
 
 def test_reach_distinguishes_national_from_local():
-    """The SCP/MCP split puts these two documents together; we do not."""
+    """The SCP/MCP split puts these two documents together; this package does not."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, RABAT + ";" + RABAT2),      # two institutions, one city
         _doc(2, RABAT + ";" + MEKNES),      # two cities, one country

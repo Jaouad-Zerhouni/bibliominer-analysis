@@ -16,7 +16,7 @@ in isolation.
 address. The **first author** is then taken as the document's
 representative. That is the usual fallback convention, but it is not
 strictly the corresponding author, and it must be said rather than
-suggesting a precision we do not have.
+suggesting a precision that is not there.
 """
 
 from __future__ import annotations

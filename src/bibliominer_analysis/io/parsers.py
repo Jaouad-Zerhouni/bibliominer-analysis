@@ -15,7 +15,7 @@ from . import schema as S
 
 _INDEX_RE = re.compile(S.AUTHOR_INDEX_PATTERN)
 _AWA_MULTI_RE = re.compile(S.AWA_MULTI_AFFILIATION_PATTERN)
-#: "Idri, Ali (6602789810)" -> name + Scopus identifier
+#: "Varela, Ana (59990000001)" -> name + Scopus identifier
 _FULLNAME_RE = re.compile(r"^(.*?)\s*\((\d{5,})\)\s*$")
 
 
@@ -38,7 +38,7 @@ def split_list(value: Any) -> List[str]:
 
 
 def strip_index(item: str) -> "tuple[Optional[int], str]":
-    '''"3:Abran A." -> (3, 'Abran A.'). Without a prefix -> (None, item).'''
+    '''"3:Lindqvist A." -> (3, 'Lindqvist A.'). Without a prefix -> (None, item).'''
     m = _INDEX_RE.match(item or "")
     if not m:
         return None, (item or "").strip()
@@ -66,7 +66,7 @@ def _surname_key(text: str) -> str:
 
 
 def _surname_of_short(name: str) -> str:
-    '''"El Baida M." -> "el baida": the short name without its initials.'''
+    '''"El Tazari N." -> "el tazari": the short name without its initials.'''
     tokens = name.strip().split()
     while len(tokens) > 1 and "." in tokens[-1]:
         tokens.pop()
@@ -74,7 +74,7 @@ def _surname_of_short(name: str) -> str:
 
 
 def _surname_of_full(full: str) -> str:
-    """'El Baida, Maelaynayn (58834078300)' -> 'el baida'."""
+    """'El Tazari, Nora (59990000004)' -> 'el tazari'."""
     return _surname_key(full.split(",")[0])
 
 
@@ -264,7 +264,7 @@ def author_affiliation_positions(block: str,
 
     An author can have several, written one after the other in the same
     block:
-        ``Hosni M., subparent: ENSIAS, ..., country: Morocco, subparent: ENSAM, ...``
+        ``Okafor M., subparent: ENSIAS, ..., country: Morocco, subparent: ENSAM, ...``
     Each one is matched to the IDENTICAL affiliation of the document. Matching
     by rank (author 3 -> affiliation 3) gave an author their neighbour's
     affiliation as soon as a previous author had two, or two authors shared
@@ -275,7 +275,7 @@ def author_affiliation_positions(block: str,
     without a position, that keeps the text.
     """
     _, text = strip_index(block)
-    # "[2 affiliations] Hosni M., ...": the cleaning's mark tells the eye that
+    # "[2 affiliations] Okafor M., ...": the cleaning's mark tells the eye that
     # this author carries several. It is not part of the name.
     text = _AWA_MULTI_RE.sub("", text)
     parts = [p.strip() for p in text.split(",") if p.strip()]
@@ -335,7 +335,7 @@ def _raw_positions(parts: List[str], doc_affs) -> list:
 _RECONCILED_REF = re.compile(r"^\s*ref\d+\s*\|")
 #: In RAW Scopus text, a reference ends with its year in brackets; the next
 #: one starts after the ";" that follows. A plain split on ";" ALSO cut
-#: between the authors of the same reference ("Ali A.; Gravino C., A
+#: between the authors of the same reference ("Ali A.; Brandt C., A
 #: systematic..."): each author became a "reference" without a title or a
 #: year.
 _RAW_REF_END = re.compile(r"(?<=\(\d{4}\))\s*;\s*")
@@ -358,7 +358,7 @@ def _reconciled(item: str, i: int) -> Dict[str, Any]:
 
 
 def _raw_scopus(item: str, i: int) -> Dict[str, Any]:
-    '''"Ali A.; Gravino C., A systematic literature review..., Journal..., 31,
+    '''"Ali A.; Brandt C., A systematic literature review..., Journal..., 31,
     (2019)" -> authors, title, year, DOI.
 
     Authors are separated by ";", the last one is followed by the title after
@@ -385,9 +385,9 @@ def parse_references(cell: Any) -> List[Dict[str, Any]]:
     """The references of a document, in the two possible forms.
 
     Reconciled by the cleaning:
-        ``ref1 | 10.1007/... | 2016 | Biau, Scornet | A random forest guided tour``
+        ``ref1 | 10.1007/... | 2016 | Lane, Moss | A guided tour of tree ensembles``
     Raw, as Scopus exports them:
-        ``Ali A.; Gravino C., A systematic literature review..., (2019); ...``
+        ``Ali A.; Brandt C., A systematic literature review..., (2019); ...``
 
     A reference that cannot be read keeps its whole text in ``ref_title``:
     information is never lost, even unstructured.

@@ -39,7 +39,7 @@ COL_ISBN = "ISBN"
 COL_PUBLISHER = "Publisher"
 COL_EID = "EID"
 
-#: Required column: without it we do not know which corpus we are talking about.
+#: Required column: without it, there is no knowing which corpus is meant.
 REQUIRED_COLUMNS = (COL_TITLE,)
 
 # --- Separators -------------------------------------------------------------
@@ -48,15 +48,15 @@ REQUIRED_COLUMNS = (COL_TITLE,)
 LIST_SEP = ";"
 
 #: Separates the fields INSIDE a reconciled reference:
-#:     ref1 | 10.1007/... | 2016 | Biau, Scornet | A random forest guided tour
+#:     ref1 | 10.1007/... | 2016 | Lane, Moss | A guided tour of tree ensembles
 REF_FIELD_SEP = "|"
 REF_FIELDS = ("ref_pos", "ref_doi", "ref_year", "ref_authors", "ref_title")
 
-#: Author index prefix written by the cleaning: "3:Abran A.".
+#: Author index prefix written by the cleaning: "3:Lindqvist A.".
 AUTHOR_INDEX_PATTERN = r"^\s*(\d+)\s*:\s*"
 
 #: Mark written by the cleaning before an author with SEVERAL affiliations:
-#: "[2 affiliations] Hosni M., subparent: ...". It is a reading aid for
+#: "[2 affiliations] Okafor M., subparent: ...". It is a reading aid for
 #: humans; it is not part of the name.
 AWA_MULTI_AFFILIATION_PATTERN = r"^\s*\[(\d+)\s+affiliations\]\s*"
 

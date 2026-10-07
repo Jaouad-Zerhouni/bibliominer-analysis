@@ -24,11 +24,11 @@ def corpus():
         # a single author, a single affiliation
         _doc(1, "Solo A.", "Solo, Ann (1)", "1", A, f"Solo A., {A}"),
         # two authors, two affiliations, including a DOUBLE affiliation
-        _doc(2, "Hosni M.; Idri A.", "Hosni, Mohamed (2); Idri, Ali (3)", "2; 3",
-             f"{A}; {B}", f"Hosni M., {A}, {B}; Idri A., {A}"),
+        _doc(2, "Okafor M.; Varela A.", "Okafor, Maya (2); Varela, Ana (3)", "2; 3",
+             f"{A}; {B}", f"Okafor M., {A}, {B}; Varela A., {A}"),
         # three affiliations
-        _doc(3, "Hosni M.; Juan C.", "Hosni, Mohamed (2); Carrillo, Juan (4)", "2; 4",
-             f"{A}; {B}; {C}", f"Hosni M., {B}; Juan C., {C}"),
+        _doc(3, "Okafor M.; Juan C.", "Okafor, Maya (2); Prado, Juan (4)", "2; 4",
+             f"{A}; {B}; {C}", f"Okafor M., {B}; Juan C., {C}"),
     ]))
 
 
@@ -52,11 +52,11 @@ def test_the_profile_counts_single_author_and_single_affiliation(corpus):
 
 def test_an_author_with_two_institutions_on_one_article_is_counted(corpus):
     p = corpus.affiliation_profile()
-    assert p["authors_with_double_affiliation"] == 1        # Hosni, article 2
+    assert p["authors_with_double_affiliation"] == 1        # Okafor, article 2
     authors = corpus.authors_by_affiliation_count().set_index("author")
-    assert authors.loc["Hosni M.", "max_in_one_document"] == 2
-    assert authors.loc["Hosni M.", "institutions"] == 2
-    assert "Idri A." not in authors.index                   # a single institution
+    assert authors.loc["Okafor M.", "max_in_one_document"] == 2
+    assert authors.loc["Okafor M.", "institutions"] == 2
+    assert "Varela A." not in authors.index                   # a single institution
 
 
 def test_an_author_who_changed_institution_is_not_a_double_affiliation():

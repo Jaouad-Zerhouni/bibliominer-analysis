@@ -34,8 +34,8 @@ def corpus():
         _doc(1, LONG_A, doi="10.1000/aaa", year="2016", cited="100"),
         _doc(2, LONG_B, year="2017", cited="10"),
         _doc(3, "A third paper", year="2019", refs=(
-            "ref1 | 10.1000/aaa | 2016 | Idri | %s;"
-            "ref2 |  | 2017 | Hosni | %s" % (LONG_A, LONG_B))),
+            "ref1 | 10.1000/aaa | 2016 | Varela | %s;"
+            "ref2 |  | 2017 | Okafor | %s" % (LONG_A, LONG_B))),
     ]))
 
 
@@ -99,14 +99,14 @@ def test_most_locally_cited_documents(corpus):
 def test_labels_disambiguated():
     """Two articles by the same author in the same year get a suffix."""
     c = Corpus.from_dataframe(pd.DataFrame([
-        _doc(1, LONG_A, authors="1:Idri A.", doi="10.1000/aaa", year="2016"),
-        _doc(2, LONG_B, authors="1:Idri A.", doi="10.1000/bbb", year="2016"),
+        _doc(1, LONG_A, authors="1:Varela A.", doi="10.1000/aaa", year="2016"),
+        _doc(2, LONG_B, authors="1:Varela A.", doi="10.1000/bbb", year="2016"),
         _doc(3, "Citing paper", year="2019", refs=(
             "ref1 | 10.1000/aaa | 2016 | X | t1;ref2 | 10.1000/bbb | 2016 | X | t2")),
     ]))
     labels = list(L.most_local_cited_documents(c)["label"])
     assert len(set(labels)) == 2, "two identical labels would make the graph wrong"
-    assert all(x.startswith("IDRI A., 2016") for x in labels)
+    assert all(x.startswith("VARELA A., 2016") for x in labels)
 
 
 def test_locally_cited_authors_full_counting():

@@ -34,7 +34,7 @@ def read_csv(path: PathLike) -> pd.DataFrame:
 
     Everything is read as text: an 11-digit Scopus identifier would
     otherwise become a float, and "0123" would lose its zero. Conversions are
-    done later, column by column, where we know what we are handling.
+    done later, column by column, where the type of each column is known.
     """
     return pd.read_csv(path, dtype=str, keep_default_na=False,
                        na_values=[""], encoding="utf-8-sig", low_memory=False)
@@ -68,7 +68,7 @@ def check_cleaned(df: pd.DataFrame) -> None:
 
     The signature of the cleaned file: its final export, and only that,
     numbers the authors in order, in the three author columns
-    ("1:Idri A.; 2:Hosni M."). Every non-empty cell must be numbered in full,
+    ("1:Varela A.; 2:Okafor M."). Every non-empty cell must be numbered in full,
     as the export writes it; a single line that is not, and the file is not
     (or no longer) the one the cleaning produced.
     """
@@ -98,7 +98,7 @@ def check_cleaned(df: pd.DataFrame) -> None:
     raise NotCleanedError(
         "This file has not been cleaned with Bibliominer. The analysis reads "
         "the file exported by the Bibliominer cleaning application, where "
-        'authors are numbered in order ("1:Idri A.; 2:Hosni M."). %s '
+        'authors are numbered in order ("1:Varela A.; 2:Okafor M."). %s '
         "Clean the Scopus export first, then import the file the cleaning "
         "exports." % found)
 
@@ -258,7 +258,7 @@ def unify_spellings(tables: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
     """A single spelling per author and per keyword, for ALL the analyses.
 
     Scopus writes the same author in several ways from one article to the
-    next ("Fernández-Alemán J.L.", "Fernandez-Aleman J.L.", "Fernández Alemán
+    next ("Martínez-Olmo J.L.", "Martinez-Olmo J.L.", "Martínez Olmo
     J.L.") under the same identifier; and authors write "Machine learning" or
     "Machine Learning". The rankings already grouped by identifier or ignoring
     case, but the authors' evolution, the keyword dynamics and the three-field

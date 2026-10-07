@@ -90,7 +90,7 @@ class Corpus:
     def from_tables(cls, tables: Dict[str, pd.DataFrame]) -> "Corpus":
         """Rebuilds a corpus from already computed tables (Parquet).
 
-        That is what the backend does: it never parses the CSV again, it reads
+        That is what a server does: it never parses the CSV again, it reads
         back the six tables written at import time."""
         return cls(tables)
 

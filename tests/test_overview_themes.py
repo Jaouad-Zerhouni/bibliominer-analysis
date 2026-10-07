@@ -26,7 +26,7 @@ def corpus() -> Corpus:
         _doc(2, 2021, 6, "1:A.; 2:C.", kws="alpha; gamma",
              refs="ref1 | 10.1/x | 2010 | Doe J. | Fondation"),
         _doc(3, 2022, 2, "1:A.", kws="alpha",
-             refs="ref1 | 10.1/y | 2012 | Roe R. | Autre"),
+             refs="ref1 | 10.1/y | 2012 | Roe R. | Another"),
         _doc(4, 2023, 0, "1:D.; 2:E.", kws="delta",
              affs=("parent 1: U, city: X, country: Morocco; "
                    "parent 1: V, city: Y, country: Spain")),

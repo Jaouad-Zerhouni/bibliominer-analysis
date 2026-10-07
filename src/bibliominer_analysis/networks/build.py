@@ -118,7 +118,7 @@ def co_citation(corpus, top_n: int = 50, min_weight: int = 2) -> Dict[str, Any]:
     keep = {k for k, _ in top_by_count(counts, top_n)}
 
     # The same reference is written differently from one citing article to
-    # another ("Minku L.L." here, "Mahmood Y." there). The label takes the MOST
+    # another ("Mendes L.L." here, "Moreau Y." there). The label takes the MOST
     # FREQUENT spelling, on a tie the first in alphabetical order (`mode`
     # sorts), never the first one met, which depended on the order of the
     # export's rows.
@@ -306,7 +306,7 @@ def _first_cited_author(value: Any) -> Optional[str]:
     if not isinstance(value, str) or not value.strip():
         return None
     first = re.split(r"[;,]", value.strip())[0].strip()
-    # "Chen T." and "Chen, T." must join; the surname is kept, with the initial
+    # "Park T." and "Park, T." must join; the surname is kept, with the initial
     # when there is one.
     first = re.sub(r"\s+", " ", first)
     return first.lower() if len(first) >= 2 else None

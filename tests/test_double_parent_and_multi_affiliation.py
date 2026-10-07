@@ -31,24 +31,24 @@ def _doc(i, affs, awa="", authors="1:Doe J.", **extra):
 
 # --- author with several affiliations ----------------------------------------
 
-def _hosni_paper():
+def _okafor_paper():
     return _doc(
         1, "; ".join([ENSIAS, MURCIA, ENSAM]),
-        authors="1:Hosni M.; 2:Carrillo de Gea J.M.; 3:Idri A.",
-        awa="; ".join([f"Hosni M., {ENSIAS}, {ENSAM}",
-                       f"Carrillo de Gea J.M., {MURCIA}",
-                       f"Idri A., {ENSIAS}"]))
+        authors="1:Okafor M.; 2:Prado de Luna J.M.; 3:Varela A.",
+        awa="; ".join([f"Okafor M., {ENSIAS}, {ENSAM}",
+                       f"Prado de Luna J.M., {MURCIA}",
+                       f"Varela A., {ENSIAS}"]))
 
 
 def test_an_author_with_two_affiliations_keeps_both():
-    c = Corpus.from_dataframe(pd.DataFrame([_hosni_paper()]))
+    c = Corpus.from_dataframe(pd.DataFrame([_okafor_paper()]))
     link = c.author_affiliations
     assert sorted(link.loc[link["position"] == 1, "aff_pos"]) == [1, 3]
 
 
 def test_the_next_authors_keep_their_own_affiliation():
-    """By rank, Idri (3rd author) received ENSAM Meknès, affiliation no. 3."""
-    c = Corpus.from_dataframe(pd.DataFrame([_hosni_paper()]))
+    """By rank, Varela (3rd author) received ENSAM Meknès, affiliation no. 3."""
+    c = Corpus.from_dataframe(pd.DataFrame([_okafor_paper()]))
     link = c.author_affiliations.merge(c.affiliations, on=["eid", "aff_pos"])
     cities = dict(zip(link["position"].astype(int).astype(str) + link["city"],
                       link["city"]))
@@ -61,14 +61,14 @@ def test_a_second_affiliation_starting_with_parent_1_is_split():
     GOES BACK in the label order after "country"."""
     cairo = "parent 1: African Disaster Mitigation Research Center, city: Cairo, country: Egypt"
     blocks = P.author_affiliation_positions(
-        f"Chourak M., {ENSIAS}, {cairo}", P.parse_affiliations(f"{ENSIAS}; {cairo}"))
+        f"Corbin M., {ENSIAS}, {cairo}", P.parse_affiliations(f"{ENSIAS}; {cairo}"))
     assert [pos for pos, _ in blocks] == [1, 2]
 
 
 def test_a_raw_scopus_export_matches_by_text():
     affs = "ENSIAS, Mohammed V University, Rabat, Morocco; ENSAM, Moulay Ismail University, Meknes, Morocco"
     blocks = P.author_affiliation_positions(
-        "Hosni M., ENSAM, Moulay Ismail University, Meknes, Morocco, "
+        "Okafor M., ENSAM, Moulay Ismail University, Meknes, Morocco, "
         "ENSIAS, Mohammed V University, Rabat, Morocco",
         P.parse_affiliations(affs))
     assert [pos for pos, _ in blocks] == [2, 1]
@@ -122,9 +122,9 @@ def test_a_short_affiliation_inside_a_longer_one_is_not_a_second_rattachement():
     rabat = "MMCS Research Team, LMAID, ENSMR, Rabat, Morocco"
     affs = P.parse_affiliations("; ".join([long_aff, rabat, short_aff]))
 
-    zerhouni = P.author_affiliation_positions(f"Zerhouni J., {long_aff}, {rabat}", affs)
-    assert [pos for pos, _ in zerhouni] == [1, 2]
+    zeller = P.author_affiliation_positions(f"Zeller J., {long_aff}, {rabat}", affs)
+    assert [pos for pos, _ in zeller] == [1, 2]
 
     # The author who REALLY carries the short affiliation keeps it.
-    bakkas = P.author_affiliation_positions(f"Bakkas M., {short_aff}", affs)
-    assert [pos for pos, _ in bakkas] == [3]
+    baxter = P.author_affiliation_positions(f"Baxter M., {short_aff}", affs)
+    assert [pos for pos, _ in baxter] == [3]

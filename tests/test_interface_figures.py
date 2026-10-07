@@ -87,12 +87,12 @@ def _tables(authors, keywords):
 def test_one_spelling_per_author_by_identifier():
     t = unify_spellings(_tables(
         {"eid": ["d1", "d2", "d3", "d4"],
-         "name": ["Fernández-Alemán J.L.", "Fernández-Alemán J.L.",
-                  "Fernandez-Aleman J.L.", "Noid A."],
+         "name": ["Martínez-Olmo J.L.", "Martínez-Olmo J.L.",
+                  "Martinez-Olmo J.L.", "Noid A."],
          "scopus_id": ["1", "1", "1", None]},
         {"eid": [], "keyword": [], "kind": []}))
     names = list(t["authors"]["name"])
-    assert names[:3] == ["Fernández-Alemán J.L."] * 3
+    assert names[:3] == ["Martínez-Olmo J.L."] * 3
     assert names[3] == "Noid A."
 
 

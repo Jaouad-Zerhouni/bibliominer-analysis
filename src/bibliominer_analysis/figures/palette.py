@@ -1,12 +1,11 @@
 """The SAME palette as the interface, copied, not reinvented.
 
-Source of truth: `analysis_service/frontend/src/theme/palette.ts`,
-validated by `scripts/validate_palette.js` (lightness band, chroma floor,
-colour-blind separation). An exported figure using other hues than those
+Source of truth: the palette of the web interface, validated by script
+(lightness band, chroma floor, colour-blind separation). An exported figure using other hues than those
 seen on screen would break the link between what the user read and what
 they publish, and re-running the validation script here would need a Node
-dependency in a Python package. Copied, with the source file named, so
-that changing one reminds us to check the other.
+dependency in a Python package. Copied, so that changing one means
+checking the other.
 """
 
 from __future__ import annotations
@@ -49,7 +48,7 @@ CHROME: Dict[str, Dict[str, str]] = {
 }
 
 
-#: Typographic hyphens that Arial and DejaVu lack ("Fernández‐Alemán" was
+#: Typographic hyphens that Arial and DejaVu lack ("Martínez‐Olmo" was
 #: shown with an empty box): they are written as a plain hyphen.
 _HYPHENS = str.maketrans({"\u2010": "-", "\u2011": "-", "\u2012": "-"})
 

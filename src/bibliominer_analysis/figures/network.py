@@ -53,7 +53,7 @@ _LEGEND_MAX = 10
 
 
 class NetworkFigureError(ValueError):
-    """The network cannot be drawn, and we say why."""
+    """The network cannot be drawn, and the figure says why."""
 
 
 def _node_areas(nodes: List[Dict[str, Any]], size_by: str) -> List[float]:
@@ -164,8 +164,8 @@ def _place_labels(fig, ax, nodes, areas, positions, colour, limit: int) -> None:
 def short_label(label: Any, limit: int = 28) -> str:
     """The ON-SCREEN label of a node: short, readable.
 
-    A co-cited reference is called "Ali Idri (2015), Accuracy Comparison of
-    Analogy-Based...": on the map, "Ali Idri (2015)" is enough to recognise
+    A co-cited reference is called "Ana Varela (2015), A Study of
+    Analogy-Based...": on the map, "Ana Varela (2015)" is enough to recognise
     it; the full title stays in the network table. Beyond ``limit``
     characters, the text is cut with "…".
     """

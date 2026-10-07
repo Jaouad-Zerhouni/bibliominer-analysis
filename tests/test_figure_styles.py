@@ -18,8 +18,8 @@ from bibliominer_analysis.figures.render import (
     FigureError, FigureSpec, Series, _gradient, _spread, render_figure,
 )
 
-CATS = ["Idri A.", "Hosni M.", "Abran A.", "Toval A.", "Nassif A.B.",
-        "Azzeh M.", "Ouhbi S.", "Benali M.", "Kharbouch A.", "Garcia G."]
+CATS = ["Varela A.", "Okafor M.", "Lindqvist A.", "Tavares A.", "Navarro A.B.",
+        "Torvik M.", "Ortega S.", "Bennett M.", "Kessler A.", "Garcia G."]
 VALUES = [42, 31, 27, 19, 17, 15, 12, 11, 9, 8]
 
 
@@ -93,7 +93,7 @@ def test_the_period_is_in_the_file_name_and_two_periods_make_two_files():
                       period="2010-2013")
     report.add_figure("Actors", "top-authors", _spec("bar"), title="Top authors",
                       period="2014-2016")
-    report.add_table("Actors", "top-authors", [{"author": "Idri A.", "documents": 42}],
+    report.add_table("Actors", "top-authors", [{"author": "Varela A.", "documents": 42}],
                      period="2010-2013")
     names = _names(report)
     assert "2-actors/figures/top-authors_2010-2013.png" in names

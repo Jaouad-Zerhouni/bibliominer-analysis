@@ -1,4 +1,4 @@
-"""SCImago matching: ISSN, title, and what we refuse to guess."""
+"""SCImago matching: ISSN, title, and what is never guessed."""
 
 import pandas as pd
 import pytest
@@ -52,7 +52,7 @@ def test_matching_by_title_when_issn_missing():
 
 
 def test_unknown_journal_stays_empty():
-    """We do not invent a quartile: that would be worse than saying nothing."""
+    """A quartile is never invented: that would be worse than saying nothing."""
     c = Corpus.from_dataframe(pd.DataFrame([
         _doc(1, "Journal Of Things That Do Not Exist At All"),
     ]))

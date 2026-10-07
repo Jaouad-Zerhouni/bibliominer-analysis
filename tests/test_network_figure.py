@@ -246,8 +246,8 @@ def test_a_dense_group_is_spread_out_not_stacked():
 def test_labels_are_short_and_printable():
     from bibliominer_analysis.figures.network import short_label
     from bibliominer_analysis.figures.palette import tick_label
-    assert short_label("Ali Idri (2015) · Accuracy Comparison of Analogy-Based") == "Ali Idri (2015)"
-    assert short_label("Fernández‐Alemán J.L.") == "Fernández-Alemán J.L."
+    assert short_label("Ana Varela (2015) · A Study of Analogy-Based") == "Ana Varela (2015)"
+    assert short_label("Martínez‐Olmo J.L.") == "Martínez-Olmo J.L."
     long_name = ("Proceedings of the Annual International Conference of the IEEE "
                  "Engineering in Medicine and Biology Society, EMBS")
     lines = tick_label(long_name, 34).split("\n")

@@ -2,7 +2,7 @@
 
 The counterpart, for publication venues, of what `impact.py` does for
 authors and organisations. Bradford (in `laws.py`) says *how many*
-journals concentrate the field; here we say *which ones*, and with what
+journals concentrate the field; this module says *which ones*, and with what
 weight.
 """
 
